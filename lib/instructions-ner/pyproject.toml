@@ -1,0 +1,87 @@
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0"]
+
+[tool]
+
+[tool.black]
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+include = '\.pyi?$'
+line-length = 100
+target-version = ['py36', 'py37', 'py38', 'py39']
+
+[tool.coverage.report]
+exclude_lines = [
+  "if __name__ == .__main__.:",
+  "pass",
+  "pragma: no cover",
+  "raise NotImplementedError",
+  "raise TypeError",
+  "raise ValueError"
+]
+
+[tool.isort]
+known_local_folder = [
+  'instructions-ner',
+  'tests'
+]
+line_length = 100
+profile = 'black'
+
+[tool.poetry]
+authors = ["Arkhn's AI Team <ai@arkhn.com>"]
+description = "instructions-ner experiements and more ..."
+license = "Apache-2.0"
+name = "instructions-ner"
+readme = "README.md"
+repository = "https://github.com/arkhn/ai-lembic/tree/main/experiements/instructions-ner"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+datasets = "^2.2.1"
+hydra-colorlog = "^1.2.0"
+hydra-core = "^1.2.0"
+hydra-optuna-sweeper = "^1.2.0"
+inception-external-recommender = {git = "https://github.com/inception-project/inception-external-recommender"} # Under the name ariadne on the project
+numpy = "~1.23.1"
+python = "~3.9"
+pytorch-lightning = "^1.7.1"
+rich = "^12.5.1" # beautiful text formatting in terminal
+scikit-learn = "1.1.2"
+seqeval = "~1.2.2"
+spacy = "~3.0.7"
+tensorboardX = "^2.5"
+torch = "^1.10.0"
+torchmetrics = "^0.9.3"
+tqdm = "^4.63.0"
+transformers = "~4.11.0"
+wandb = "^0.13.1"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.1.1"
+pytest-cov = "^3.0.0"
+
+[[tool.poetry.source]]
+name = "pypi-arkhn"
+secondary = true
+url = "https://pypi.arkhn.com/simple/"
+
+[tool.pytest.ini_options]
+addopts = "--cov-report term-missing:skip-covered"
+markers = [
+  "serial",
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')"
+]

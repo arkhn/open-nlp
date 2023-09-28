@@ -1,0 +1,3 @@
+layer: it.layer1
+wandb_run_name: layer_it.layer1_topk_0_limit_1146
+prediction_path: /Users/Simon/PycharmProjects/ai-lembic/datasets_collection/e3c-llm/data/layer=eu.layer1_limit=3126/model_text-davinci-003_20230403-075505.csv

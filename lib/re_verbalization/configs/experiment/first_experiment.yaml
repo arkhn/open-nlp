@@ -1,0 +1,28 @@
+# @package _global_
+
+defaults:
+  - override /data: nli.yaml
+  - override /model: nli.yaml
+  - override /callbacks: default.yaml
+  - override /trainer: default.yaml
+  - override /logger: wandb.yaml
+
+tags: ["draft", "mnli", "WIP"]
+
+seed: 42
+
+trainer:
+  min_epochs: 1
+  max_epochs: 5
+
+model:
+  optimizer:
+    lr: 2e-5
+
+data:
+  batch_size: 4
+
+logger:
+  wandb:
+    tags: ${tags}
+    group: "first_experiment"

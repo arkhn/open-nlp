@@ -1,0 +1,5 @@
+_target_: prediction_utils.model.Llama
+ip_address: 35.185.196.120
+temperature: 0.0
+max_gen_len: 64
+model_name: llama-7b-int4

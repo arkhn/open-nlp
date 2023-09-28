@@ -1,0 +1,22 @@
+model:
+  name: "t5-base"
+  upload_name: "rntc/t5-instructionner-bigbio"
+  tokenizer: "t5-base"
+
+training:
+  epochs: 1
+  batch_size: 8
+  gradient_accumulation_steps: 8
+  learning_rate: 5e-5
+  warmup_steps: 100
+  weight_decay: 0.01
+  logging_steps: 100
+  save_steps: 1000
+  eval_steps: 1000
+  eval_strategy: "steps"
+  metric_for_best_model: "loss"
+  save_total_limit: 3
+
+wandb:
+  project: "t5-bigbio-ner"
+  entity: "clinical-dream-team"

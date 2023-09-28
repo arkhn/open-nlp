@@ -1,0 +1,74 @@
+# This file defines all the hooks run by pre-commit.
+
+exclude: "poetry.lock"
+
+repos:
+  # Base pre-commit hook repository, for simple checks & fixes
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-added-large-files # Prevent giant files from being committed
+      - id: check-ast # Check whether the files parse as valid Python
+      - id: check-json # Check JSON files for parseable syntax
+      - id: check-merge-conflict # Check for files that contain merge conflict strings
+      - id: check-toml # Checks TOML files for parseable syntax
+      - id: check-yaml # Check YAML files for parseable syntax
+      - id: debug-statements # Check for debugger imports and `breakpoint()` calls in python
+      - id: detect-private-key # Detect the presence of private keys
+      - id: end-of-file-fixer # Ensures that files end with a newline
+      - id: name-tests-test # Verify that test files are named correctly
+        exclude: tests/utils/
+
+  # Black is used to format the code in Python
+  - repo: https://github.com/psf/black
+    rev: 22.12.0
+    hooks:
+      - id: black
+
+  # Isort is used to re-organize our import statements in Python
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: ["--resolve-all-configs"]
+
+  # nbstripout is used to remove Jupyter notebooks' cell outputs
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.6.1
+    hooks:
+      - id: nbstripout
+
+  # Prettier is a formatting tool for many non-Python files
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.0.0-alpha.4
+    hooks:
+      - id: prettier
+
+  # TOML-sort is used to re-organize alphabetically TOML files (such as pyproject.toml)
+  - repo: https://github.com/pappasam/toml-sort
+    rev: v0.22.1
+    hooks:
+      - id: toml-sort
+        args: ["--all", "--in-place"]
+
+  # Flake8 is used to perform various code sanity checks in Python
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.0.0
+    hooks:
+      - id: flake8
+        exclude: notebooks/
+
+  # Mypy is used to check the typing hints in Python; it is quite a restrictive tool, so we don't
+  # use it in tests
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.991
+    hooks:
+      - id: mypy
+        exclude: apps/|notebooks/|tests/
+        additional_dependencies: ["types-requests"]
+
+    # Safety is used to check if there are hardcoded secrets inside code and history
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.16.1
+    hooks:
+      - id: gitleaks

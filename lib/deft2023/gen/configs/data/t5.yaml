@@ -1,0 +1,6 @@
+_target_: gen.gen.data.t5_datamodule.T5DataModule
+num_workers: 0
+pin_memory: False
+seed: ${seed}
+tokenizer: ${model.model}
+batch_size: 16

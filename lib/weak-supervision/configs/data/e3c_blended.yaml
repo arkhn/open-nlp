@@ -1,0 +1,8 @@
+_target_: weak_supervision.data.e3c_blended_datamodule.E3CBlendedDataModule
+batch_size: 24
+num_workers: 0
+pin_memory: False
+language: ${model.lang}
+tokenizer: ${model.model}
+instructgpt_ws: false
+fold: 0

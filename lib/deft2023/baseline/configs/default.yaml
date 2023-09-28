@@ -1,0 +1,28 @@
+defaults:
+  - _self_
+  - override /hydra/sweeper: basic
+  - override /hydra/launcher: joblib
+
+data:
+  test_ratio: 0.2
+
+model:
+  model_name_or_path: "camembert-base"
+
+training:
+  batch_size: 1
+  gradient_accumulation_steps: 16
+  epochs: 25
+  weight_decay: 0.01
+  learning_rate: 2e-5
+  push_to_hub: False
+  eval_steps: 100
+  logging_steps: 100
+
+logging:
+  output_dir: "outputs"
+  entity: "clinical-dream-team"
+  project: "deft2023"
+  tags: ["baseline"]
+
+global_seed: 42

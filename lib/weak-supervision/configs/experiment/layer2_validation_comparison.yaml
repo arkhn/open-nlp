@@ -1,0 +1,33 @@
+# @package _global_
+
+defaults:
+  - override /data: e3c_validation.yaml
+  - override /model: e3c.yaml
+  - override /callbacks: default.yaml
+  - override /trainer: default.yaml
+  - override /logger: wandb.yaml
+
+tags: ["validation"]
+
+seed: 42
+
+trainer:
+  min_epochs: 1
+  max_epochs: 5
+
+model:
+  optimizer:
+    lr: 1e-5
+
+data:
+  batch_size: 4
+
+logger:
+  wandb:
+    tags: ${tags}
+    group: "layer_2_validation_comparison"
+
+hydra:
+  sweeper:
+    params:
+      data.instructgpt_ws: choice(true,false)

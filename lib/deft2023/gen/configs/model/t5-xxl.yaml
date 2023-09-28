@@ -1,0 +1,20 @@
+_target_: gen.gen.models.t5_xxl_module.T5XllModule
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 2e-5
+  weight_decay: 0.01
+
+lora_config:
+  _target_: peft.LoraConfig
+  r: 24
+  lora_alpha: 32
+  target_modules: [q, v]
+  lora_dropout: 0.05
+  bias: none
+  task_type: TaskType.SEQ_2_SEQ_LM
+
+scheduler: null
+
+model: "t5-small"

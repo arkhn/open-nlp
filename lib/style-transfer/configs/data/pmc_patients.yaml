@@ -1,0 +1,19 @@
+_target_: style_transfer.data.st_datamodule.StyleTransferDataModule
+data_dir: ${paths.data_dir}
+batch_size: 2
+num_workers: 0
+pin_memory: False
+name: bio-datasets/pmc_style_transfer
+max_combinations: 3
+instruction: >
+  Instruction: With these following keywords,
+  generate a clinical case associated to the keywords below.
+  The current keywords are associated to the clinical case we want to generate 
+  and the past keywords are associated with the other clinical case of the same topic. 
+  Generate the clinical case and only this.
+
+  Current Keywords: {}
+
+  Past Keywords: {}
+
+response_instruction: "Answer:"

@@ -1,0 +1,15 @@
+Input:  Durante la realización de la endoscopia oral, se produjo sangrado al dilatar una estenosis en porción esofágica superior, por lo que se desistió de proseguir el procedimiento y se recurrió a la GRP, que se llevó a cabo sin incidencias.
+extract the exact match of disorders, diseases or symptoms mentioned in the text or return None if there is no clinical entity:
+- "sangrado"
+- "estenosis"
+
+Input:  La tomografía axial computerizada de cuerpo completo (T.A.C.) evidenció masa mixta de predominio sólido en polo superior de riñón derecho, con probable infiltración del músculo psoas; no se objetivó adenopatías, ni trombosis vascular.
+extract the exact match of disorders, diseases or symptoms mentioned in the text or return None if there is no clinical entity:
+- "masa"
+- "infiltración"
+- "adenopatías"
+- "trombosis vascular"
+
+Input:  La evolución semanal de las Phe a lo largo de los primeros 3 meses de seguimiento mostraron niveles de 498 ± 15 micromoles/L.
+extract the exact match of disorders, diseases or symptoms mentioned in the text or return None if there is no clinical entity:
+- "None"

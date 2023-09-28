@@ -1,0 +1,3 @@
+_target_: prediction_utils.model.T5
+ip_address: 34.168.93.238
+model_name: t5-instructionner-bigbio

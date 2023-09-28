@@ -1,0 +1,38 @@
+# This re-usable workflow runs pre-commit hooks on all the files of the repository.
+#
+# If a pre-commit hook finds an issue with a file or fixes it, the workflow will fail, but it will
+# not fix the files on its own. The pre-commit hooks must be defined in a `.pre-commit-config.yaml`
+# file and pre-commit's version in a `requirements-pre-commit.txt` file.
+#
+# This workflow caches pre-commit hooks; this is  directly adapted from:
+# https://github.com/pre-commit/action/blob/efd3bcfec120bd343786e46318186153b7bc8c68/action.yml.
+
+on:
+  workflow_call:
+
+jobs:
+  pre-commit:
+    name: Run pre-commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install pre-commit
+        run: python -m pip install -r requirements-pre-commit.txt
+
+      - name: Cache pre-commit hooks
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-hooks-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Run pre-commit
+        run: pre-commit run --all-files --show-diff-on-failure

@@ -1,0 +1,54 @@
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core"]
+
+[tool]
+
+[tool.black]
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+include = '\.pyi?$'
+line-length = 100
+target-version = ['py36', 'py37', 'py38', 'py39']
+
+[tool.isort]
+known_local_folder = [
+  'mimic-translation'
+]
+line_length = 100
+profile = 'black'
+
+[tool.poetry]
+authors = ["Simon Meoni <simonmeoni@aol.com>"]
+description = "translate mimic from english to french and create pseudonymisation corpus"
+license = "apache-2.0"
+name = "mimic-translation"
+packages = [{include = "mimic_translation"}]
+readme = "README.md"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+Faker = "^15.3.4"
+google-cloud-translate = "^2.0.1"
+pandas = "^1.5.1"
+python = "~3.9"
+tqdm = "^4.64.1"
+typer = "^0.6.1"
+types-six = "^1.16.21"
+
+[[tool.poetry.source]]
+name = "pypi-arkhn"
+secondary = true
+url = "https://pypi.arkhn.com/simple/"

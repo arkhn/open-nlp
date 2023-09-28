@@ -1,0 +1,20 @@
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core"]
+
+[tool.poetry]
+authors = ["Arkhn's AI Team"]
+description = "Weak InstructGPT Supervision for CAS"
+name = "wiscas"
+readme = "README.md"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+datasets = "^2.8.0"
+markupsafe = "2.0.1" # Needed by promptify
+openai = "^0.27.0"
+python = "^3.9"
+seqeval = "*"
+spacy = "^3.4.1"
+typer = "*"
+wandb = "*"

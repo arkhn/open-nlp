@@ -1,0 +1,5 @@
+hf_hub_repo_name: bio-datasets/bigbio-ner-merged
+tokenizer: xx_ent_wiki_sm
+# data:
+#   - excluded_datasets:
+#     - pubtator_central

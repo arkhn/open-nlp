@@ -1,0 +1,13 @@
+_target_: src.datamodules.ner_instructions_datamodule.NerInstructionsDataModule
+data_dir: ${paths.data_dir}
+datasets:
+  [
+    "webanno797399823581181383export.zip",
+    "webanno9829307934552568645export_curated_documents.zip",
+  ]
+architecture: ${architecture}
+batch_size: 16
+num_workers: 0
+pin_memory: False
+k_fold: 5
+c_fold: 0

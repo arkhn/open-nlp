@@ -1,0 +1,10 @@
+_target_: re_verbalization.models.nli_module.NliModule
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 2e-5
+  weight_decay: 0.0
+
+scheduler: null
+model: "camembert-base"

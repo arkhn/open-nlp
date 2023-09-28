@@ -1,0 +1,16 @@
+Input:  A 23 year old female patient (weight 67kg, height 171cm, BMI 22.91kg/cm 2) presented to emergency department with fever (39.4oC), tachycardia (116 bpm), hypotension (95/45 mmHg), tachypnoea (25 breaths/min), sore throat, neck pain, diffuse pain and tissue oedema in the right-side gluteal region.
+extract the exact match of disorders, diseases or symptoms mentioned in the text or return None if there is no clinical entity:
+- "fever"
+- "tachycardia"
+- "hypotension"
+- "tachypnoea"
+- "sore throat"
+- "neck pain"
+
+Input:  Given the positive screen for celiac disease (positive anti-tissue transglutaminase antibodies and results of duodenal biopsy), dietary intervention was immediately commenced.
+extract the exact match of disorders, diseases or symptoms mentioned in the text or return None if there is no clinical entity:
+- "celiac disease"
+
+Input:  He also demonstrated a change in temperament as he started to whine repeatedly and to scream without provocation.
+extract the exact match of disorders, diseases or symptoms mentioned in the text or return None if there is no clinical entity:
+- "None"
