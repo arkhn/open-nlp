@@ -1,0 +1,26 @@
+# @package _global_
+
+# example hyperparameter optimization of some experiment with Optuna:
+# python train.py -m hparams_search=e3c_optuna experiment=example
+
+defaults:
+  - override /hydra/sweeper: basic
+  - override /hydra/launcher: joblib
+
+hydra:
+  sweeper:
+    params:
+      data.fold: choice(0, 1, 2, 3, 4)
+      model: choice("en/bio-clinicalbert",
+        "en/roberta-base",
+        "en/xlm-roberta",
+        "es/bert-base-spanish-wwm-cased",
+        "es/roberta-base-biomedical-es",
+        "es/xlm-roberta",
+        "eu/berteus-base-cased",
+        "eu/xlm-roberta",
+        "fr/camembert",
+        "fr/dr-bert",
+        "fr/xlm-roberta",
+        "it/bert-base-italian-cased",
+        "it/xlm-roberta")

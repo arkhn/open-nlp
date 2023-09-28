@@ -1,0 +1,6 @@
+_target_: re_verbalization.data.nli_datamodule.NliDataModule
+batch_size: 4
+data_dir: ${paths.data_dir}/mnli_dataset.json
+num_workers: 0
+pin_memory: False
+fold: 0

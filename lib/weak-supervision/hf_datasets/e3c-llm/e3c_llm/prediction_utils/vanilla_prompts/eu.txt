@@ -1,0 +1,15 @@
+Input:  Umeari hilabete bat geroago egindako azterketak sintomarik gabeko egoera baieztatu zuen eta kontrolezko garuneko OTAn hondar-lesio minimoa antzeman zen.
+extract the exact match of disorders, diseases or symptoms mentioned in the text or return None if there is no clinical entity:
+- "sintomarik"
+- "hondar-lesio"
+
+Input:  14 urteko ume baten kasua aurkezten dugu.
+3 astetan zehar gorakoak, astenia eta 7 kg-ko pisu galera izan duena.
+extract the exact match of disorders, diseases or symptoms mentioned in the text or return None if there is no clinical entity:
+- "gorakoak"
+- "astenia"
+- "pisu galera"
+
+Input:  Ondoren ikerketa baskularra egiten zaio.
+extract the exact match of disorders, diseases or symptoms mentioned in the text or return None if there is no clinical entity:
+- "None"

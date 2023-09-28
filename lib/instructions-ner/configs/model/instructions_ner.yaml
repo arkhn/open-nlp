@@ -1,0 +1,9 @@
+_target_: src.models.ner_instructions.NerInstructionsModule
+num_labels: 19
+architecture: ${architecture}
+
+optimizer:
+  _target_: transformers.AdamW
+  _partial_: true
+  lr: 2e-5
+  weight_decay: 0.01

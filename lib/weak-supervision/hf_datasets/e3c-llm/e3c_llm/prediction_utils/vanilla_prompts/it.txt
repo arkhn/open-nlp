@@ -1,0 +1,16 @@
+Input:  In prima giornata di vita riscontro di grave anemia emolitica e moderata piastrinopenia (Hb 7,8 g/dl, Ptl 76 x 109/l, ldH 14501u/l, CPK 778 u/l e ast 429 u/l) per cui la paziente è stata sottoposta a trasfusione di emazie concentrate e piastrine.
+extract the exact match of disorders, diseases or symptoms mentioned in the text or return None if there is no clinical entity:
+- "anemia emolitica"
+- "piastrinopenia"
+
+Input:  Donna, 87 anni, ipertiroidismo subclinico, artrosi, osteoporosi (fratture T10-T11), ipovisus, AH in terapia steroidea cronica; ipertensione; scompenso cardiaco diastolico; un ricovero per EPA.
+extract the exact match of disorders, diseases or symptoms mentioned in the text or return None if there is no clinical entity:
+- "ipertiroidismo"
+- "artrosi"
+- "osteoporosi"
+- "ipertensione"
+- "scompenso cardiaco diastolico"
+
+Input:  Recente embolia polmonare, da allora in TAO.
+extract the exact match of disorders, diseases or symptoms mentioned in the text or return None if there is no clinical entity:
+- "None"

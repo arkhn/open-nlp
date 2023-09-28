@@ -1,0 +1,20 @@
+_target_: style_transfer.data.st_datamodule.StyleTransferDataModule
+data_dir: ${paths.data_dir}
+batch_size: 2
+num_workers: 0
+pin_memory: False
+name: bio-datasets/mimic_style_transfer
+max_combinations: 3
+instruction: >
+  Instruction: With these following keywords,
+  generate the history of present illness section of a discharge summary.
+  The current keywords are associated with the current document we want to generate 
+  and the past keywords are associated with the other documents of the patient history. 
+  Generate the history of present illness of the patient and only this.
+
+  Current Keywords: {}
+
+  Past Keywords: {}
+
+  History of Present Illness:
+response_instruction: "Answer:"

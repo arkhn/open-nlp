@@ -1,0 +1,10 @@
+# @package _global_
+
+defaults:
+  - _self_
+  - model: davinci-003.yaml
+
+static_examples: [110, 115, 500]
+layer: fr.layer1
+debug: false
+limit: -1,

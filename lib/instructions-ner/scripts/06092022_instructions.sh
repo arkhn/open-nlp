@@ -1,0 +1,20 @@
+python train.py -m model.optimizer.lr=5e-5 \
+                   datamodule.batch_size=8,16 \
+                   datamodule.c_fold=0,1,2,3,4 \
+                   trainer.max_epochs=20 \
+                   model=instructions_ner \
+                   +datamodule.sentence_mode="en","fr" \
+                   datamodule=instructions_ner \
+                   +architecture="t5-small","t5-base" \
+                   datamodule.datasets=["webanno797399823581181383export-without-deft2021-and-label-studio-export.zip"] \
+                   trainer=gpu \
+                   logger=wandb \
+		               logger.wandb.project="instructions-ner"
+
+python train.py -m model.optimizer.lr=5e-5 \
+                   datamodule.batch_size=16 \
+                   datamodule.c_fold=0,1,2,3,4 \
+                   datamodule.datasets=["webanno797399823581181383export-without-deft2021-and-label-studio-export.zip"] \
+                   trainer=gpu \
+                   trainer.max_epochs=30 \
+                   logger=wandb

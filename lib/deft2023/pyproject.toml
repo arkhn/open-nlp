@@ -1,0 +1,85 @@
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0"]
+
+[tool]
+
+[tool.black]
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+include = '\.pyi?$'
+line-length = 100
+target-version = ['py36', 'py37', 'py38', 'py39']
+
+[tool.coverage.report]
+exclude_lines = [
+  "if __name__ == .__main__.:",
+  "pass",
+  "pragma: no cover",
+  "raise NotImplementedError",
+  "raise TypeError",
+  "raise ValueError"
+]
+
+[tool.isort]
+known_local_folder = [
+  'experiences'
+]
+line_length = 100
+profile = 'black'
+
+[tool.poetry]
+authors = ["Almanach Team"]
+description = "code for deft-2023 challenge"
+license = "Apache-2.0"
+name = "deft-2023"
+readme = "README.md"
+repository = "https://github.com/arkhn/ai-lembic/tree/main/experiements/instructions-ner"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+accelerate = "^0.19.0"
+bitsandbytes = "^0.38.1"
+datasets = "^2.2.1"
+hydra-colorlog = "^1.2.0"
+hydra-core = "^1.2.0"
+hydra-joblib-launcher = "^1.2.0"
+hydra-optuna-sweeper = "^1.2.0"
+lightning = "^2.0.2"
+numpy = "~1.23.1"
+peft = "^0.3.0"
+protobuf = "3.20.1"
+pyrootutils = "^1.0.4"
+python = "~3.9"
+rich = "^12.5.1" # beautiful text formatting in terminal
+scikit-learn = "1.1.2"
+seqeval = "~1.2.2"
+torch = "^2.0.0"
+torchmetrics = "^0.11.4"
+tqdm = "^4.63.0"
+transformers = "~4.28.1"
+urllib3 = "1.26.15"
+wandb = "^0.15.2"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.1.1"
+pytest-cov = "^3.0.0"
+
+[tool.pytest.ini_options]
+addopts = "--cov-report term-missing:skip-covered"
+markers = [
+  "serial",
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')"
+]

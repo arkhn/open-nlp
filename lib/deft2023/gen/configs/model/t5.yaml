@@ -1,0 +1,11 @@
+_target_: gen.gen.models.t5_module.T5Module
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 2e-5
+  weight_decay: 0.01
+
+scheduler: null
+
+model: "t5-small"

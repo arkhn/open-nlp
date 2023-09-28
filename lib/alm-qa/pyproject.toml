@@ -1,0 +1,72 @@
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0"]
+
+[tool]
+
+[tool.black]
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+include = '\.pyi?$'
+line-length = 100
+target-version = ['py36', 'py37', 'py38', 'py39']
+
+[tool.coverage.report]
+exclude_lines = [
+  "if __name__ == .__main__.:",
+  "pass",
+  "pragma: no cover",
+  "raise NotImplementedError",
+  "raise TypeError",
+  "raise ValueError"
+]
+
+[tool.isort]
+known_local_folder = [
+  'alm-qa',
+  'tests'
+]
+line_length = 100
+profile = 'black'
+
+[tool.poetry]
+authors = ["Arkhn's AI Team <ai@arkhn.com>"]
+description = "A project to experiment medical QA using Augmented LLMs"
+license = "Apache-2.0"
+name = "alm-qa"
+readme = "README.md"
+repository = "https://github.com/arkhn/ai-lembic/tree/main/experiements/alm-qa"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+chromadb = "^0.4.8"
+datasets = "^2.14.5"
+langchain = "^0.0.278"
+openai = "^0.28.0"
+python = "^3.9"
+ragas = "^0.0.12"
+sentence-transformers = "^2.2.2"
+tiktoken = "^0.4.0"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.1.1"
+pytest-cov = "^3.0.0"
+
+[tool.pytest.ini_options]
+addopts = "--cov-report term-missing:skip-covered"
+markers = [
+  "serial",
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')"
+]

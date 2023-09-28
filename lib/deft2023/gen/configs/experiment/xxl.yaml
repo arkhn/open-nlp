@@ -1,0 +1,43 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /data: t5.yaml
+  - override /model: t5-xxl.yaml
+  - override /callbacks: default.yaml
+  - override /trainer: default.yaml
+  - override /hydra/sweeper: basic
+  - override /hydra/launcher: joblib
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["seq2seq"]
+
+seed: 42
+
+trainer:
+  min_epochs: 10
+  max_epochs: 10
+  gradient_clip_val: 0.5
+  accumulate_grad_batches: 4
+
+model:
+  model: "philschmid/flan-t5-xxl-sharded-fp16"
+  lora_config:
+    _target_: peft.LoraConfig
+    r: 16
+    lora_alpha: 32
+    target_modules: [q, v]
+    lora_dropout: 0.05
+    bias: none
+    task_type: TaskType.SEQ_2_SEQ_LM
+
+data:
+  batch_size: 4
+
+logger:
+  wandb:
+    tags: ["gen"]

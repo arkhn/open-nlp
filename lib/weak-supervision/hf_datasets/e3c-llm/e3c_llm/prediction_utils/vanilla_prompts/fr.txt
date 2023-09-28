@@ -1,0 +1,15 @@
+Input:  L'évolution était marquée deux mois plus tard, par l'apparition de placards angiomateux au niveau de l'avant bras droit, du tronc et des lobules des 2 oreilles avec une extension rapide au niveau de l'avant bras gauche et des 2 mains associés à un lymphoedème important des 2 membres supérieurs prédominant à gauche et à des lésions papillomateuses au niveau de la paume de la main gauche.
+extract the exact match of disorders, diseases or symptoms mentioned in the text or return None if there is no clinical entity:
+- "placards angiomateux"
+- "lymphoedème"
+- "lésions"
+
+Input:  De façon concomitante, le patient avait présenté une altération progressive de l'état général, une fièvre et des sueurs nocturnes.
+extract the exact match of disorders, diseases or symptoms mentioned in the text or return None if there is no clinical entity:
+- "altération progressive de l' état général"
+- "fièvre"
+- "sueurs nocturnes"
+
+Input:  La vitesse de sédimentation était à 35mm à la première heure, la protéine C réactive était négative et la Ferritinémie était à 900µg/l (soit à 4 fois la normale).
+extract the exact match of disorders, diseases or symptoms mentioned in the text or return None if there is no clinical entity:
+- "None"

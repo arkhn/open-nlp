@@ -1,0 +1,39 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /data: t5.yaml
+  - override /model: t5.yaml
+  - override /callbacks: default.yaml
+  - override /trainer: default.yaml
+  - override /hydra/sweeper: basic
+  - override /hydra/launcher: joblib
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["seq2seq"]
+
+seed: 42
+
+trainer:
+  min_epochs: 10
+  max_epochs: 10
+  gradient_clip_val: 0.5
+  accumulate_grad_batches: 2
+
+model:
+  model: "t5-large"
+  optimizer:
+    _target_: torch.optim.Adam
+    _partial_: true
+    lr: 4e-5
+
+data:
+  batch_size: 8
+
+logger:
+  wandb:
+    tags: ["gen"]

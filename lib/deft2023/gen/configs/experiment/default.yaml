@@ -1,0 +1,49 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /data: t5.yaml
+  - override /model: t5.yaml
+  - override /callbacks: default.yaml
+  - override /trainer: default.yaml
+  - override /hydra/sweeper: basic
+  - override /hydra/launcher: joblib
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["seq2seq"]
+
+seed: 42
+
+trainer:
+  min_epochs: 1
+  max_epochs: 10
+  gradient_clip_val: 0.5
+
+model:
+  model: "google/flan-t5-base"
+
+data:
+  batch_size: 24
+
+logger:
+  wandb:
+    tags: ["gen"]
+
+hydra:
+  mode: "MULTIRUN" # set hydra to multirun by default if this config is attached
+  launcher:
+    _target_: hydra_plugins.hydra_joblib_launcher.joblib_launcher.JoblibLauncher
+    n_jobs: 1
+    backend: loky
+    timeout: null
+  sweeper:
+    params:
+      model.model: choice("t5-large",
+        "t5-base",
+        "google/flan-t5-base",
+        "google/mt5-base",
+        "razent/SciFive-base-Pubmed_PMC")

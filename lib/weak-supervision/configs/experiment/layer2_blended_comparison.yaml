@@ -1,0 +1,33 @@
+# @package _global_
+
+defaults:
+  - override /data: e3c_blended.yaml
+  - override /model: e3c.yaml
+  - override /callbacks: default.yaml
+  - override /trainer: default.yaml
+  - override /logger: wandb.yaml
+
+tags: ["blended comparison"]
+
+seed: 42
+
+trainer:
+  min_epochs: 1
+  max_epochs: 5
+
+model:
+  optimizer:
+    lr: 2e-5
+
+data:
+  batch_size: 16
+
+logger:
+  wandb:
+    tags: ${tags}
+    group: "layer_2_blended_comparison"
+
+hydra:
+  sweeper:
+    params:
+      data.instructgpt_ws: choice(true,false)

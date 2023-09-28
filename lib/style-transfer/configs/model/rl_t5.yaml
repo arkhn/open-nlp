@@ -1,0 +1,28 @@
+_target_: style_transfer.models.rl_t5_module.RlT5Module
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 5e-5
+  weight_decay: 0.0
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: min
+  factor: 0.1
+  patience: 10
+
+oracles:
+  [
+    _target_: style_transfer.models.oracles.rouge.RougeOracle,
+    _target_: style_transfer.models.oracles.sim_score.SimScoreOracle,
+  ]
+
+model_name: t5-small
+num_beams: 5
+max_length: 512
+num_return_sequences: 1
+
+# compile model for faster training with pytorch 2.0
+compile: false
