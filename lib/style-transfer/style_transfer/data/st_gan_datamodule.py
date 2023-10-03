@@ -1,12 +1,12 @@
 from typing import Any, Dict, Optional, Union
 
 import datasets
-import torch
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader, Dataset
+from transformers import AutoTokenizer
 
 
-class StyleTransferDataModule(LightningDataModule):
+class StyleTransferGanDataModule(LightningDataModule):
     """`LightningDataModule` for the StyleTransfer dataset.
 
     A `LightningDataModule` implements 7 key methods:
@@ -51,9 +51,12 @@ class StyleTransferDataModule(LightningDataModule):
         num_workers: int = 0,
         pin_memory: bool = False,
         max_combinations: int = 4,
-        instruction: str = "",
-        response_instruction="",
+        generator_instruction: str = "",
+        generator_response="",
+        discriminator_instruction: str = "",
+        discriminator_response="",
         name: str = "",
+        model_name: str = "gpt2",
     ):
         """Initialize a `StyleTransferDataModule`.
 
@@ -75,7 +78,10 @@ class StyleTransferDataModule(LightningDataModule):
         self.data_train: Optional[Dataset] = None  # type: ignore
         self.data_val: Optional[Dataset] = None  # type: ignore
         self.data_test: Optional[Dataset] = None  # type: ignore
-        self.dataset: Optional[datasets.Dataset] = None  # type: ignore
+        self.tokenizer = AutoTokenizer.from_pretrained(self.hparams.model_name)
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+        self.dataset = None
 
     def prepare_data(self) -> None:
         """Download data if needed. Lightning ensures that `self.prepare_data()` is called only
@@ -85,7 +91,7 @@ class StyleTransferDataModule(LightningDataModule):
 
         Do not use it to assign state (self.x = y).
         """
-        self.dataset = datasets.load_dataset(self.hparams.name)  # type: ignore
+        datasets.load_dataset(self.hparams.name)  # type: ignore
 
     def setup(self, stage: Optional[str] = None):
         """Load data. Set variables: `self.data_train`, `self.data_val`, `self.data_test`.
@@ -103,6 +109,8 @@ class StyleTransferDataModule(LightningDataModule):
         """
 
         # load and split datasets only if not loaded already
+        self.dataset = datasets.load_dataset(self.hparams.name)  # type: ignore
+
         def generate_dataset(dataset: Union[dict, list], max_combinations: int = 1):
             def create_combinations(examples):
                 combinations = []
@@ -118,7 +126,6 @@ class StyleTransferDataModule(LightningDataModule):
                     combinations += [
                         {
                             "current_keywords": current_keywords,
-                            "past_keywords": past_keywords,
                             "text": examples["text"][entry],
                         }
                     ]
@@ -140,7 +147,7 @@ class StyleTransferDataModule(LightningDataModule):
             max_combinations=self.hparams.max_combinations,
         )
         self.data_val = generate_dataset(
-            self.dataset["validation"],  # type: ignore
+            self.dataset["test"],  # type: ignore
             max_combinations=self.hparams.max_combinations,
         )
 
@@ -221,7 +228,7 @@ class StyleTransferDataModule(LightningDataModule):
         """
         pass
 
-    def collate_fn(self, batch: Any) -> tuple[torch.Tensor, torch.Tensor, list[str]]:
+    def collate_fn(self, batch: Any) -> dict:
         """Override to customize the default collate_fn.
 
         Args:
@@ -233,34 +240,14 @@ class StyleTransferDataModule(LightningDataModule):
 
         x = [
             str.format(
-                self.hparams.instruction,
+                self.hparams.generator_instruction,
                 data_point["current_keywords"],
-                data_point["past_keywords"],
             )
             for data_point in batch
         ]
-        x = self.trainer.model.tokenizer(x, truncation=True, padding=True, return_tensors="pt")
         texts = [data_point["text"] for data_point in batch]
-        decoder_x = self.trainer.model.tokenizer(
-            texts,
-            truncation=True,
-            padding=True,
-            return_tensors="pt",
-            max_length=self.trainer.model.hparams.max_length,
-        )
-        decoder_x["decoder_input_ids"] = decoder_x["input_ids"]
-        decoder_x["decoder_attention_mask"] = decoder_x["attention_mask"]
-        del decoder_x["input_ids"]
-        del decoder_x["attention_mask"]
-        return (
-            x,
-            decoder_x,
-            self.trainer.model.tokenizer.batch_decode(
-                decoder_x["decoder_input_ids"],
-                skip_special_tokens=True,
-            ),
-        )
+        return {"x": x, "texts": texts}
 
 
 if __name__ == "__main__":
-    _ = StyleTransferDataModule()
+    _ = StyleTransferGanDataModule()

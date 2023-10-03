@@ -1,6 +1,6 @@
 _target_: style_transfer.data.st_datamodule.StyleTransferDataModule
 data_dir: ${paths.data_dir}
-batch_size: 2
+batch_size: 4
 num_workers: 0
 pin_memory: False
 name: bio-datasets/mimic_style_transfer
@@ -16,5 +16,6 @@ instruction: >
 
   Past Keywords: {}
 
-  History of Present Illness:
-response_instruction: "Answer:"
+  Response:
+
+response_instruction: "Response:\n"

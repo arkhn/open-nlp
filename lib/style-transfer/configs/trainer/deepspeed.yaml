@@ -1,7 +1,7 @@
 defaults:
   - default
 
-strategy: ddp
+strategy: deepspeed
 
 accelerator: gpu
 devices: 2

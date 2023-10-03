@@ -1,7 +1,7 @@
 defaults:
   - default
 
-strategy: ddp
+strategy: fsdp
 
 accelerator: gpu
 devices: 2
