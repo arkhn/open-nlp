@@ -1,0 +1,8 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /data: mimic_iii
+  - override /model: rl_t5

@@ -1,0 +1,59 @@
+_target_: style_transfer.models.gan.gan_gpt_module.GanGptModule
+
+g_optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 1e-4
+  weight_decay: 0.0
+
+d_optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 1e-4
+  weight_decay: 0.0
+
+scheduler: null
+
+max_length: 512
+batch_accumulation: 2
+
+g_model:
+  _target_: transformers.AutoModelForCausalLM.from_pretrained
+  _partial_: true
+  pretrained_model_name_or_path: amazon/MistralLite
+
+bnb_config:
+  _target_: transformers.BitsAndBytesConfig
+  _partial_: true
+  load_in_4bit: true
+  bnb_4bit_quant_type: nf4
+  bnb_4bit_use_double_quant: True
+  bnb_4bit_compute_dtype: bfloat16
+
+g_lora:
+  _target_: peft.LoraConfig
+  task_type: CAUSAL_LM
+  r: 64
+  lora_alpha: 16
+  lora_dropout: 0.1
+  target_modules: ["q_proj", "v_proj"]
+  inference_mode: false
+  bias: none
+
+d_model:
+  _target_: transformers.LlamaForSequenceClassification.from_pretrained
+  _partial_: true
+  pretrained_model_name_or_path: amazon/MistralLite
+  num_labels: 1
+
+d_lora:
+  _target_: peft.LoraConfig
+  task_type: TaskType.SEQ_CLS,
+  r: 64
+  lora_alpha: 16
+  lora_dropout: 0.1
+  target_modules: ["q_proj", "v_proj"]
+  inference_mode: false
+  bias: none
+# compile model for faster training with pytorch 2.0
+compile: false

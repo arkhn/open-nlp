@@ -5,7 +5,7 @@
 defaults:
   - _self_
   - data: mimic_iii
-  - model: sft_t5
+  - model: rl_t5
   - callbacks: default
   - logger: wandb # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
   - trainer: default
@@ -29,6 +29,7 @@ defaults:
 
 # task name, determines output directory path
 task_name: "train"
+gradient_clip_val: 0.5
 
 # tags to help you identify your experiments
 # you can overwrite this in experiment configs

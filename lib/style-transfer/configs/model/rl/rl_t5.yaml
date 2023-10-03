@@ -1,0 +1,30 @@
+_target_: style_transfer.models.rl.rl_t5_module.RlT5Module
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 5e-3
+  weight_decay: 0.0
+
+scheduler: null
+
+oracles:
+  [
+    _target_: style_transfer.models.rl.oracles.rouge.RougeOracle,
+    _target_: style_transfer.models.rl.oracles.sim_score.SimScoreOracle,
+  ]
+
+model_name: google/flan-t5-base
+max_length: 256
+
+lora:
+  _target_: peft.LoraConfig
+  r: 16
+  lora_alpha: 32
+  target_modules: [q, v]
+  lora_dropout: 0.05
+  bias: none
+  task_type: TaskType.SEQ_2_SEQ_LM
+
+# compile model for faster training with pytorch 2.0
+compile: false
