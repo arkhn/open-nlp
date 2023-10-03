@@ -43,8 +43,6 @@ class RlCausalLmModule(RlT5Module):
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler,
         max_length: int,
-        num_beams: int,
-        num_return_sequences: int,
         compile: bool,
         oracles: list[Oracle],
     ) -> None:
@@ -65,8 +63,6 @@ class RlCausalLmModule(RlT5Module):
             optimizer=optimizer,
             scheduler=scheduler,
             max_length=max_length,
-            num_beams=num_beams,
-            num_return_sequences=num_return_sequences,
             compile=compile,
             oracles=oracles,
         )
@@ -74,7 +70,7 @@ class RlCausalLmModule(RlT5Module):
     def load_model(self):
         return AutoModelForCausalLM.from_pretrained(self.hparams.model_name)
 
-    def generate_output(self, batch_dec, batch_enc):
+    def forward_step(self, batch_dec, batch_enc):
         return self.model(
             input_ids=batch_dec["decoder_input_ids"],
             attention_mask=batch_dec["decoder_attention_mask"],

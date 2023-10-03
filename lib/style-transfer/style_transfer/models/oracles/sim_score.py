@@ -20,8 +20,7 @@ class SimScoreOracle(Oracle):
             The rewards.
         """
         similarities = [
-            1
-            - util.cos_sim(
+            util.cos_sim(
                 self.model.encode(pred, show_progress_bar=False),
                 self.model.encode(target, show_progress_bar=False),
             )
