@@ -1,6 +1,7 @@
 from typing import Any, Dict, Optional, Union
 
 import datasets
+import torch
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader, Dataset
 
@@ -220,7 +221,7 @@ class StyleTransferDataModule(LightningDataModule):
         """
         pass
 
-    def collate_fn(self, batch: Any) -> Any:
+    def collate_fn(self, batch: Any) -> tuple[torch.Tensor, torch.Tensor, list[str]]:
         """Override to customize the default collate_fn.
 
         Args:
@@ -241,13 +242,24 @@ class StyleTransferDataModule(LightningDataModule):
         x = self.trainer.model.tokenizer(x, truncation=True, padding=True, return_tensors="pt")
         texts = [data_point["text"] for data_point in batch]
         decoder_x = self.trainer.model.tokenizer(
-            texts, truncation=True, padding=True, return_tensors="pt"
+            texts,
+            truncation=True,
+            padding=True,
+            return_tensors="pt",
+            max_length=self.trainer.model.hparams.max_length,
         )
         decoder_x["decoder_input_ids"] = decoder_x["input_ids"]
         decoder_x["decoder_attention_mask"] = decoder_x["attention_mask"]
         del decoder_x["input_ids"]
         del decoder_x["attention_mask"]
-        return x, decoder_x, texts
+        return (
+            x,
+            decoder_x,
+            self.trainer.model.tokenizer.batch_decode(
+                decoder_x["decoder_input_ids"],
+                skip_special_tokens=True,
+            ),
+        )
 
 
 if __name__ == "__main__":

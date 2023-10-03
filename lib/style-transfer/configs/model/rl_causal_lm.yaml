@@ -17,9 +17,7 @@ oracle:
   _target_: style_transfer.models.oracles.rouge.RougeOracle
 
 model_name: gpt2
-num_beams: 5
-max_length: 64
-num_return_sequences: 5
+max_length: 256
 
 # compile model for faster training with pytorch 2.0
 compile: false

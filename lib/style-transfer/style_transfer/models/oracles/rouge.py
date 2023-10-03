@@ -21,8 +21,7 @@ class RougeOracle(Oracle):
         """
 
         return (
-            1
-            - torch.Tensor(
+            torch.Tensor(
                 [self.rouge(pred, text)["rougeL_fmeasure"] for pred, text in zip(preds, targets)]
             )
             * self.alpha
