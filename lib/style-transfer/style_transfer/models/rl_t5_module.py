@@ -134,11 +134,15 @@ class RlT5Module(LightningModule):
     ) -> torch.Tensor:
         """Perform a single training step on a batch of data from the training set.
 
-        :param batch: A batch of data (a tuple) containing the input tensor of images and target
+        Args:
+            batch: A batch of data (a tuple) containing the input tensor of images and target
             labels.
-        :param batch_idx: The index of the current batch.
-        :return: A tensor of losses between model predictions and targets.
+            batch_idx: The index of the current batch.
+
+        Returns:
+            The loss.
         """
+
         noisy_loss = self.noisy_step(batch_dec=batch[1], batch_enc=batch[0])
         reward_loss, rewards_scores, text_preds = self.rewards_step(
             batch_enc=batch[0],
@@ -185,9 +189,13 @@ class RlT5Module(LightningModule):
     ) -> tensor:
         """Perform a single validation step on a batch of data from the validation set.
 
-        :param batch: A batch of data (a tuple) containing the input tensor of images and target
+        Args:
+            batch: A batch of data (a tuple) containing the input tensor of images and target
             labels.
-        :param batch_idx: The index of the current batch.
+            batch_idx: The index of the current batch.
+
+        Returns:
+            The loss.
         """
         loss, preds_ids, preds_text = self.model_step(batch[0], batch[1])
         # update and log metrics
@@ -235,9 +243,13 @@ class RlT5Module(LightningModule):
     def test_step(self, batch: Tuple[BatchEncoding, BatchEncoding, list], batch_idx: int) -> tensor:
         """Perform a single test step on a batch of data from the test set.
 
-        :param batch: A batch of data (a tuple) containing the input tensor of images and target
+        Args:
+            batch: A batch of data (a tuple) containing the input tensor of images and target
             labels.
-        :param batch_idx: The index of the current batch.
+            batch_idx: The index of the current batch.
+
+        Returns:
+            The loss.
         """
         loss, preds_ids, preds_text = self.model_step(batch[0], batch[1])
         self.test_loss(loss)
@@ -313,12 +325,12 @@ class RlT5Module(LightningModule):
         """Compute the loss taking into account the rewards.
 
         Args:
-            frozen_likelihoods: The log probabilities of the generated text.
-            rewards_scores: The rewards scores.
+            batch_enc: The batch encoding.
+            batch_dec: The batch decoding.
+            text_targets: The target text.
 
         Returns:
             The loss.
-            :param text_targets:
         """
         preds = self.forward_step(batch_enc=batch_enc, batch_dec=batch_dec)
         preds_ids = torch.argmax(preds.logits, dim=-1)
@@ -357,6 +369,16 @@ class RlT5Module(LightningModule):
         return loss, preds_ids, preds_text
 
     def forward_step(self, batch_dec, batch_enc):
+        """Perform a single forward step on a batch of data.
+
+        Args:
+            batch_enc: The batch encoding.
+            batch_dec: The batch decoding.
+
+        Returns:
+            The output.
+        """
+
         return self.model(
             **batch_enc,
             **batch_dec,
@@ -370,7 +392,8 @@ class RlT5Module(LightningModule):
         This is a good hook when you need to build models dynamically or adjust something about
         them. This hook is called on every process when using DDP.
 
-        :param stage: Either `"fit"`, `"validate"`, `"test"`, or `"predict"`.
+        Args:
+            stage: The stage being set up.
         """
         if self.hparams.compile and stage == "fit":
             self.model = torch.compile(self.model)
@@ -426,7 +449,16 @@ class RlT5Module(LightningModule):
             value=pad_token_id,
         )
 
-    def compute_nll(self, preds_ids, model):
+    def compute_nll(self, preds_ids, model) -> torch.Tensor:
+        """Compute the negative log likelihood.
+
+        Args:
+            preds_ids: The predicted ids.
+            model: The model.
+
+        Returns:
+            The negative log likelihood.
+        """
         stride = 512
         seq_len = preds_ids.size(1)
         nlls = []
