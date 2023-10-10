@@ -70,7 +70,17 @@ class RlCausalLmModule(RlT5Module):
     def load_model(self):
         return AutoModelForCausalLM.from_pretrained(self.hparams.model_name)
 
-    def forward_step(self, batch_dec, batch_enc):
+    def forward_step(self, batch_dec, batch_enc) -> torch.Tensor:
+        """Forward step.
+
+        Args:
+            batch_dec: The batch for the decoder.
+            batch_enc: The batch for the encoder.
+
+        Returns:
+            The output of the model.
+        """
+
         return self.model(
             input_ids=batch_dec["decoder_input_ids"],
             attention_mask=batch_dec["decoder_attention_mask"],
