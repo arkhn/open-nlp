@@ -3,7 +3,7 @@ _target_: style_transfer.models.rl_t5_module.RlT5Module
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 2e-3
+  lr: 5e-3
   weight_decay: 0.0
 
 scheduler: null

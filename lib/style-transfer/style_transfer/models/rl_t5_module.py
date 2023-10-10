@@ -1,5 +1,3 @@
-import inspect
-from types import MethodType
 from typing import Any, Tuple
 
 import peft
@@ -62,6 +60,8 @@ class RlT5Module(LightningModule):
         oracles: list[Oracle],
         lora: peft.LoraConfig = None,
         tau_noise: float = 0,
+        noisy_lambda: float = 0.5,
+        reward_lambda: float = 0.5,
     ):
         """Initialize a `StyleTransferModule`.
 
@@ -73,6 +73,9 @@ class RlT5Module(LightningModule):
             compile: Whether to compile.
             oracles: The oracle to evaluate the generated text.
             lora: Whether to use LoRA.
+            tau_noise: The tau noise.
+            noisy_lambda: The noisy factor to multiply the noisy loss.
+            reward_lambda: The reward factor to multiply the reward loss.
         """
         super().__init__()
         self.save_hyperparameters(logger=False)
@@ -88,8 +91,6 @@ class RlT5Module(LightningModule):
             self.tokenizer.pad_token = self.tokenizer.eos_token
         for param in self.frozen_model.parameters():
             param.requires_grad = False
-        generate_with_grad = inspect.unwrap(self.model.generate)
-        self.model.generate_with_grad = MethodType(generate_with_grad, self.model)
 
         # log metrics
         self.acc = Accuracy(
@@ -124,7 +125,7 @@ class RlT5Module(LightningModule):
         """Lightning hook that is called when training begins."""
         # by default lightning executes validation step sanity checks before training starts,
         # so it's worth to make sure validation metrics don't store results from these checks
-        # self.wandb_logger: WandbLogger = self.trainer.loggers[0]
+
         self.val_loss.reset()
         self.val_acc.reset()
         self.val_acc_best.reset()
@@ -149,8 +150,8 @@ class RlT5Module(LightningModule):
             batch_dec=batch[1],
             text_targets=batch[2],
         )
-
-        self.train_loss(noisy_loss * 1 + reward_loss * 0)
+        loss = noisy_loss * self.hparams.noisy_lambda + reward_loss * self.hparams.reward_lambda
+        self.train_loss(loss)
         self.train_rouge.update(preds=[text for text in text_preds], target=batch[2])
         self.log("train/loss", self.train_loss, on_step=True, on_epoch=True, prog_bar=True)
         self.log(
@@ -163,7 +164,7 @@ class RlT5Module(LightningModule):
         self.train_target_text.extend(batch[2])
 
         # return loss or backpropagation will fail
-        return reward_loss * 0 + noisy_loss * 1
+        return loss
 
     def on_train_epoch_end(self) -> None:
         "Lightning hook that is called when a training epoch ends."
