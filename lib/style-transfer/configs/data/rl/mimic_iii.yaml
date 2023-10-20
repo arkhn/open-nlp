@@ -16,5 +16,6 @@ instruction: >
 
   Past Keywords: {}
 
-  History of Present Illness:
-response_instruction: "Answer:"
+  Response:
+
+response_instruction: "Response:\n"
