@@ -1,0 +1,38 @@
+_target_: style_transfer.models.gan.gan_gpt_module.GanGptModule
+
+g_optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 1e-4
+  weight_decay: 0.0
+
+d_optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 1e-6
+  weight_decay: 0.0
+
+scheduler: null
+
+max_length: 512
+batch_accumulation: 8
+
+model:
+  _target_: transformers.AutoModelForCausalLM.from_pretrained
+  _partial_: true
+  pretrained_model_name_or_path: mistralai/Mistral-7B-Instruct-v0.1
+  load_in_8bit: false
+  load_in_4bit: true
+  use_flash_attention_2: true
+
+lora:
+  _target_: peft.LoraConfig
+  task_type: CAUSAL_LM
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj"]
+  bias: none
+
+# compile model for faster training with pytorch 2.0
+compile: false

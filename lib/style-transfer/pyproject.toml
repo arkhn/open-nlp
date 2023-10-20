@@ -68,7 +68,7 @@ sentence-transformers = "^2.2.2"
 spacy = "^3.6.1"
 torch = "^2.0.1"
 torchmetrics = "^1.1.2"
-transformers = "^4.33.1"
+transformers = "^4.33.3"
 wandb = "^0.15.10"
 
 [tool.poetry.dev-dependencies]

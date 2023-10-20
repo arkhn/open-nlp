@@ -3,7 +3,7 @@ from typing import Any, Tuple
 import peft
 import torch
 from lightning import LightningModule
-from style_transfer.models.oracles.base import Oracle
+from style_transfer.models.rl.oracles.base import Oracle
 from torch import tensor
 from torch.nn.functional import pad
 from torchmetrics import MaxMetric, MeanMetric
@@ -59,7 +59,7 @@ class RlT5Module(LightningModule):
         compile: bool,
         oracles: list[Oracle],
         lora: peft.LoraConfig = None,
-        tau_noise: float = 0,
+        tau_noise: float = 1e-9,
         noisy_lambda: float = 0.5,
         reward_lambda: float = 0.5,
     ):
@@ -83,9 +83,7 @@ class RlT5Module(LightningModule):
         self.model = self.load_model()
         self.oracles = self.hparams.oracles
         self.frozen_model = self.load_model()
-        if self.hparams.lora:
-            lora = self.hparams.lora
-            self.model = peft.get_peft_model(self.model, lora)
+        self.get_lora()
         self.tokenizer = AutoTokenizer.from_pretrained(self.hparams.model_name)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -150,6 +148,8 @@ class RlT5Module(LightningModule):
             batch_dec=batch[1],
             text_targets=batch[2],
         )
+        print(text_preds)
+
         loss = noisy_loss * self.hparams.noisy_lambda + reward_loss * self.hparams.reward_lambda
         self.train_loss(loss)
         self.train_rouge.update(preds=[text for text in text_preds], target=batch[2])
@@ -303,21 +303,17 @@ class RlT5Module(LightningModule):
             num_classes=self.model.config.vocab_size,
         ).float()
         if self.hparams.tau_noise > 0:
-            labels = torch.nn.functional.gumbel_softmax(one_hot_labels, tau=1e-9) + one_hot_labels
+            labels = (
+                torch.nn.functional.gumbel_softmax(
+                    one_hot_labels,
+                    tau=self.hparams.tau_noise,
+                )
+                + one_hot_labels
+            )
         else:
             labels = one_hot_labels
         batch_dec["decoder_input_ids"] = torch.argmax(labels, dim=-1)
-        output = self.model(
-            **batch_enc,
-            **batch_dec,
-            labels=labels.argmax(dim=-1),
-        )
-        print(
-            self.tokenizer.batch_decode(
-                torch.argmax(output.logits, dim=-1),
-                skip_special_tokens=True,
-            )
-        )
+        output = self.forward_noisy_step(batch_dec, batch_enc, labels.argmax(dim=-1))
         return output.loss
 
     def rewards_step(
@@ -335,7 +331,7 @@ class RlT5Module(LightningModule):
         """
         preds = self.forward_step(batch_enc=batch_enc, batch_dec=batch_dec)
         preds_ids = torch.argmax(preds.logits, dim=-1)
-        preds_text = self.tokenizer.batch_decode(preds_ids, skip_special_tokens=True)
+        preds_text = self.decode_texts(preds_ids)
 
         frozen_likelihoods = self.compute_nll(
             preds_ids,
@@ -366,7 +362,7 @@ class RlT5Module(LightningModule):
         output = self.forward_step(batch_dec, batch_enc)
         loss = output.loss
         preds_ids = torch.argmax(output.logits, dim=-1)
-        preds_text = self.tokenizer.batch_decode(preds_ids, skip_special_tokens=True)
+        preds_text = self.decode_texts(preds_ids)
         return loss, preds_ids, preds_text
 
     def forward_step(self, batch_dec, batch_enc):
@@ -384,6 +380,23 @@ class RlT5Module(LightningModule):
             **batch_enc,
             **batch_dec,
             labels=batch_dec["decoder_input_ids"],
+        )
+
+    def forward_noisy_step(self, batch_dec, batch_enc, labels) -> torch.Tensor:
+        """Perform a single forward step on a batch of data.
+
+        Args:
+            batch_enc: The batch encoding.
+            batch_dec: The batch decoding.
+            labels: The labels.
+
+        Returns:
+            The output.
+        """
+        return self.model(
+            **batch_enc,
+            **batch_dec,
+            labels=labels,
         )
 
     def setup(self, stage: str) -> None:
@@ -480,3 +493,19 @@ class RlT5Module(LightningModule):
             if end_loc == seq_len:
                 break
         return torch.stack(nlls)
+
+    def get_lora(self):
+        if self.hparams.lora:
+            lora = self.hparams.lora
+            self.model = peft.get_peft_model(self.model, lora)
+
+    def decode_texts(self, preds_ids) -> list[str]:
+        """Decode the predicted ids to texts.
+
+        Args:
+            preds_ids: The predicted ids.
+
+        Returns:
+            The decoded texts.
+        """
+        return self.tokenizer.batch_decode(preds_ids, skip_special_tokens=True)

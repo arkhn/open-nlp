@@ -1,4 +1,4 @@
-_target_: style_transfer.models.rl_t5_module.RlT5Module
+_target_: style_transfer.models.rl.rl_t5_module.RlT5Module
 
 optimizer:
   _target_: torch.optim.Adam
@@ -10,8 +10,8 @@ scheduler: null
 
 oracles:
   [
-    _target_: style_transfer.models.oracles.rouge.RougeOracle,
-    _target_: style_transfer.models.oracles.sim_score.SimScoreOracle,
+    _target_: style_transfer.models.rl.oracles.rouge.RougeOracle,
+    _target_: style_transfer.models.rl.oracles.sim_score.SimScoreOracle,
   ]
 
 model_name: google/flan-t5-base
