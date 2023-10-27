@@ -59,6 +59,9 @@ python = "^3.9"
 ragas = "^0.0.12"
 sentence-transformers = "^2.2.2"
 tiktoken = "^0.4.0"
+transformers = "^4.33.1"
+accelerate = "^0.23.0"
+bitsandbytes = "^0.41.1"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.1.1"
