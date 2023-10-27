@@ -27,17 +27,17 @@ def main():
         use_flash_attention_2=True,
         device_map="auto",
     )
-    tokenizers = AutoTokenizer.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.pad_token_id = tokenizer.eos_token_id
 
     # create the prompt
-    first_prompt = """
-    You are a medical expert and given this clinical report, 
-    you have to generate a pertinent question and response related 
-    to this patient's history of present illness section :
-
-    {}
-
-    """
+    first_prompt = (
+        "You are a medical expert and given this clinical report, you have to generate a pertinent "
+        "question and response related to this patient's history of present illness section; the "
+        'question and response must in this JSON format {"Q": "",  "A": ""}:\n'
+    )
 
     # generate the questions and answers
     def generate_qa(example):
@@ -49,13 +49,16 @@ def main():
 
         # generate certain number of questions and answers
         for i in range(number_of_generations):
-            model_inputs = tokenizers.apply_chat_template(messages, return_tensors="pt")
+            model_inputs = tokenizer.apply_chat_template(messages, return_tensors="pt").to(
+                model.device
+            )
             generated_ids = model.generate(model_inputs, max_new_tokens=1000, do_sample=True)
-            decoded = tokenizers.batch_decode(generated_ids)
+            decoded = tokenizer.batch_decode(generated_ids)
             try:
-
                 # decode the generated ids if json format is well-formed.
-                qa = json.loads(decoded[0])
+                qa = json.loads(decoded[0].split("[/INST]")[1].removesuffix("</s>"))
+                print("qa")
+                print(qa)
 
             except Exception:
                 print(decoded[0])
@@ -63,9 +66,11 @@ def main():
 
             example["questions"].append(qa["Q"])
             example["answers"].append(qa["A"])
+            print("example")
+            print(example)
 
-    mimic_iii.map(generate_qa)
-    mimic_iii.to_json("mimic_qa.json")
+    with open("mimic_qa.json", "w") as f:
+        json.dump(mimic_iii, f)
     # mimic_iii.to_parquet("mimic_qa.parquet")
 
 
