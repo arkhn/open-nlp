@@ -40,6 +40,11 @@ RUN source activate ${CONDA_ENV_NAME} \
     && pip install poetry \
     && poetry install
 
-
 # Set ${CONDA_ENV_NAME} to default virutal environment
 RUN echo "source activate ${CONDA_ENV_NAME}" >> ~/.zshrc
+
+# Weird stuff
+RUN pip install transformers -U
+RUN pip install torch
+RUN pip uninstall -y ninja && pip install ninja
+RUN pip install flash-attn --no-build-isolation
