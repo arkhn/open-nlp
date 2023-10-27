@@ -13,12 +13,13 @@ def main():
     # load datasets
     mimic_iii = datasets.load_dataset("bio-datasets/mimic_style_transfer")
 
-    # preprocess mimic_iii dataset
-    def hpi(example):
-        example["text"] = example["text"][0]
-
-    mimic_iii = mimic_iii["train"].map(hpi)
-    mimic_iii = mimic_iii.select(list[range(max_texts)])
+    # # preprocess mimic_iii dataset
+    # def hpi(example):
+    #     example["text"] = example["text"][0]
+    #
+    # mimic_iii = mimic_iii["train"].map(hpi)
+    mimic_iii = mimic_iii["train"].to_list()
+    mimic_iii = mimic_iii[:3]
 
     # load the model mistral-7b
     model = AutoModelForCausalLM.from_pretrained(
@@ -40,11 +41,11 @@ def main():
     )
 
     # generate the questions and answers
-    def generate_qa(example):
+    for example in mimic_iii:
         example["questions"] = []
         example["answers"] = []
         messages = [
-            {"role": "user", "content": first_prompt.format(data_point["text"])},
+            {"role": "user", "content": first_prompt + example["text"][0]},
         ]
 
         # generate certain number of questions and answers
@@ -60,8 +61,10 @@ def main():
                 print("qa")
                 print(qa)
 
-            except Exception:
-                print(decoded[0])
+            except Exception as e:
+                print("THERE WAS AN ERROR!!!!!!!!")
+                print(decoded[0].split("[/INST]")[1].removesuffix("</s>"))
+                print(e)
                 continue
 
             example["questions"].append(qa["Q"])
