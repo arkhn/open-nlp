@@ -8,9 +8,10 @@ max_length = 1024
 number_of_generations = 5
 max_texts = 3
 prompt = (
-    "You are a medical expert that is given this clinical report, you have to generate one "
-    "pertinent question related to the patient whose answer can be found in the report; "
-    'the question and answer must be in this JSON format {"Q": "",  "A": ""}:\n'
+    "You are a healthcare profesionnal and you are given this clinical report. \n\n"
+    "%text%\n\n"
+    "You have to generate one relevant question related to the patient whose answer can be found "
+    'in the report; the question and answer must be in this JSON format {"Q": "",  "A": ""}:\n'
 )
 
 
@@ -43,7 +44,7 @@ def main():
     # generate the questions and answers
     def generate_qa(example):
         messages = [
-            {"role": "user", "content": prompt + example["text"][0]},
+            {"role": "user", "content": prompt.replace("%text%", example["text"])},
         ]
 
         # generate certain number of questions and answers
