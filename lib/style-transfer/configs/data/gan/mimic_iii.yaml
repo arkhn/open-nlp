@@ -6,26 +6,17 @@ pin_memory: False
 name: bio-datasets/mimic_style_transfer
 max_combinations: 3
 generator_instruction: >
-  Instruction:
-    description: "Utilizing the supplied keywords, construct an original 'History of Present Illness' section for a discharge summary. Your response should capture the essence of a patient's health journey and recent medical experiences, while strictly adhering to the provided keywords. Ensure that the content remains focused on the 'History of Present Illness' and does not veer into other medical documentation sections."
-    emphasis: "Prioritize authenticity and coherence, and avoid replicating generic templates. The content should appear as if it were written by a seasoned medical professional."
+  Instruction: construct an original 'History of Present Illness' (HPI) section for a discharge summary. 
+    Your response should capture the essence of a patient's health journey and recent medical experiences, while strictly using all the provided keywords conserving the order. 
+    You must adopt a medical telegraphic style, abbreviated, characterized by concise and direct language.
+    Ensure that the content remains focused on the 'History of Present Illness' and does not veer into other medical documentation sections.
 
   Current Keywords: {}
 
-  Answer:
+  HPI:
 
-generator_response: "Answer:\n"
+generator_response: "HPI:\n"
 discriminator_instruction: >
-  Clinical Report A:
-
   {}
 
-  Clinical Report B:
-
-  {}
-
-  Instruction: which clinical report either A or B is a fake generated clinical report ? 
-  the answer must be only "A" or "B"
-
-discriminator_response: "Answer: "
-model_name: mistralai/Mistral-7B-Instruct-v0.1
+model_name: amazon/MistralLite

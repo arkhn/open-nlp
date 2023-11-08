@@ -3,7 +3,9 @@ from typing import Any
 
 import peft
 import torch
+import torchmetrics.functional
 from lightning import LightningModule
+from torch._C._nn import pad_sequence
 from torch.nn import functional as F
 from torchmetrics import MeanMetric
 from torchmetrics.text import ROUGEScore
@@ -51,9 +53,12 @@ class GanGptModule(LightningModule):
         scheduler: torch.optim.lr_scheduler,
         max_length: int,
         compile: bool,
-        lora: peft.LoraConfig = None,
+        g_lora: peft.LoraConfig = None,
+        d_lora: peft.LoraConfig = None,
         stride: int = 512,
-        model: Any = AutoModelForCausalLM,
+        g_model: Any = AutoModelForCausalLM,
+        d_model: Any = AutoModelForCausalLM,
+        bnb_config: Any = None,
     ) -> None:
         """Initialize a `StyleTransferModule`.
         Args:
@@ -69,7 +74,7 @@ class GanGptModule(LightningModule):
         self.save_hyperparameters(logger=False)
 
         self.tokenizer = AutoTokenizer.from_pretrained(
-            self.hparams.model.keywords["pretrained_model_name_or_path"]
+            self.hparams.g_model.keywords["pretrained_model_name_or_path"]
         )
 
         # Disable automatic optimization to adapt to the GAN training loop using multiple optimizers
@@ -79,14 +84,18 @@ class GanGptModule(LightningModule):
             self.tokenizer.pad_token = self.tokenizer.eos_token
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
-        self.generator = self.hparams.model()
-        self.discriminator = self.hparams.model()
+        self.generator = self.hparams.g_model(quantization_config=self.hparams.bnb_config())
+        self.discriminator = self.hparams.d_model(quantization_config=self.hparams.bnb_config())
 
-        if self.hparams.lora:
-            lora = self.hparams.lora
-            self.generator = peft.get_peft_model(self.generator, lora)
-            self.discriminator = peft.get_peft_model(self.discriminator, lora)
-
+        self.frozen_generator = self.hparams.g_model(quantization_config=self.hparams.bnb_config())
+        for param in self.frozen_generator.parameters():
+            param.requires_grad = False
+        if self.hparams.g_lora:
+            g_lora = self.hparams.g_lora
+            self.generator = peft.get_peft_model(self.generator, g_lora)
+        if self.hparams.d_lora:
+            d_lora = self.hparams.d_lora
+            self.discriminator = peft.get_peft_model(self.discriminator, d_lora)
         # log metrics
         self.train_rouge = ROUGEScore()
         self.val_rouge = ROUGEScore()
@@ -129,16 +138,27 @@ class GanGptModule(LightningModule):
         x = self.tokenizer(batch["x"], truncation=True, padding=True, return_tensors="pt")
         input_ids = x["input_ids"]
         _ = self.generator(input_ids=input_ids, labels=input_ids)
+        ground_truth_ids = self.tokenizer(
+            batch["texts"],
+            truncation=True,
+            padding=True,
+            return_tensors="pt",
+        )["input_ids"]
         preds_ids = self.generator.generate(
             input_ids=input_ids,
-            min_length=self.hparams.max_length,
-            max_length=self.hparams.max_length,
+            min_length=len(ground_truth_ids[0]) + len(input_ids[0]),
+            max_length=len(ground_truth_ids[0]) + len(input_ids[0]),
             pad_token_id=self.tokenizer.pad_token_id,
         )
-        text_preds = self.decode_texts(preds_ids)
-        rewards = self.discriminator_forward(
-            **self.generate_discriminator_prompts(batch, preds_ids)
+        frozen_preds_ids = self.generator.generate(
+            input_ids=input_ids,
+            min_length=len(ground_truth_ids[0]) + len(input_ids[0]),
+            max_length=len(ground_truth_ids[0]) + len(input_ids[0]),
+            pad_token_id=self.tokenizer.pad_token_id,
         )
+        padded_ids = pad_sequence([frozen_preds_ids[0], preds_ids[0]], batch_first=True)
+        text_preds = self.decode_texts(preds_ids)
+        rewards = self.discriminator_forward(**self.generate_d_prompts(batch, preds_ids))
 
         # discriminator optimization
         d_loss = rewards["d_rewards"] / self.hparams.batch_accumulation
@@ -149,9 +169,21 @@ class GanGptModule(LightningModule):
             optimizer_d.zero_grad()
 
         # generator optimization
+        preds_output = self.tokenizer(
+            text_preds,
+            truncation=True,
+            padding=True,
+            return_tensors="pt",
+        )
+
+        loss = self.generator(**preds_output, labels=preds_output["input_ids"]).loss
         g_loss = (
-            self.compute_nll(preds_ids, self.generator) * rewards["g_rewards"]
-        ).mean() / self.hparams.batch_accumulation
+            0.8 * (loss * rewards["g_rewards"])
+            - 0.2
+            * torchmetrics.functional.kl_divergence(
+                padded_ids[0].unsqueeze(dim=0), padded_ids[1].unsqueeze(dim=0)
+            )
+        ) / self.hparams.batch_accumulation
         self.manual_backward(g_loss)
         self.generator_train_loss(g_loss)
         if (batch_idx + 1) % self.hparams.batch_accumulation == 0:
@@ -211,6 +243,7 @@ class GanGptModule(LightningModule):
         input_ids = x["input_ids"]
         output = self.generator.generate(
             input_ids=input_ids,
+            min_length=256,
             max_length=self.hparams.max_length,
             pad_token_id=self.tokenizer.pad_token_id,
         )
@@ -243,7 +276,7 @@ class GanGptModule(LightningModule):
     def test_step(self, batch: dict, batch_idx: int) -> torch.tensor:
         pass
 
-    def discriminator_forward(self, batch_dec, labels) -> dict:
+    def discriminator_forward(self, fakes, valids) -> dict:
         """Forward step.
 
         Args:
@@ -253,36 +286,13 @@ class GanGptModule(LightningModule):
             The output of the model.
         """
         # Parse prediction
-        output = self.discriminator(**batch_dec, labels=labels)
-        preds_labels = self.tokenizer.batch_decode(
-            torch.argmax(F.softmax(output.logits, dim=-1), dim=-1),
-            skip_special_tokens=True,
-            predict_with_generate=True,
-        )
-        responses = [text[-4:] for text in preds_labels]
-        responses = [
-            "A" if "A" in response else "B" if "B" in response else "N/A" for response in responses
-        ]
-
-        # Compute the scores
-        labels[labels == -100] = self.tokenizer.pad_token_id
-        text_labels = self.tokenizer.batch_decode(
-            labels,
-            skip_special_tokens=True,
-        )
-        # print to remove
-        for label, response in zip(text_labels, responses):
-            print(label.strip(), response.strip())
-        g_scores = torch.Tensor(
-            [
-                0 if label.split("Answer: ")[1] == response else 1
-                for label, response in zip(text_labels, responses)
-            ]
-        )
-        d_scores = torch.Tensor([1 if score == 0 else 0 for score in g_scores]).to(self.device)
+        fakes_loss = self.discriminator(**fakes, labels=torch.ones(fakes.input_ids.shape[0])).loss
+        valids_loss = self.discriminator(
+            **valids, labels=torch.zeros(valids.input_ids.shape[0])
+        ).loss
         return {
-            "d_rewards": output.loss * d_scores,
-            "g_rewards": g_scores,
+            "d_rewards": (fakes_loss + valids_loss) / 2,
+            "g_rewards": fakes_loss.detach(),
         }
 
     def decode_texts(self, preds_ids) -> list[str]:
@@ -294,7 +304,7 @@ class GanGptModule(LightningModule):
         Returns:
             The decoded texts.
         """
-        decoded_preds = self.tokenizer.batch_decode(preds_ids, skip_special_tokens=True)[0]
+        decoded_preds = self.tokenizer.batch_decode(preds_ids)[0]
         # print to remove
         print(f"{decoded_preds}\n{'*'*100}\n")
         return [
@@ -345,37 +355,7 @@ class GanGptModule(LightningModule):
             {"optimizer": d_optimizer},
         ]
 
-    def compute_nll(self, preds_ids, model) -> torch.Tensor:
-        """Compute the negative log likelihood.
-
-        Args:
-            preds_ids: The predicted ids.
-            model: The model.
-
-        Returns:
-            The negative log likelihood.
-        """
-        stride = self.hparams.stride
-        seq_len = preds_ids.size(1)
-        nlls = []
-        prev_end_loc = 0
-        for begin_loc in range(0, seq_len, stride):
-            end_loc = min(begin_loc + self.hparams.max_length, seq_len)
-            trg_len = end_loc - prev_end_loc  # may be different from stride on last loop
-            input_ids = preds_ids[:, begin_loc:end_loc]
-            target_ids = input_ids.clone()
-            target_ids[:, :-trg_len] = -100
-            outputs = model(input_ids=input_ids, labels=target_ids)
-            neg_log_likelihood = outputs.loss
-            nlls.append(neg_log_likelihood)
-            prev_end_loc = end_loc
-            if end_loc == seq_len:
-                break
-        return torch.stack(nlls)
-
-    def generate_discriminator_prompts(
-        self, batch: dict, preds_ids: torch.Tensor
-    ) -> dict[str, Any]:
+    def generate_d_prompts(self, batch: dict, preds_ids: torch.Tensor) -> dict[str, Any]:
         """Generate the prompt for the discriminator.
 
         Args:
@@ -386,7 +366,7 @@ class GanGptModule(LightningModule):
             The prompt.
         """
 
-        prompts = []
+        prompts = {"valids": [], "fakes": []}
         for ground_text, pred_ids in zip(batch["texts"], preds_ids):
             pred_text = self.tokenizer.decode(pred_ids, skip_special_tokens=True)
             pred_text = (
@@ -394,34 +374,14 @@ class GanGptModule(LightningModule):
                 if self.trainer.datamodule.hparams.generator_response in pred_text
                 else "not a report"
             )
-
-            text_pairs = [(ground_text, 0), (pred_text, 1)]
-            random.shuffle(text_pairs)
-            one_hot_label = [text_pairs[0][1], text_pairs[1][1]]
-            report_ids = ["A", "B"]
-            answer = report_ids[one_hot_label.index(1)]
-
-            prompts.append(
-                [
-                    str.format(
-                        self.trainer.datamodule.hparams.discriminator_instruction,
-                        text_pairs[0][0],
-                        text_pairs[1][0],
-                    ),
-                    self.trainer.datamodule.hparams.discriminator_response + answer,
-                ]
+            prompts["valids"].append(
+                ground_text,
+            )
+            prompts["fakes"].append(
+                pred_text,
             )
 
-        prompts_ids = self.tokenizer(
-            prompts,
-            padding=True,
-            return_token_type_ids=True,
-            return_tensors="pt",
-        )
-        prompt_labels = prompts_ids["input_ids"] * prompts_ids["token_type_ids"]
-        prompt_labels[prompt_labels == 0] = -100
-        del prompts_ids["token_type_ids"]
         return {
-            "batch_dec": prompts_ids,
-            "labels": prompt_labels,
+            "fakes": self.tokenizer(prompts["fakes"], padding=True, return_tensors="pt"),
+            "valids": self.tokenizer(prompts["valids"], padding=True, return_tensors="pt"),
         }
