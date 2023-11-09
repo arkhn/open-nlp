@@ -59,6 +59,7 @@ class GanGptModule(LightningModule):
         g_model: Any = AutoModelForCausalLM,
         d_model: Any = AutoModelForCausalLM,
         bnb_config: Any = None,
+        generation_config: Any = None,
     ) -> None:
         """Initialize a `StyleTransferModule`.
         Args:
@@ -135,33 +136,66 @@ class GanGptModule(LightningModule):
         optimizer_g, optimizer_d = self.optimizers()
 
         # do the forward pass
-        x = self.tokenizer(batch["x"], truncation=True, padding=True, return_tensors="pt")
-        input_ids = x["input_ids"]
-        _ = self.generator(input_ids=input_ids, labels=input_ids)
-        ground_truth_ids = self.tokenizer(
+        x_ids = batch["x"]
+        # _ = self.generator(input_ids=input_ids, labels=input_ids)
+        texts = batch["texts"]
+        ground_truth = self.tokenizer(
             batch["texts"],
             truncation=True,
             padding=True,
             return_tensors="pt",
-        )["input_ids"]
-        preds_ids = self.generator.generate(
-            input_ids=input_ids,
-            min_length=len(ground_truth_ids[0]) + len(input_ids[0]),
-            max_length=len(ground_truth_ids[0]) + len(input_ids[0]),
-            pad_token_id=self.tokenizer.pad_token_id,
         )
-        frozen_preds_ids = self.generator.generate(
-            input_ids=input_ids,
-            min_length=len(ground_truth_ids[0]) + len(input_ids[0]),
-            max_length=len(ground_truth_ids[0]) + len(input_ids[0]),
-            pad_token_id=self.tokenizer.pad_token_id,
-        )
-        padded_ids = pad_sequence([frozen_preds_ids[0], preds_ids[0]], batch_first=True)
-        text_preds = self.decode_texts(preds_ids)
-        rewards = self.discriminator_forward(**self.generate_d_prompts(batch, preds_ids))
+        ground_truth_ids = ground_truth["input_ids"]
+        ground_truth_mask = ground_truth["attention_mask"]
 
+        seed_preds_ids = x_ids.clone()
+        seed_frozen_ids = x_ids.clone()
+        losses = []
+        g_rewards = []
+        d_rewards = []
+        kl_divergences = []
+        for begin_loc in range(
+            0, ground_truth_ids.size(1), self.hparams.generator_config.max_length
+        ):
+            end_loc = min(
+                begin_loc + self.hparams.generator_config.max_length, ground_truth_ids.size(1)
+            )
+            stride_ground_ids = ground_truth_ids[:, begin_loc:end_loc]
+            stride_preds_ids = self.generator.generate(
+                input_ids=seed_preds_ids,
+                pad_token_id=self.tokenizer.pad_token_id,
+                generation_config=self.hparams.generation_config,
+            )
+            stride_frozen_ids = self.generator.generate(
+                input_ids=seed_frozen_ids,
+                pad_token_id=self.tokenizer.pad_token_id,
+                generation_config=self.hparams.generation_config,
+            )
+
+            seed_preds_ids = torch.cat((seed_preds_ids, stride_preds_ids), dim=1)
+            seed_frozen_ids = torch.cat((seed_frozen_ids, stride_frozen_ids), dim=1)
+            losses.extend(
+                self.generator(
+                    input_ids=stride_preds_ids,
+                    attention_mask=ground_truth_mask,
+                    labels=stride_preds_ids["input_ids"],
+                ).loss
+            )
+            mini_batch_rewards = self.discriminator_forward(
+                **self.generate_d_prompts(
+                    stride_ground_ids,
+                    stride_preds_ids,
+                )
+            )
+            g_rewards.extend(mini_batch_rewards["g_rewards"])
+            d_rewards.extend(mini_batch_rewards["d_rewards"])
+            kl_divergences.extend(
+                torchmetrics.functional.kl_divergence(
+                    stride_preds_ids["input_ids"], stride_frozen_ids["input_ids"]
+                )
+            )
         # discriminator optimization
-        d_loss = rewards["d_rewards"] / self.hparams.batch_accumulation
+        d_loss = d_rewards / self.hparams.batch_accumulation
         self.manual_backward(d_loss)
         self.discriminator_train_loss(d_loss)
         if (batch_idx + 1) % self.hparams.batch_accumulation == 0:
@@ -169,29 +203,22 @@ class GanGptModule(LightningModule):
             optimizer_d.zero_grad()
 
         # generator optimization
-        preds_output = self.tokenizer(
-            text_preds,
-            truncation=True,
-            padding=True,
-            return_tensors="pt",
-        )
-
-        loss = self.generator(**preds_output, labels=preds_output["input_ids"]).loss
         g_loss = (
-            0.8 * (loss * rewards["g_rewards"])
-            - 0.2
-            * torchmetrics.functional.kl_divergence(
-                padded_ids[0].unsqueeze(dim=0), padded_ids[1].unsqueeze(dim=0)
-            )
+            0.8 * (losses * g_rewards) - 0.2 * kl_divergences
         ) / self.hparams.batch_accumulation
+
         self.manual_backward(g_loss)
         self.generator_train_loss(g_loss)
         if (batch_idx + 1) % self.hparams.batch_accumulation == 0:
             optimizer_g.step()
             optimizer_g.zero_grad()
 
+        decode_texts = self.decode_texts(seed_preds_ids)
         # update and log metrics
-        self.train_rouge.update(preds=[text for text in text_preds], target=batch["texts"])
+        self.train_rouge.update(
+            preds=[text for text in decode_texts],
+            target=texts,
+        )
         self.log(
             "train/generator_loss",
             self.generator_train_loss,
@@ -206,8 +233,8 @@ class GanGptModule(LightningModule):
             on_epoch=True,
             prog_bar=True,
         )
-        self.train_preds_text.extend(text_preds)
-        self.train_target_text.extend(batch["texts"])
+        self.train_preds_text.extend(decode_texts)
+        self.train_target_text.extend(texts)
 
     def on_train_epoch_end(self) -> None:
         "Lightning hook that is called when a training epoch ends."
@@ -243,9 +270,8 @@ class GanGptModule(LightningModule):
         input_ids = x["input_ids"]
         output = self.generator.generate(
             input_ids=input_ids,
-            min_length=256,
-            max_length=self.hparams.max_length,
             pad_token_id=self.tokenizer.pad_token_id,
+            generation_config=self.hparams.generation_config,
         )
         preds_text = self.decode_texts(output)
         # update and log metrics

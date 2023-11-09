@@ -246,7 +246,12 @@ class StyleTransferGanDataModule(LightningDataModule):
             for data_point in batch
         ]
         texts = [data_point["text"] for data_point in batch]
-        return {"x": x, "texts": texts}
+        return {
+            "x": self.tokenizer(batch["x"], truncation=True, padding=True, return_tensors="pt")[
+                "input_ids"
+            ],
+            "texts": texts,
+        }
 
 
 if __name__ == "__main__":

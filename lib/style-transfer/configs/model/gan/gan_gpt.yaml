@@ -17,11 +17,6 @@ scheduler: null
 max_length: 512
 batch_accumulation: 8
 
-g_model:
-  _target_: transformers.AutoModelForCausalLM.from_pretrained
-  _partial_: true
-  pretrained_model_name_or_path: amazon/MistralLite
-
 bnb_config:
   _target_: transformers.BitsAndBytesConfig
   _partial_: true
@@ -29,6 +24,11 @@ bnb_config:
   bnb_4bit_quant_type: nf4
   bnb_4bit_use_double_quant: True
   bnb_4bit_compute_dtype: bfloat16
+
+g_model:
+  _target_: transformers.AutoModelForCausalLM.from_pretrained
+  _partial_: true
+  pretrained_model_name_or_path: amazon/MistralLite
 
 g_lora:
   _target_: peft.LoraConfig
@@ -39,6 +39,13 @@ g_lora:
   target_modules: ["q_proj", "v_proj"]
   inference_mode: false
   bias: none
+
+generation_config:
+  _target_: transformers.GenerationConfig
+  max_new_tokens: 64
+  early_stopping: true
+  max_time: 30
+  use_cache: false
 
 d_model:
   _target_: transformers.LlamaForSequenceClassification.from_pretrained
