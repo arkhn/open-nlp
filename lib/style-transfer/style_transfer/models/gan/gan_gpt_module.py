@@ -1,12 +1,11 @@
-import random
 from typing import Any
 
 import peft
 import torch
 import torchmetrics.functional
+import pysbd
 from lightning import LightningModule
 from torch._C._nn import pad_sequence
-from torch.nn import functional as F
 from torchmetrics import MeanMetric
 from torchmetrics.text import ROUGEScore
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -85,17 +84,12 @@ class GanGptModule(LightningModule):
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
         self.generator = self.hparams.g_model(quantization_config=self.hparams.bnb_config())
-        self.discriminator = self.hparams.d_model(quantization_config=self.hparams.bnb_config())
-
         self.frozen_generator = self.hparams.g_model(quantization_config=self.hparams.bnb_config())
         for param in self.frozen_generator.parameters():
             param.requires_grad = False
         if self.hparams.g_lora:
             g_lora = self.hparams.g_lora
             self.generator = peft.get_peft_model(self.generator, g_lora)
-        if self.hparams.d_lora:
-            d_lora = self.hparams.d_lora
-            self.discriminator = peft.get_peft_model(self.discriminator, d_lora)
         # log metrics
         self.train_rouge = ROUGEScore()
         self.val_rouge = ROUGEScore()
@@ -132,7 +126,7 @@ class GanGptModule(LightningModule):
         """
 
         # get optimizers
-        optimizer_g, optimizer_d = self.optimizers()
+        optimizer_g = self.optimizers()
 
         # do the forward pass
         x = self.tokenizer(batch["x"], truncation=True, padding=True, return_tensors="pt")
@@ -158,25 +152,15 @@ class GanGptModule(LightningModule):
         )
         padded_ids = pad_sequence([frozen_preds_ids[0], preds_ids[0]], batch_first=True)
         text_preds = self.decode_texts(preds_ids)
-        rewards = self.discriminator_forward(**self.generate_d_prompts(batch, preds_ids))
-
-        # discriminator optimization
-        d_loss = rewards["d_rewards"] / self.hparams.batch_accumulation
-        self.manual_backward(d_loss)
-        self.discriminator_train_loss(d_loss)
-        if (batch_idx + 1) % self.hparams.batch_accumulation == 0:
-            optimizer_d.step()
-            optimizer_d.zero_grad()
-
-        # generator optimization
-        preds_output = self.tokenizer(
-            text_preds,
+        rewards = self.evaluator_forward(**self.generate_d_prompts(batch, text_preds))
+        sentences_input = self.tokenizer(
+            rewards["sentences"],
             truncation=True,
             padding=True,
             return_tensors="pt",
         )
 
-        loss = self.generator(**preds_output, labels=preds_output["input_ids"]).loss
+        loss = self.generator(**sentences_input, labels=sentences_input["input_ids"]).loss
         g_loss = (
             0.8 * (loss * rewards["g_rewards"])
             - 0.2
@@ -195,13 +179,6 @@ class GanGptModule(LightningModule):
         self.log(
             "train/generator_loss",
             self.generator_train_loss,
-            on_step=True,
-            on_epoch=True,
-            prog_bar=True,
-        )
-        self.log(
-            "train/discriminator_loss",
-            self.discriminator_train_loss,
             on_step=True,
             on_epoch=True,
             prog_bar=True,
@@ -276,7 +253,7 @@ class GanGptModule(LightningModule):
     def test_step(self, batch: dict, batch_idx: int) -> torch.tensor:
         pass
 
-    def discriminator_forward(self, fakes, valids) -> dict:
+    def evaluator_forward(self, prompts, sentences) -> dict:
         """Forward step.
 
         Args:
@@ -286,13 +263,31 @@ class GanGptModule(LightningModule):
             The output of the model.
         """
         # Parse prediction
-        fakes_loss = self.discriminator(**fakes, labels=torch.ones(fakes.input_ids.shape[0])).loss
-        valids_loss = self.discriminator(
-            **valids, labels=torch.zeros(valids.input_ids.shape[0])
-        ).loss
+        scores = 0
+        print(len(prompts))
+        for prompt in prompts:
+            prompt_ids = self.tokenizer(prompt, truncation=True, padding=True, return_tensors="pt")[
+                "input_ids"
+            ]
+            response = self.frozen_generator.generate(
+                prompt_ids,
+                min_length=128,
+                max_length=self.hparams.max_length,
+                pad_token_id=self.tokenizer.pad_token_id,
+            )
+            response = self.tokenizer.batch_decode(response, skip_special_tokens=True)[0]
+            response = (
+                eval(response.split("=")[1].strip()[:4].split(" ")[0])
+                if "Result =" in response
+                else 0
+            )
+            print("score response", response)
+            scores += response if response < 1 else 0
+
+        print("scores: ", scores)
         return {
-            "d_rewards": (fakes_loss + valids_loss) / 2,
-            "g_rewards": fakes_loss.detach(),
+            "g_rewards": torch.tensor(scores) / len(prompts),
+            "sentences": sentences,
         }
 
     def decode_texts(self, preds_ids) -> list[str]:
@@ -326,10 +321,8 @@ class GanGptModule(LightningModule):
             to be used for training.
         """
         g_optimizer = self.hparams.g_optimizer(params=self.generator.parameters())
-        d_optimizer = self.hparams.d_optimizer(params=self.discriminator.parameters())
         if self.hparams.scheduler is not None:
             g_scheduler = self.hparams.scheduler(optimizer=g_optimizer)
-            d_scheduler = self.hparams.scheduler(optimizer=d_optimizer)
             return [
                 {
                     "optimizer": g_optimizer,
@@ -340,48 +333,46 @@ class GanGptModule(LightningModule):
                         "frequency": 1,
                     },
                 },
-                {
-                    "optimizer": d_optimizer,
-                    "lr_scheduler": {
-                        "scheduler": d_scheduler,
-                        "monitor": "val/loss",
-                        "interval": "epoch",
-                        "frequency": 1,
-                    },
-                },
             ]
         return [
             {"optimizer": g_optimizer},
-            {"optimizer": d_optimizer},
         ]
 
-    def generate_d_prompts(self, batch: dict, preds_ids: torch.Tensor) -> dict[str, Any]:
+    def generate_d_prompts(self, batch: dict, preds_texts: list[str]) -> dict[str, Any]:
         """Generate the prompt for the discriminator.
 
         Args:
             batch: The batch.
-            preds_ids: The output of the generator.
+            preds_texts: The output of the generator.
 
         Returns:
             The prompt.
         """
-
-        prompts = {"valids": [], "fakes": []}
-        for ground_text, pred_ids in zip(batch["texts"], preds_ids):
-            pred_text = self.tokenizer.decode(pred_ids, skip_special_tokens=True)
-            pred_text = (
-                pred_text.split(self.trainer.datamodule.hparams.generator_response)[1]
-                if self.trainer.datamodule.hparams.generator_response in pred_text
-                else "not a report"
-            )
-            prompts["valids"].append(
-                ground_text,
-            )
-            prompts["fakes"].append(
-                pred_text,
-            )
-
+        prompts = []
+        sentences = []
+        style_accuracy = """Here is sentence S1: {} and sentence S2: {}. 
+        How different is sentence S2 compared to S1 on a continuous scale from 0
+        (completely different styles) to 1 (completely identical styles)? Result ="""
+        content_preservation = """Here is S1: {} and sentence S2: {}.
+        How much does S2 preserve the content of S2 on a continuous scale from 0
+        (completely different topic) to 1 (identical topic)? Result ="""
+        fluency = """How natural is this sentence S1: {} on a scale from 0 to 1
+        where 0 (lowest coherent) and 1 (highest coherent)? Result = """
+        seg = pysbd.Segmenter(language="en", clean=True)
+        for ground_text, pred_text in zip(batch["texts"], preds_texts):
+            pred_sents = seg.segment(pred_text.replace("\n", " ").strip())
+            ground_sents = seg.segment(ground_text.replace("\n", " ").strip())
+            limit = len(pred_sents) if len(pred_sents) < len(ground_sents) else len(ground_sents)
+            if len(prompts) == 10:
+                break
+            for s2, s1 in zip(pred_sents[:limit], ground_sents[:limit]):
+                prompts.append(style_accuracy.format(s1, s2))
+                prompts.append(content_preservation.format(s1, s2))
+                prompts.append(fluency.format(s2))
+                sentences.append(s2)
+                if len(prompts) == 10:
+                    break
         return {
-            "fakes": self.tokenizer(prompts["fakes"], padding=True, return_tensors="pt"),
-            "valids": self.tokenizer(prompts["valids"], padding=True, return_tensors="pt"),
+            "prompts": prompts,
+            "sentences": " ".join(sentences),
         }

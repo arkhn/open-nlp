@@ -15,7 +15,7 @@ d_optimizer:
 scheduler: null
 
 max_length: 512
-batch_accumulation: 8
+batch_accumulation: 2
 
 g_model:
   _target_: transformers.AutoModelForCausalLM.from_pretrained
