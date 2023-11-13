@@ -75,7 +75,8 @@ class GanGptModule(LightningModule):
         self.save_hyperparameters(logger=False)
 
         self.tokenizer = AutoTokenizer.from_pretrained(
-            self.hparams.g_model.keywords["pretrained_model_name_or_path"]
+            self.hparams.g_model.keywords["pretrained_model_name_or_path"],
+            padding_side="left",
         )
 
         # Disable automatic optimization to adapt to the GAN training loop using multiple optimizers
@@ -136,8 +137,13 @@ class GanGptModule(LightningModule):
         optimizer_g, optimizer_d = self.optimizers()
 
         # do the forward pass
-        x_ids = batch["x"]
-        # _ = self.generator(input_ids=input_ids, labels=input_ids)
+        x_batch = self.tokenizer(
+            batch["x"],
+            truncation=True,
+            padding=True,
+            return_tensors="pt",
+        )
+
         texts = batch["texts"]
         ground_truth = self.tokenizer(
             batch["texts"],
@@ -146,56 +152,53 @@ class GanGptModule(LightningModule):
             return_tensors="pt",
         )
         ground_truth_ids = ground_truth["input_ids"]
-        ground_truth_mask = ground_truth["attention_mask"]
 
-        seed_preds_ids = x_ids.clone()
-        seed_frozen_ids = x_ids.clone()
-        losses = []
-        g_rewards = []
-        d_rewards = []
-        kl_divergences = []
+        seed_preds_ids = x_batch["input_ids"].clone()
+        seed_frozen_ids = x_batch["input_ids"].clone()
+        losses: list[torch.Tensor] = []
+        g_rewards: list[torch.Tensor] = []
+        d_rewards: list[torch.Tensor] = []
+        kl_divergences: list[torch.Tensor] = []
         for begin_loc in range(
-            0, ground_truth_ids.size(1), self.hparams.generator_config.max_length
+            0, ground_truth_ids.size(1), self.hparams.generation_config.max_length
         ):
             end_loc = min(
-                begin_loc + self.hparams.generator_config.max_length, ground_truth_ids.size(1)
+                begin_loc + self.hparams.generation_config.max_length, ground_truth_ids.size(1)
             )
             stride_ground_ids = ground_truth_ids[:, begin_loc:end_loc]
             stride_preds_ids = self.generator.generate(
                 input_ids=seed_preds_ids,
                 pad_token_id=self.tokenizer.pad_token_id,
                 generation_config=self.hparams.generation_config,
-            )
-            stride_frozen_ids = self.generator.generate(
+            )[:, -self.hparams.generation_config.max_length :]
+
+            stride_frozen_ids = self.frozen_generator.generate(
                 input_ids=seed_frozen_ids,
                 pad_token_id=self.tokenizer.pad_token_id,
                 generation_config=self.hparams.generation_config,
-            )
+            )[:, -self.hparams.generation_config.max_length :]
 
+            print(self.generator(input_ids=seed_preds_ids, labels=seed_preds_ids).loss)
             seed_preds_ids = torch.cat((seed_preds_ids, stride_preds_ids), dim=1)
             seed_frozen_ids = torch.cat((seed_frozen_ids, stride_frozen_ids), dim=1)
-            losses.extend(
-                self.generator(
-                    input_ids=stride_preds_ids,
-                    attention_mask=ground_truth_mask,
-                    labels=stride_preds_ids["input_ids"],
-                ).loss
-            )
+            loss = self.generator(
+                input_ids=stride_preds_ids,
+                labels=stride_preds_ids,
+            ).loss
+            print(self.generator(input_ids=seed_preds_ids, labels=seed_preds_ids).loss)
+            print(f"loss: {loss}")
+            losses.append(loss)
             mini_batch_rewards = self.discriminator_forward(
-                **self.generate_d_prompts(
-                    stride_ground_ids,
-                    stride_preds_ids,
-                )
+                fakes=stride_preds_ids,
+                valids=stride_ground_ids,
             )
-            g_rewards.extend(mini_batch_rewards["g_rewards"])
-            d_rewards.extend(mini_batch_rewards["d_rewards"])
-            kl_divergences.extend(
-                torchmetrics.functional.kl_divergence(
-                    stride_preds_ids["input_ids"], stride_frozen_ids["input_ids"]
-                )
+            g_rewards.append(mini_batch_rewards["g_rewards"])
+            d_rewards.append(mini_batch_rewards["d_rewards"])
+            kl_divergences.append(
+                torchmetrics.functional.kl_divergence(stride_preds_ids, stride_frozen_ids)
             )
         # discriminator optimization
-        d_loss = d_rewards / self.hparams.batch_accumulation
+        d_loss = torch.stack(d_rewards).mean() / self.hparams.batch_accumulation
         self.manual_backward(d_loss)
         self.discriminator_train_loss(d_loss)
         if (batch_idx + 1) % self.hparams.batch_accumulation == 0:
@@ -203,8 +206,12 @@ class GanGptModule(LightningModule):
             optimizer_d.zero_grad()
 
         # generator optimization
+        print(f"losses: {losses}")
+        print(f"g_rewards: {g_rewards}")
+        print(f"kl_divergences: {kl_divergences}")
         g_loss = (
-            0.8 * (losses * g_rewards) - 0.2 * kl_divergences
+            0.8 * (torch.stack(losses) * torch.stack(g_rewards)).mean()
+            - 0.2 * torch.stack(kl_divergences).mean()
         ) / self.hparams.batch_accumulation
 
         self.manual_backward(g_loss)
@@ -271,7 +278,7 @@ class GanGptModule(LightningModule):
         output = self.generator.generate(
             input_ids=input_ids,
             pad_token_id=self.tokenizer.pad_token_id,
-            generation_config=self.hparams.generation_config,
+            max_new_tokens=64,
         )
         preds_text = self.decode_texts(output)
         # update and log metrics
@@ -312,10 +319,8 @@ class GanGptModule(LightningModule):
             The output of the model.
         """
         # Parse prediction
-        fakes_loss = self.discriminator(**fakes, labels=torch.ones(fakes.input_ids.shape[0])).loss
-        valids_loss = self.discriminator(
-            **valids, labels=torch.zeros(valids.input_ids.shape[0])
-        ).loss
+        fakes_loss = self.discriminator(input_ids=fakes, labels=torch.ones(fakes.shape[0])).loss
+        valids_loss = self.discriminator(input_ids=valids, labels=torch.zeros(valids.shape[0])).loss
         return {
             "d_rewards": (fakes_loss + valids_loss) / 2,
             "g_rewards": fakes_loss.detach(),
@@ -380,34 +385,3 @@ class GanGptModule(LightningModule):
             {"optimizer": g_optimizer},
             {"optimizer": d_optimizer},
         ]
-
-    def generate_d_prompts(self, batch: dict, preds_ids: torch.Tensor) -> dict[str, Any]:
-        """Generate the prompt for the discriminator.
-
-        Args:
-            batch: The batch.
-            preds_ids: The output of the generator.
-
-        Returns:
-            The prompt.
-        """
-
-        prompts = {"valids": [], "fakes": []}
-        for ground_text, pred_ids in zip(batch["texts"], preds_ids):
-            pred_text = self.tokenizer.decode(pred_ids, skip_special_tokens=True)
-            pred_text = (
-                pred_text.split(self.trainer.datamodule.hparams.generator_response)[1]
-                if self.trainer.datamodule.hparams.generator_response in pred_text
-                else "not a report"
-            )
-            prompts["valids"].append(
-                ground_text,
-            )
-            prompts["fakes"].append(
-                pred_text,
-            )
-
-        return {
-            "fakes": self.tokenizer(prompts["fakes"], padding=True, return_tensors="pt"),
-            "valids": self.tokenizer(prompts["valids"], padding=True, return_tensors="pt"),
-        }

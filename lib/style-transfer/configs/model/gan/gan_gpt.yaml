@@ -28,7 +28,7 @@ bnb_config:
 g_model:
   _target_: transformers.AutoModelForCausalLM.from_pretrained
   _partial_: true
-  pretrained_model_name_or_path: amazon/MistralLite
+  pretrained_model_name_or_path: mistralai/Mistral-7B-Instruct-v0.1
 
 g_lora:
   _target_: peft.LoraConfig
@@ -48,9 +48,9 @@ generation_config:
   use_cache: false
 
 d_model:
-  _target_: transformers.LlamaForSequenceClassification.from_pretrained
+  _target_: transformers.MistralForSequenceClassification.from_pretrained
   _partial_: true
-  pretrained_model_name_or_path: amazon/MistralLite
+  pretrained_model_name_or_path: mistralai/Mistral-7B-Instruct-v0.1
   num_labels: 1
 
 d_lora:
