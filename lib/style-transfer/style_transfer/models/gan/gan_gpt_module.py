@@ -165,6 +165,7 @@ class GanGptModule(LightningModule):
             end_loc = min(
                 begin_loc + self.hparams.generation_config.max_length, ground_truth_ids.size(1)
             )
+            _ = self.generator(input_ids=seed_preds_ids[:,:-1], labels=seed_preds_ids[:,:-1]).loss
             stride_ground_ids = ground_truth_ids[:, begin_loc:end_loc]
             stride_preds_ids = self.generator.generate(
                 input_ids=seed_preds_ids,
@@ -178,15 +179,12 @@ class GanGptModule(LightningModule):
                 generation_config=self.hparams.generation_config,
             )[:, -self.hparams.generation_config.max_length :]
 
-            print(self.generator(input_ids=seed_preds_ids, labels=seed_preds_ids).loss)
             seed_preds_ids = torch.cat((seed_preds_ids, stride_preds_ids), dim=1)
             seed_frozen_ids = torch.cat((seed_frozen_ids, stride_frozen_ids), dim=1)
             loss = self.generator(
                 input_ids=stride_preds_ids,
                 labels=stride_preds_ids,
             ).loss
-            print(self.generator(input_ids=seed_preds_ids, labels=seed_preds_ids).loss)
-            print(f"loss: {loss}")
             losses.append(loss)
             mini_batch_rewards = self.discriminator_forward(
                 fakes=stride_preds_ids,
