@@ -22,12 +22,14 @@ def main():
                     # Extract the keywords from the text
                     extracted_terms = matcher.match(text, best_match=True, ignore_syntax=False)
                     keywords = [
-                        sorted(term, key=lambda x: x["similarity"])[0]["term"]
-                        for term in extracted_terms
+                        sorted(terms, key=lambda x: x["end"], reverse=True)[0]
+                        for terms in extracted_terms
                     ]
+                    keywords = sorted(keywords, key=lambda x: x["start"])
+                    keywords = [term["ngram"] for term in keywords]
                     # For each patient, append the text and the keywords to the list
                     patient[folder].append(
-                        {"id": file_id, "text": text, "keywords": ", ".join(set(keywords))}
+                        {"id": file_id, "text": text, "keywords": ", ".join(keywords)}
                     )
 
             # Write the patient to the file each line of the jsonl file is a patient
