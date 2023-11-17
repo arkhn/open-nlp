@@ -2,7 +2,7 @@
 # Run: sudo docker run -v $(pwd):/workspace/project --gpus all -it --rm <project_name>
 
 
-FROM nvidia/cuda:12.0.0-devel-ubuntu20.04
+FROM nvidia/cuda:12.3.1-devel-ubuntu22.04
 
 
 ENV CONDA_ENV_NAME=myenv
