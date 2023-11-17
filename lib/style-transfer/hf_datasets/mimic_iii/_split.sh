@@ -1,7 +1,7 @@
 #!/bin/bash
 # Split the dataset into train, dev, and test sets
 mkdir -p data
-dataset_path=keywords_extraction/mimic-style-transfer.jsonl
+dataset_path=post-processed/filtered_entries.jsonl
 total_lines=$(wc -l < $dataset_path)
 train_end=$((total_lines * 80 / 100))
 dev_end=$((train_end + total_lines * 10 / 100))
