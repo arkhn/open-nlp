@@ -12,16 +12,16 @@ dataset_info:
     list: string
   splits:
   - name: train
-    num_bytes: 11280998
-    num_examples: 3019
+    num_bytes: 13388994
+    num_examples: 3631
   - name: validation
-    num_bytes: 1413532
-    num_examples: 377
+    num_bytes: 1684292
+    num_examples: 453
   - name: test
-    num_bytes: 1382908
-    num_examples: 378
-  download_size: 14374253
-  dataset_size: 14077438
+    num_bytes: 1584958
+    num_examples: 455
+  download_size: 17014296
+  dataset_size: 16658244
 ---
 
 # Dataset Card for Mimic III Style Transfer

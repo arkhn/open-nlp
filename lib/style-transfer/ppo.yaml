@@ -4,11 +4,11 @@
 # order of defaults determines the order in which configs override each other
 
 ppo_config:
-  __target__: "trl.PPOConfig"
-  model_name: "amazon/MistalLite"
-  learning_rate: 1e-5
+  _target_: trl.PPOConfig
+  model_name: "mistralai/Mistral-7B-Instruct-v0.1"
+  learning_rate: 2e-5
   log_with: "wandb"
-  ppo_epochs: 100
+  ppo_epochs: 3
   tracker_project_name: "style-transfer-ppo"
   init_kl_coef: 2
   mini_batch_size: 4
@@ -20,9 +20,7 @@ ppo_config:
   score_clip: 0.5
   remove_unused_columns: False
 
-max_gen_sampler:
-  min: 80
-  max: 256
+max_sampler_length: 256
 
 dataset: "bio-datasets/mimic_style_transfer"
 
@@ -33,10 +31,10 @@ lora:
   lora_alpha: 32
   lora_dropout: 0.05
   bias: none
+  target_modules: ["q_proj", "v_proj"]
 
-bnb_config:
+bnb:
   _target_: transformers.BitsAndBytesConfig
-  _partial_: true
   load_in_4bit: true
   bnb_4bit_quant_type: nf4
   bnb_4bit_use_double_quant: True
@@ -46,13 +44,13 @@ model:
   num_shared_layers: 20
   use_flash_attention_2: True
   save_path: "models/ppo"
+
 generation_config:
   _target_: transformers.GenerationConfig
-  early_stopping: true
-  use_cache: false
   min_length: -1
-  top_k: 0.0
   top_p: 1.0
+  num_beams: 1
+  repetition_penalty: 1.3
   do_sample: true
 
-seed: 42
+seed: 0

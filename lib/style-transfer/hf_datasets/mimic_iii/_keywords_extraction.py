@@ -29,7 +29,7 @@ def main():
                     keywords = [term["ngram"] for term in keywords]
                     # For each patient, append the text and the keywords to the list
                     patient[folder].append(
-                        {"id": file_id, "text": text, "keywords": ", ".join(set(keywords))}
+                        {"id": file_id, "text": text, "keywords": ", ".join(keywords)}
                     )
 
             # Write the patient to the file each line of the jsonl file is a patient
