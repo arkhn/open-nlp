@@ -1,0 +1,47 @@
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core"]
+
+[tool]
+
+[tool.black]
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+include = '\.pyi?$'
+line-length = 100
+target-version = [
+  'py310'
+]
+
+[tool.poetry]
+authors = ["Arkhn's NLP Team <nlp@arkhn.com>"]
+description = "Kaggle LLM Science Exam Challenge"
+license = "Apache-2.0"
+name = "kaggle_llm_science_exam"
+readme = "README.md"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+bitsandbytes = "~0.41.2.post2"
+datasets = "^2.15.0"
+python = "~3.10"
+torchmetrics = "^1.2.0"
+loguru = "~0.7.2"
+typer = "~0.9.0"
+transformers = "^4.35.2"
+
+[[tool.poetry.source]]
+name = "PyPI"
+priority = "primary"
