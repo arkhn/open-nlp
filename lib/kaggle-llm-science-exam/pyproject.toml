@@ -42,6 +42,10 @@ loguru = "~0.7.2"
 typer = "~0.9.0"
 transformers = "^4.35.2"
 
+[tool.poetry.group.test.dependencies]
+pytest = "^7.1.2"
+pytest-cov = "^3.0.0"
+
 [[tool.poetry.source]]
 name = "PyPI"
 priority = "primary"
