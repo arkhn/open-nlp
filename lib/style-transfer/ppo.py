@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
 import re
 
 import datasets
@@ -112,7 +113,6 @@ def main(cfg):
         ds.set_format(type="torch")
 
         ds = ds.train_test_split(test_size=0.2, shuffle=False)["train"]
-
         return ds
 
     # We retrieve the dataloader by calling the `build_dataset` function.
@@ -167,7 +167,6 @@ def main(cfg):
     # We then build the reward pipeline, we will use the toxicity model to compute the reward.
     # We first load the toxicity model and tokenizer.
     # We load the toxicity model in fp16 to save memory.
-
     evaluator_tokenizer = AutoTokenizer.from_pretrained(
         "kaist-ai/Prometheus-13b-v1.0", padding_side="left"
     )
@@ -214,9 +213,6 @@ def main(cfg):
                    3. The output format should look as follows: \"Feedback: (write a feedback for criteria) [RESULT] (an integer number between 1 and 5)\"
                    4. Please do not generate any other opening, closing, and explanations.
 
-                   ###The instruction to evaluate:
-                   {}
-
                    ###Response to evaluate:
                    {}
 
@@ -231,7 +227,6 @@ def main(cfg):
                    Score 4: The excerpts are very similar in content, preserving most of the key topics and details, including the presence and order of most keywords, with only minor deviations.
                    Score 5: The excerpts have identical content, perfectly mirroring each other in terms of topic, key details, and the presence and order of all keywords.
                    ###Feedback:""",
-                        tokenizer.decode(query_ids),
                         decode,
                         tokenizer.decode(ground_id),
                     )
@@ -248,9 +243,6 @@ def main(cfg):
                    3. The output format should look as follows: \"Feedback: (write a feedback for criteria) [RESULT] (an integer number between 1 and 5)\"
                    4. Please do not generate any other opening, closing, and explanations.
 
-                   ###The instruction to evaluate:
-                   {}
-
                    ###Response to evaluate:
                    {}
 
@@ -265,7 +257,6 @@ def main(cfg):
                    Score 4: The response is very similar to the reference, sharing most aspects of conciseness, simplicity, directness, abbreviation, telegraphic style, and punctuation, with only minor differences.
                    Score 5: The response is identical to the reference in terms of conciseness, simplicity, directness, abbreviation, telegraphic style, and punctuation.
                    ###Feedback:""",
-                        tokenizer.decode(query_ids),
                         decode,
                         tokenizer.decode(ground_id),
                     )
@@ -283,9 +274,6 @@ def main(cfg):
                    3. The output format should look as follows: \"Feedback: (write a feedback for criteria) [RESULT] (an integer number between 1 and 5)\"
                    4. Please do not generate any other opening, closing, and explanations.
 
-                   ###The instruction to evaluate:
-                   {}
-
                    ###Response to evaluate:
                    {}
 
@@ -299,7 +287,6 @@ def main(cfg):
                    Score 3: The assessment is moderately accurate, considering several fluency factors like grammar, vocabulary, and readability, but with some inaccuracies or inconsistencies.
                    Score 4: The assessment is very accurate, thoroughly considering fluency factors with minor inaccuracies or omissions.
                    Score 5: The assessment is perfect, accurately considering all fluency factors like grammar, vocabulary, coherence, and readability, and assigns an accurate fluency score.                   ###Feedback:""",
-                        tokenizer.decode(query_ids),
                         decode,
                         tokenizer.decode(ground_id),
                     )
@@ -307,7 +294,6 @@ def main(cfg):
                     .replace("\t", " ")
                     .strip()
                 )
-                print(content_preservation)
                 batch_gen_inputs = evaluator_tokenizer(
                     [
                         style_accuracy,
@@ -325,9 +311,9 @@ def main(cfg):
                     do_sample=True,
                     temperature=1.0,
                     top_p=0.9,
-                    max_new_tokens=256,
+                    max_new_tokens=512,
                     repetition_penalty=1.03,
-                )[:, -256:]
+                )[:, -512:]
 
                 def extract_score(score_ids):
                     feedback = evaluator_tokenizer.decode(score_ids.squeeze())
@@ -340,7 +326,7 @@ def main(cfg):
                         return (float(eval(findall[0]) - 1)) / 4 if len(findall) == 1 else 0
 
                     else:
-                        print("NO SCORE")
+                        logging.warning(f"NO SCORE:\n {feedback}")
                         return 0
 
                 # eval to create tensor

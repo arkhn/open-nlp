@@ -8,7 +8,7 @@ ppo_config:
   model_name: "mistralai/Mistral-7B-Instruct-v0.1"
   learning_rate: 2e-5
   log_with: "wandb"
-  ppo_epochs: 3
+  ppo_epochs: 100
   tracker_project_name: "style-transfer-ppo"
   init_kl_coef: 2
   mini_batch_size: 4
@@ -17,7 +17,7 @@ ppo_config:
   optimize_cuda_cache: True
   use_score_scaling: True
   use_score_norm: True
-  score_clip: 0.5
+  score_clip: 1
   remove_unused_columns: False
 
 max_sampler_length: 256

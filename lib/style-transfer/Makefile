@@ -34,3 +34,9 @@ create-datasets-cards: ## create metadata and test hf datasets
 	datasets-cli test mimic_style_transfer.py --save_info --all_configs && \
 	cd ../pmc_patients && \
 	datasets-cli test pmc_style_transfer.py --save_info --all_configs
+
+start: ## start the training
+	accelerate launch --config_file=accelerate-config.yaml ppo.py
+
+slurm_start: ## start the training on slurm
+	sbatch ppo.batch
