@@ -371,10 +371,14 @@ def main(cfg):
         stats = ppo_trainer.step(queries_ids, response_tensors, rewards)
         ppo_trainer.log_stats(stats, batch, rewards)
         torch.cuda.empty_cache()
-        # Save model every 100 epochs
-        # if epoch % 100 == 0:
-        #    if ppo_trainer.accelerator.is_main_process:
-        #        ppo_trainer.save_pretrained("models/ppo")
+        # Save model every 20 epochs
+        if epoch % 20 == 0:
+            if ppo_trainer.accelerator.is_main_process:
+                ppo_trainer.save_pretrained(
+                    f"models/{ppo_trainer.accelerator.get_tracker('wandb').run.name}-"
+                    f"{ppo_trainer.accelerator.get_tracker('wandb').run.id}"
+                    f"/cfg.model_name-style_transfer-{epoch}"
+                )
 
 
 if __name__ == "__main__":
