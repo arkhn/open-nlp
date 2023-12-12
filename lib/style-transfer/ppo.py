@@ -130,7 +130,7 @@ def main(cfg):
     # And then we pass the loaded model to `AutoModelForCausalLMWithValueHead`.
     lora_config = hydra.utils.instantiate(cfg.lora)
     bnb_config = hydra.utils.instantiate(cfg.bnb)
-
+    lora_config.target_modules = list(lora_config.target_modules)
     model = AutoModelForCausalLM.from_pretrained(ppo_config.model_name, torch_dtype=torch.bfloat16)
     model = AutoModelForCausalLMWithValueHead.from_pretrained(
         model,
@@ -163,7 +163,11 @@ def main(cfg):
     ppo_trainer.accelerator.get_tracker("wandb").config = OmegaConf.to_container(
         cfg, resolve=True, throw_on_missing=True
     )
-
+    if ppo_trainer.accelerator.is_main_process:
+        model.push_to_hub(
+            f"bio-datasets/{cfg.ppo_config.model_name.split('/')[-1]}-"
+            f"{ppo_trainer.accelerator.get_tracker('wandb').run.name}-epoch-0"
+        )
     # We then build the reward pipeline, we will use the toxicity model to compute the reward.
     # We first load the toxicity model and tokenizer.
     # We load the toxicity model in fp16 to save memory.
@@ -196,6 +200,7 @@ def main(cfg):
                 response = ppo_trainer.generate(
                     query_ids,
                     max_new_tokens=gen_len,
+                    min_new_tokens=40,
                     generation_config=generation_config,
                     pad_token_id=tokenizer.eos_token_id,
                 )
@@ -374,10 +379,9 @@ def main(cfg):
         # Save model every 20 epochs
         if epoch % 20 == 0:
             if ppo_trainer.accelerator.is_main_process:
-                ppo_trainer.save_pretrained(
-                    f"models/{ppo_trainer.accelerator.get_tracker('wandb').run.name}-"
-                    f"{ppo_trainer.accelerator.get_tracker('wandb').run.id}"
-                    f"/cfg.model_name-style_transfer-{epoch}"
+                model.push_to_hub(
+                    f"bio-datasets/{cfg.ppo_config.model_name.split('/')[-1]}-"
+                    f"{ppo_trainer.accelerator.get_tracker('wandb').run.name}-epoch-{epoch}"
                 )
 
 
