@@ -1,7 +1,7 @@
 import json
 import os
 import sqlite3
-import re
+from typing import re
 
 import clearml
 import torch
@@ -13,6 +13,7 @@ from spider._path import _ROOT
 from spider.clearml_utils import setup_clearml
 from spider.evaluation import build_foreign_key_map_from_json, evaluate
 import nltk
+from sentence_transformers import SentenceTransformer
 nltk.download('punkt')
 # setup_clearml(env_file_path=_ROOT / ".env")
 
@@ -58,18 +59,16 @@ MAX_SAMPLES = 10
 
 def extract_sql(message:str) -> str:
    # compile a pattern that matches SQL code between ```sql and ```
-   pattern = re.compile(r"```(?:select)?(.*?)```", re.DOTALL | re.IGNORECASE)
+   pattern = re.compile(r"```(?:select)?(.*?)```", re.DOTALL, flags=re.IGNORECASE)
    # find all matches in the message
    matches = pattern.findall(message)
    # check if there are any matches
    if matches:
        # join all matches with a newline character
        sql_code = "\n".join(matches)
-       print("IIIIIIICCCCCIIIIIIII\n\n", sql_code.strip().split("\t"))
-       return sql_code.strip().split("\t")[0]
+       return sql_code
    else:
-       print("IIIIIIICCCCCIIIIIIII\n\n", message.strip().split("\t"))
-       return message.strip().split("\t")[0]
+       return message
 
 
 if EVAL_TYPE not in ["all", "exec", "match"]:
@@ -83,6 +82,14 @@ table = DATASET_PATH / "tables.json"
 
 
 transformers.set_seed(SEED)
+
+sentence_model = SentenceTransformer('all-MiniLM-L6-v2') # You can change the model as per your requirement
+
+def encode_data(batch):
+    # Assuming your text data is in the 'text' column
+    texts = batch['question']
+    batch['encoded_text'] = sentence_model.encode(texts, convert_to_tensor=True)
+    return batch
 
 # ClearML logging
 # task = Task.init(
@@ -110,6 +117,16 @@ dev_json = [
         "question": data_point["question"],
     }
     for data_point in dev_json
+]
+
+train_json = json.load(open(DATASET_PATH / "train_spider.json"))
+train_json = [
+    {
+        "db_id": data_point["db_id"],
+        "question": data_point["question"],
+        "encoded_question":
+    }
+    for data_point in train_json
 ]
 
 # Model loading
@@ -169,9 +186,9 @@ with open(OUTPUT_FILE, "w") as file:
             cursor = conn.cursor()
             try:
                 print("response: ", cursor.execute(sql))
-                return True, "perfect !"
             except Exception as e:
-                return False, e
+                return (False, e)
+            return (True, "perfect !")
 
         is_valid, error = is_valid_sql(response)
         if not is_valid:
@@ -188,7 +205,7 @@ with open(OUTPUT_FILE, "w") as file:
             response = response.split("[/INST]")[-1].replace("\\","").replace("\n", " ").split(";")[0] + ";"
             response = extract_sql(response)
             print("RESPONSE: ", response)
-        file.write(response + "\n")
+            file.write(response + "\n")
 
         print("-" * 100)
 
