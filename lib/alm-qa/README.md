@@ -11,6 +11,8 @@
 
 # 👁️ Description
 
-This project is the codebase used for our weak supervision experiments using E3C dataset annotated with InstructGPT-3 and dictionary.
+This project is the codebase used for our weak supervision experiments using E3C dataset annotated
+with InstructGPT-3 and dictionary.
 
-Considering the E3C dataset, we have compared the models trained with both annotations on the whole language in monolingual and multilingual contexts.
+Considering the E3C dataset, we have compared the models trained with both annotations on the whole
+language in monolingual and multilingual contexts.

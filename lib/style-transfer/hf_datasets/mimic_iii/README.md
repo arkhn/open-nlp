@@ -33,8 +33,8 @@ dataset_info:
 
 ## Citation Information
 
-This dataset is a collection of clinical reports that have been preprocessed
-to be used for style transfer.
+This dataset is a collection of clinical reports that have been preprocessed to be used for style
+transfer.
 
 ```
 @inproceedings{10.1145/3368555.3384469,

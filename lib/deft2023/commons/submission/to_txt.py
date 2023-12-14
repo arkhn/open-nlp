@@ -21,7 +21,6 @@ def log_predictions(predictions_classes, dataset_sub):
 
 
 def to_txt(predictions, dataset_sub, file_path, id2label):
-
     predictions_classes = to_letters(predictions, id2label)
     ids = [d["id"] for d in dataset_sub]
     log_predictions(predictions_classes, dataset_sub)

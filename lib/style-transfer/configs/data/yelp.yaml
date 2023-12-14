@@ -8,8 +8,8 @@ max_combinations: 3
 instruction: >
   Instruction: With these following keywords,
   generate a yelp review in the user's style using keywords below.
-  The current keywords are associated with the review we want to generate 
-  and the past keywords are associated with the user's past reviews. 
+  The current keywords are associated with the review we want to generate
+  and the past keywords are associated with the user's past reviews.
   Generate the history of present illness of the patient and only this.
 
   Current Keywords: {}

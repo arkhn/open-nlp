@@ -1,7 +1,7 @@
 # 🪱 MIMIC-III Translation & Pseudonymisation
 
-This repo uses Google Translate API to translate MIMIC-III to French.
-Then, we use Faker to pseudonymised a set of MIMIC-III.
+This repo uses Google Translate API to translate MIMIC-III to French. Then, we use Faker to
+pseudonymised a set of MIMIC-III.
 
 ## 🎲 Instructions
 
@@ -18,8 +18,9 @@ Then, we use Faker to pseudonymised a set of MIMIC-III.
    and copy the content of the downloaded to the data folder 😉
 4. use the following command to get the translation :
 
-☠️ **it is important to keep the same shuffled version each time you translate a new slice of mimic. Otherwise, you risk to get some overlap between
-the document you'll translate, the translation is soooo expensive !**
+☠️ **it is important to keep the same shuffled version each time you translate a new slice of mimic.
+Otherwise, you risk to get some overlap between the document you'll translate, the translation is
+soooo expensive !**
 
 ```bash
 # get a shuffled version of Mimic-III (a new shuffling but you don't need this if you already have the shuffled version of Mimic-III)
@@ -39,7 +40,8 @@ python mimic_translation/translate.py translate ./data/translation/en/0_1100 ./d
 
 ### 🃏 Substitution
 
-1. create your regexps in a text file such as `data/subsitution/your_re-rules.txt`. Each regex should represent a group of entities
+1. create your regexps in a text file such as `data/subsitution/your_re-rules.txt`. Each regex
+   should represent a group of entities
 2. extract the whole anonymised tokens of the sub-corpus using
    ```bash
    egrep -Eo '\[\*.*?\*.*?\*.*?\* ?]' data/translation/en/0_1100/* | sed 's/.*://g' | sort | uniq > data/substitution/en_mimic_iii_tokens_0_1100.txt

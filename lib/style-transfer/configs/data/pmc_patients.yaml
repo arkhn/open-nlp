@@ -8,8 +8,8 @@ max_combinations: 3
 instruction: >
   Instruction: With these following keywords,
   generate a clinical case associated to the keywords below.
-  The current keywords are associated to the clinical case we want to generate 
-  and the past keywords are associated with the other clinical case of the same topic. 
+  The current keywords are associated to the clinical case we want to generate
+  and the past keywords are associated with the other clinical case of the same topic.
   Generate the clinical case and only this.
 
   Current Keywords: {}
