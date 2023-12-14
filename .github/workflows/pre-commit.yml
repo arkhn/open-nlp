@@ -34,5 +34,6 @@ jobs:
           path: ~/.cache/pre-commit
           key: pre-commit-hooks-${{ hashFiles('.pre-commit-config.yaml') }}
 
+      # Skip the no-commit-to-branch hook as its useless in the CI and makes it fail on main
       - name: Run pre-commit
-        run: pre-commit run --all-files --show-diff-on-failure
+        run: SKIP=no-commit-to-branch pre-commit run --all-files --show-diff-on-failure
