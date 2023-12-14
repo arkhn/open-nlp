@@ -10,6 +10,9 @@
 #   --build-arg ALIAS_USERNAME=<username> \
 #   --build-arg ALIAS_REPOSITORY=dotfiles \
 #   --build-arg ALIAS_PATH=.config/oh-my-zsh \
+#   --build-arg NEOVIM_USERNAME=<username> \
+#   --build-arg NEOVIM_DEPS_INSTALL_COMMAND="apt install -y npm zip" \
+#   --build-arg NEOVIM_TOOLS_INSTALL_COMMAND="+MasonInstallAll"
 # If this has been run with another configuration, you might need to destroy the cache with 
 # `--no-cache` to introduce a new configuration.
 
@@ -22,6 +25,11 @@ ARG POETRY_VERSION=1.6.1
 ARG ALIAS_USERNAME=ohmyzsh
 ARG ALIAS_REPOSITORY=ohmyzsh
 ARG ALIAS_PATH=custom
+ARG NEOVIM_USERNAME=nvim-lua
+ARG NEOVIM_REPOSITORY=kickstart.nvim
+ARG NEOVIM_DEPS_INSTALL_COMMAND=""
+ARG NEOVIM_PLUGIN_INSTALL_COMMAND="'+Lazy install'"
+ARG NEOVIM_TOOLS_INSTALL_COMMAND=""
 
     # python
 ENV PYTHON_VERSION=$PYTHON_VERSION \
@@ -38,6 +46,7 @@ ENV PYTHON_VERSION=$PYTHON_VERSION \
     POETRY_NO_INTERACTION=1 \
     \
     # paths
+    CONFIG_PATH="/root/.config" \
     SETUP_PATH="/opt/setup" \
     PYSETUP_PATH="/opt/pysetup" 
 
@@ -78,6 +87,20 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 RUN curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh | zsh
 RUN git clone https://github.com/$ALIAS_USERNAME/$ALIAS_REPOSITORY $SETUP_PATH/$ALIAS_REPOSITORY
 RUN cp -r $SETUP_PATH/$ALIAS_REPOSITORY/$ALIAS_PATH/* $HOME/.oh-my-zsh/custom
+
+# install neovim (optional)
+RUN add-apt-repository ppa:neovim-ppa/unstable
+RUN apt update
+RUN apt install -y neovim
+
+# install neovim custom config (optional)
+RUN git clone https://github.com/$NEOVIM_USERNAME/$NEOVIM_REPOSITORY $CONFIG_PATH/nvim
+# dependencies required for external tools
+RUN $NEOVIM_DEPS_INSTALL_COMMAND
+# install neovim plugins
+RUN nvim $NEOVIM_PLUGIN_INSTALL_COMMAND +qall
+# install neovim external tools
+RUN nvim $NEOVIM_TOOLS_INSTALL_COMMAND +qall
 
 # copy project requirement files here to ensure they will be cached.
 WORKDIR $PYSETUP_PATH
