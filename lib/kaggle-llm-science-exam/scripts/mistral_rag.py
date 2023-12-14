@@ -1,6 +1,6 @@
 """File to run the evaluation of an LLM on the task.
 
-When used in Kaggle's notebooks, the following lines must be run beforehand, and the notebook 
+When used in Kaggle's notebooks, the following lines must be run beforehand, and the notebook
 must probably be reset as well:
 
 ```
@@ -26,10 +26,9 @@ from loguru import logger
 from torch import Tensor
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer, BitsAndBytesConfig, GenerationConfig
-from transformers.utils import quantization_config
 
 try:
-    from pandas.api.types import is_datetime64tz_dtype
+    from pandas.api.types import is_datetime64tz_dtype  # noqa: F401
 except ImportError:
     # pandas < 0.19.2
     pass

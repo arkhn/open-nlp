@@ -25,7 +25,7 @@ from torch.utils.data import DataLoader
 from transformers import AutoTokenizer, BitsAndBytesConfig, GenerationConfig
 
 try:
-    from pandas.api.types import is_datetime64tz_dtype
+    from pandas.api.types import is_datetime64tz_dtype  # noqa: F401
 except ImportError:
     # pandas < 0.19.2
     pass

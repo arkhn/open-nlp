@@ -1,6 +1,6 @@
 """File to run the evaluation of an LLM on the task.
 
-When used in Kaggle's notebooks, the following lines must be run beforehand, and the notebook 
+When used in Kaggle's notebooks, the following lines must be run beforehand, and the notebook
 must probably be reset as well:
 
 ```
