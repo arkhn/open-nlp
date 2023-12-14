@@ -33,4 +33,6 @@ hydra:
     params:
       data.ratio: choice(0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0)
       data.fold: choice(0, 1, 2, 3, 4)
-      model: choice("en/xlm-roberta", "es/xlm-roberta", "eu/xlm-roberta", "fr/xlm-roberta", "it/xlm-roberta")
+      model:
+        choice("en/xlm-roberta", "es/xlm-roberta", "eu/xlm-roberta", "fr/xlm-roberta",
+        "it/xlm-roberta")

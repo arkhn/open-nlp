@@ -11,9 +11,11 @@
 
 # 👁️ Description
 
-This project is the codebase used for our weak supervision experiments using E3C dataset annotated with InstructGPT-3 and dictionary.
+This project is the codebase used for our weak supervision experiments using E3C dataset annotated
+with InstructGPT-3 and dictionary.
 
-Considering the E3C dataset, we have compared the models trained with both annotations on the whole language in monolingual and multilingual contexts.
+Considering the E3C dataset, we have compared the models trained with both annotations on the whole
+language in monolingual and multilingual contexts.
 
 # 🚀 Quick start
 
@@ -44,11 +46,16 @@ docker run -v $(pwd):/workspace/project -e WANDB_API_KEY=$WANDB_API_KEY --gpus a
 
 # ⚗️ Experiments
 
-here is a description for each experiment consigned in the Makefile. You see the configuration inside
-hydra folder `configs/experiment`:
+here is a description for each experiment consigned in the Makefile. You see the configuration
+inside hydra folder `configs/experiment`:
 
-- **layer_2_comparison**: Performance comparison between two encoder models trained with weak supervision dictionary and InstructGPT-3 annotations on layer 2.
-- **layer 2 validation comparison**: Same but comparison between manual and InstructGPT-3 annotations on layer 2 subset.
-- **layer 2 blended comparison**: Same experience as **layer_2_comparison** but for each dataset we add a slight quantity of manual annotation.
-- **layer 2 blended methods**: we experiment different ratio to blend the dictionary and InstrucGPT-3 annotations.
-- **layer 2 xlm**: we trained model with all the data available (all the languages are used) for layer 2. We compare with weak supervision dictionary and InstructGPT-3 annotations.
+- **layer_2_comparison**: Performance comparison between two encoder models trained with weak
+  supervision dictionary and InstructGPT-3 annotations on layer 2.
+- **layer 2 validation comparison**: Same but comparison between manual and InstructGPT-3
+  annotations on layer 2 subset.
+- **layer 2 blended comparison**: Same experience as **layer_2_comparison** but for each dataset we
+  add a slight quantity of manual annotation.
+- **layer 2 blended methods**: we experiment different ratio to blend the dictionary and
+  InstrucGPT-3 annotations.
+- **layer 2 xlm**: we trained model with all the data available (all the languages are used) for
+  layer 2. We compare with weak supervision dictionary and InstructGPT-3 annotations.

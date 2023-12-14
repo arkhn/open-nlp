@@ -1,10 +1,7 @@
 _target_: src.datamodules.ner_camembert_datamodule.NerCamembertDataModule
 data_dir: ${paths.data_dir}
 datasets:
-  [
-    "webanno797399823581181383export.zip",
-    "webanno9829307934552568645export_curated_documents.zip",
-  ]
+  ["webanno797399823581181383export.zip", "webanno9829307934552568645export_curated_documents.zip"]
 batch_size: 16
 num_workers: 0
 architecture: ${architecture}

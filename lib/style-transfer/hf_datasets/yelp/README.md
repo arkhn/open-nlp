@@ -33,8 +33,8 @@ dataset_info:
 
 ## Citation Information
 
-This dataset is a collection of yelp reviews that have been preprocessed
-to be used for style transfer.
+This dataset is a collection of yelp reviews that have been preprocessed to be used for style
+transfer.
 
 ```
 @article{DBLP:journals/corr/Asghar16,

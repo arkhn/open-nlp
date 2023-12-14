@@ -35,8 +35,8 @@ dataset_info:
 
 ## Citation Information
 
-This dataset is a collection of clinical cases that have been preprocessed
-to be used for style transfer.
+This dataset is a collection of clinical cases that have been preprocessed to be used for style
+transfer.
 
 ```
 @misc{zhao2023pmcpatients,

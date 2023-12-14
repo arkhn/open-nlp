@@ -1,6 +1,8 @@
 # T5-BIGBIO
 
-This repository is a toolkit for experiments using T5 on biomedical information extraction. It provides scripts to finetune a t5-based model using InstructionNER format and a simple server using FastAPI for inference.
+This repository is a toolkit for experiments using T5 on biomedical information extraction. It
+provides scripts to finetune a t5-based model using InstructionNER format and a simple server using
+FastAPI for inference.
 
 ## Usage
 

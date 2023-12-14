@@ -15,8 +15,8 @@ HuggingFace Dataset from the Inception Medical Annotations project.
 
 ## Usage
 
-This dataset is not pushed on HuggingFace (yet), but it can be used locally with any
-archive downloaded from Inception that contains relation annotations.
+This dataset is not pushed on HuggingFace (yet), but it can be used locally with any archive
+downloaded from Inception that contains relation annotations.
 
 **Example**: load the dataset from the "RE Temporality POC"
 

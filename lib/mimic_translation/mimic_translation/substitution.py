@@ -309,7 +309,6 @@ def get_prefix_name(fake: Faker) -> str:
 
 
 def get_address(fake: Faker) -> str:
-
     """Generates a random address.
     Returns a randomly generated address, with line breaks replaced with spaces and commas removed.
 

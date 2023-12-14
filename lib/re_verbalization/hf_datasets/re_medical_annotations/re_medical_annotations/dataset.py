@@ -37,7 +37,6 @@ class ReMedicalAnnotations(datasets.GeneratorBasedBuilder):
     VERSION = datasets.Version("1.1.0")
 
     def _info(self):
-
         return datasets.DatasetInfo(
             # This is the description that will appear on the datasets page.
             description=_DESCRIPTION,
