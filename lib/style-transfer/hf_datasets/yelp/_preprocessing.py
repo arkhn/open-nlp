@@ -1,12 +1,12 @@
-import json
-from pathlib import Path
-
-from tqdm import tqdm
-
 """
 This script is used to preprocess the Yelp dataset.
 Pretty simple, it just loads the json file and gathers the comments by user.
 """
+
+import json
+from pathlib import Path
+
+from tqdm import tqdm
 
 
 def main():

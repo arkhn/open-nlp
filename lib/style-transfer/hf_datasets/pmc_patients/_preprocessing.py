@@ -1,13 +1,13 @@
-import json
-from pathlib import Path
-
-from tqdm import tqdm
-
 """
 This script is used to preprocess the PMC Patients dataset.
 Pretty simple, it just loads the json file and saves it in a different format
 gathering clinical case by title.
 """
+
+import json
+from pathlib import Path
+
+from tqdm import tqdm
 
 
 def main():
