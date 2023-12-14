@@ -1,42 +1,81 @@
-# Build: sudo docker build -t <project_name> .
-# Run: sudo docker run -v $(pwd):/workspace/project --gpus all -it --rm <project_name> /bin/zsh
-
+# Cuda-based image which installs a Python Poetry environment designed to be used interactively.
+#
+# To build this image, use: `docker build -t <image-name> --build-arg PROJECT_NAME=<project-name> .`
+# To use this image interactively, use:
+# `docker run -v $(pwd):/opt/pysetup/ --gpus all -it --rm <image-name>`
+# You might need to add `sudo` at the beginning of the commands.
 
 FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
 
-ENV CONDA_ENV_NAME=myenv
-ENV PYTHON_VERSION=3.11
+ARG PROJECT_NAME
 
-# Basic setup
+ARG PYTHON_VERSION=3.11
+ARG POETRY_VERSION=1.6.1
+
+    # python
+ENV PYTHON_VERSION=$PYTHON_VERSION \
+    \
+    # poetry
+    # https://python-poetry.org/docs/configuration/#using-environment-variables
+    POETRY_VERSION=$POETRY_VERSION \
+    # make poetry install to this location
+    POETRY_HOME="/opt/poetry" \
+    # make poetry NOT create the virtual environment in the project's root, as it would be 
+    # overwriten when setting a volume on /opt/pysetup/
+    POETRY_VIRTUALENVS_IN_PROJECT=false \
+    # do not ask any interactive question
+    POETRY_NO_INTERACTION=1 \
+    \
+    # paths
+    PYSETUP_PATH="/opt/pysetup" 
+
+# prepend poetry to path
+ENV PATH="$POETRY_HOME/bin:$PATH"
+
+# core dependencies
+# setup timezone for software-properties-common install
+ENV TZ=Europe/Minsk
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+# install dependencies
+# software-properties-common is needed to run add-apt-repository
 RUN apt update
-RUN apt install -y zsh \
+RUN apt install -y \
     build-essential \
-    git \
-    curl \
     ca-certificates \
-    wget \
+    curl \
+    git \
+    software-properties-common \
+    zsh \
     && rm -rf /var/lib/apt/lists
-RUN wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh || true
 
-# Set working directory
-WORKDIR /workspace/project
+# install python
+RUN add-apt-repository ppa:deadsnakes/ppa
+RUN apt update
+RUN apt install -y \
+    python${PYTHON_VERSION} \
+    python3-distutils \
+    python3-pip \
+    python3-venv
 
-# Install Miniconda and create main env
-ADD https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh miniconda3.sh
-RUN bash miniconda3.sh -b -p /conda \
-    && echo export PATH=/conda/bin:$PATH >> .zshrc \
-    && rm miniconda3.sh
-ENV PATH="/conda/bin:${PATH}"
-RUN conda create -n ${CONDA_ENV_NAME} python=${PYTHON_VERSION}
+# install poetry via the official installer:
+# https://python-poetry.org/docs/master/#installing-with-the-official-installer
+# this script respects $POETRY_VERSION & $POETRY_HOME
+RUN curl -sSL https://install.python-poetry.org | python3 -
 
-# Switch to zsh shell
-SHELL ["/bin/zsh", "-c"]
+# copy project requirement files here to ensure they will be cached.
+WORKDIR $PYSETUP_PATH
+COPY poetry.lock pyproject.toml ./
 
-# Install requirements
-COPY pyproject.toml ./
-RUN source activate ${CONDA_ENV_NAME} \
-    && pip install poetry \
-    && poetry install
+# install runtime deps
+RUN poetry env use $PYTHON_VERSION 
+RUN poetry install --only main --no-root
 
-# Set ${CONDA_ENV_NAME} to default virutal environment
-RUN echo "source activate ${CONDA_ENV_NAME}" >> ~/.zshrc
+# copy local code
+COPY $PROJECT_NAME ./$PROJECT_NAME
+COPY README.md ./
+
+# quicker install as runtime deps are already installed
+RUN poetry install --only main
+ 
+# use a zsh shell when started interactively
+CMD ["/bin/zsh"]
