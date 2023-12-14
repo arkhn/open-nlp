@@ -16,8 +16,8 @@ Fixes #[issue number]
 ## Definition of Done
 
 <!-- Check the boxes (replace the [ ] with [x]) corresponding to what you've done. -->
-<!-- You must have followed the AI Code Book, but the other items can be skipped if your work doesn't require them. -->
+<!-- You must have followed the repository practices, but the other items can be skipped if your work doesn't require them. -->
 
-- [ ] I followed the [AI Code Book](https://www.notion.so/arkhn/How-to-Code-a-k-a-the-AI-Code-Book-f8df0dd8fa484a7fb5eb989f07076141) (I swear!).
+- [ ] I followed the repository practices (e.g. I used gitmojis).
 - [ ] I have added/updated tests according to my changes.
 - [ ] I have added/updated documentation according to my changes.
