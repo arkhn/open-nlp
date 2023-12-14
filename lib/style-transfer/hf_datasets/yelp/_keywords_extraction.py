@@ -1,3 +1,8 @@
+"""
+This script is used to extract the keywords from the Yelp dataset. We use the SentiWordNet to get
+the words with positive or negative score and add them to the keywords.
+"""
+
 import json
 from pathlib import Path
 
@@ -7,11 +12,6 @@ from tqdm import tqdm
 
 nltk.download("sentiwordnet")
 nltk.download("stopwords")
-
-"""
-This script is used to extract the keywords from the Yelp dataset. We use the SentiWordNet to get
-the words with positive or negative score and add them to the keywords.
-"""
 
 
 def main(size=20000):

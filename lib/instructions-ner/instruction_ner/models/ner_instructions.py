@@ -185,7 +185,7 @@ class NerInstructionsModule(LightningModule):
             if target_name != "O"
         ]
         for logger in self.trainer.logger:
-            if type(logger) == WandbLogger:
+            if type(logger) == WandbLogger:  # noqa: E721
                 logger.log_text(
                     key="val/samples",
                     columns=["texts", "targets texts"],

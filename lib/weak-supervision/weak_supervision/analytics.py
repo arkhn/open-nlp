@@ -1,3 +1,10 @@
+"""
+The following scripts are used to analyze the E3C dataset and the E3C-LLM dataset specifically
+for the French layer. We analyze the number of sentences, tokens and BI tags in the dataset,
+and we render the NER tags to compare the InstructGPT predictions with the "ground truth".
+Also we compute the confusion matrix to see the annotation differences between the two datasets.
+"""
+
 import datasets
 import spacy
 import torch
@@ -9,13 +16,6 @@ from transformers import AutoTokenizer
 
 tokenizer = AutoTokenizer.from_pretrained("camembert-base")
 nlp = spacy.blank("fr")
-
-"""
-The following scripts are used to analyze the E3C dataset and the E3C-LLM dataset specifically
-for the French layer. We analyze the number of sentences, tokens and BI tags in the dataset,
-and we render the NER tags to compare the InstructGPT predictions with the "ground truth".
-Also we compute the confusion matrix to see the annotation differences between the two datasets.
-"""
 
 
 def main():
