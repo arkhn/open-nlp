@@ -4,6 +4,14 @@
 # To use this image interactively, use:
 # `docker run -v $(pwd):/opt/pysetup/ --gpus all -it --rm <image-name>`
 # You might need to add `sudo` at the beginning of the commands.
+# 
+# To customize this image, you can use this example:
+# docker build -t <image-name> --build-arg PROJECT_NAME=<project-name> . \
+#   --build-arg ALIAS_USERNAME=<username> \
+#   --build-arg ALIAS_REPOSITORY=dotfiles \
+#   --build-arg ALIAS_PATH=.config/oh-my-zsh \
+# If this has been run with another configuration, you might need to destroy the cache with 
+# `--no-cache` to introduce a new configuration.
 
 FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
 
@@ -11,6 +19,9 @@ ARG PROJECT_NAME
 
 ARG PYTHON_VERSION=3.11
 ARG POETRY_VERSION=1.6.1
+ARG ALIAS_USERNAME=ohmyzsh
+ARG ALIAS_REPOSITORY=ohmyzsh
+ARG ALIAS_PATH=custom
 
     # python
 ENV PYTHON_VERSION=$PYTHON_VERSION \
@@ -27,6 +38,7 @@ ENV PYTHON_VERSION=$PYTHON_VERSION \
     POETRY_NO_INTERACTION=1 \
     \
     # paths
+    SETUP_PATH="/opt/setup" \
     PYSETUP_PATH="/opt/pysetup" 
 
 # prepend poetry to path
@@ -61,6 +73,11 @@ RUN apt install -y \
 # https://python-poetry.org/docs/master/#installing-with-the-official-installer
 # this script respects $POETRY_VERSION & $POETRY_HOME
 RUN curl -sSL https://install.python-poetry.org | python3 -
+
+# install oh-my-zsh & custom aliases (optional)
+RUN curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh | zsh
+RUN git clone https://github.com/$ALIAS_USERNAME/$ALIAS_REPOSITORY $SETUP_PATH/$ALIAS_REPOSITORY
+RUN cp -r $SETUP_PATH/$ALIAS_REPOSITORY/$ALIAS_PATH/* $HOME/.oh-my-zsh/custom
 
 # copy project requirement files here to ensure they will be cached.
 WORKDIR $PYSETUP_PATH
