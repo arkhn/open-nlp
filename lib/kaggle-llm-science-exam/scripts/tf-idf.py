@@ -1,6 +1,6 @@
 """File to compute dataset augmentation with articles from Wikipedia using TF-IDF.
 
-This script can run on a CPU, as it's made mainly with sklearn, polars and datasets, however it 
+This script can run on a CPU, as it's made mainly with sklearn, polars and datasets, however it
 takes just a bit more than one hour to run on my MacOS CPU (Intel chip).
 """
 
