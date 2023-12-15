@@ -1,20 +1,34 @@
 # Cuda-based image which installs a Python Poetry environment designed to be used interactively.
 #
-# To build this image, use: `docker build -t <image-name> --build-arg PROJECT_NAME=<project-name> .`
-# To use this image interactively, use:
-# `docker run -v $(pwd):/opt/pysetup/ --gpus all -it --rm <image-name>`
-# You might need to add `sudo` at the beginning of the commands.
-# 
-# To customize this image, you can use this example:
-# docker build -t <image-name> --build-arg PROJECT_NAME=<project-name> . \
-#   --build-arg ALIAS_USERNAME=<username> \
-#   --build-arg ALIAS_REPOSITORY=dotfiles \
-#   --build-arg ALIAS_PATH=.config/oh-my-zsh \
-#   --build-arg NEOVIM_USERNAME=<username> \
-#   --build-arg NEOVIM_DEPS_INSTALL_COMMAND="apt install -y npm zip" \
-#   --build-arg NEOVIM_TOOLS_INSTALL_COMMAND="+MasonInstallAll"
-# If this has been run with another configuration, you might need to destroy the cache with 
+# Depending on the machine configuration, you might need to add `sudo` at the beginning of all the 
+# `docker` commands below. 
+#
+# To build this image, use:
+#   docker build . \
+#       --tag <image-name> \
+#       --build-arg PROJECT_NAME=<project-name>
+# To customize it, you can use the following example:
+#   docker build . \
+#       --tag <image-name> \
+#       --build-arg PROJECT_NAME=<project-name> \
+#       --build-arg ALIAS_USERNAME=<username> \
+#       --build-arg ALIAS_REPOSITORY=dotfiles \
+#       --build-arg ALIAS_PATH=.config/oh-my-zsh \
+#       --build-arg NEOVIM_USERNAME=<username> \
+#       --build-arg NEOVIM_DEPS_INSTALL_COMMAND="apt install -y npm zip" \
+#       --build-arg NEOVIM_TOOLS_INSTALL_COMMAND="+MasonInstallAll"
+# If this has been run with another configuration, you might need to destroy the cache by adding
 # `--no-cache` to introduce a new configuration.
+#
+# To use this image interactively, use:
+#   docker run -it --rm --gpus all \    
+#       --volume $(pwd):/opt/pysetup/ \
+#       <image-name> 
+# To share some local cache with the container, for instance HuggingFace's models, use:
+#   docker run -it --rm --gpus all \    
+#       --volume $(pwd):/opt/pysetup/ \
+#       --volum ~/.cache/huggingface:/root/.cache/huggingface \
+#       <image-name> 
 
 FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
 
