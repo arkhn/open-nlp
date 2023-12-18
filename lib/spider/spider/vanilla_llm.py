@@ -1,9 +1,8 @@
 import json
 import os
-import sqlite3
-import re
 
 import clearml
+import nltk
 import torch
 import transformers
 from clearml import Task
@@ -12,19 +11,20 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from spider._path import _ROOT
 from spider.clearml_utils import setup_clearml
 from spider.evaluation import build_foreign_key_map_from_json, evaluate
-import nltk
-nltk.download('punkt')
-# setup_clearml(env_file_path=_ROOT / ".env")
+from spider.utils import extract_sql, is_valid_sql
+
+nltk.download("punkt")
 
 SEED = 42
 DATASET_PATH = _ROOT / "data" / "spider"
-PROMPT_TEMPLATE ="""/* Given the following database schema: */
+PROMPT_TEMPLATE = """/* Given the following database schema: */
 {}
 
 /* Answer the following: {} Very important: generate only the SQL query and nothing else.*/
 SELECT
 """
-PROMPT_TEMPLATE_OLD = """Create a SQL query to answer the following question using the database schema provided below.
+PROMPT_TEMPLATE_OLD = """Create a SQL query to answer the following question using the database
+schema provided below.
 Question:
 {}
 
@@ -34,7 +34,8 @@ Database schema:
 Very important: generate only the SQL query and nothing else.
 Query: """
 
-EDIT_PROMPT_TEMPLATE = """Take in account the Error returned to edit or change the SQL query to make it executable.
+EDIT_PROMPT_TEMPLATE = """Take in account the Error returned to edit or change the SQL query
+to make it executable.
 Error Returned: {}
 
 Very important: generate only the edited SQL query and nothing else.
@@ -56,20 +57,7 @@ GENERATION_CONFIG = dict(
 EVAL_TYPE = "all"
 MAX_SAMPLES = 10
 
-def extract_sql(message:str) -> str:
-   # compile a pattern that matches SQL code between ```sql and ```
-   pattern = re.compile(r"```(?:select)?(.*?)```", re.DOTALL | re.IGNORECASE)
-   # find all matches in the message
-   matches = pattern.findall(message)
-   # check if there are any matches
-   if matches:
-       # join all matches with a newline character
-       sql_code = "\n".join(matches)
-       print("IIIIIIICCCCCIIIIIIII\n\n", sql_code.strip().split("\t"))
-       return sql_code.strip().split("\t")[0]
-   else:
-       print("IIIIIIICCCCCIIIIIIII\n\n", message.strip().split("\t"))
-       return message.strip().split("\t")[0]
+IF_LOG_CLEAR_ML = False
 
 
 if EVAL_TYPE not in ["all", "exec", "match"]:
@@ -84,23 +72,25 @@ table = DATASET_PATH / "tables.json"
 
 transformers.set_seed(SEED)
 
-# ClearML logging
-# task = Task.init(
-#     project_name="spider",
-#     task_name="vanilla_llm",
-#     task_type=clearml.Task.TaskTypes.testing,
-# )
-# task.set_parameters(
-#     dict(
-#         pretrained_model_name_or_path=PRETRAINED_MODEL_NAME_OR_PATH,
-#         bnb_config=BNB_CONFIG,
-#         generation_config=GENERATION_CONFIG,
-#         dataset_path=DATASET_PATH,
-#         seed=SEED,
-#         prompt_template=PROMPT_TEMPLATE,
-#         eval_type=EVAL_TYPE,
-#     )
-# )
+
+if IF_LOG_CLEAR_ML:
+    setup_clearml(env_file_path=_ROOT / ".env")
+    task = Task.init(
+        project_name="spider",
+        task_name="vanilla_llm",
+        task_type=clearml.Task.TaskTypes.testing,
+    )
+    task.set_parameters(
+        dict(
+            pretrained_model_name_or_path=PRETRAINED_MODEL_NAME_OR_PATH,
+            bnb_config=BNB_CONFIG,
+            generation_config=GENERATION_CONFIG,
+            dataset_path=DATASET_PATH,
+            seed=SEED,
+            prompt_template=PROMPT_TEMPLATE,
+            eval_type=EVAL_TYPE,
+        )
+    )
 
 # Dataset parsing
 dev_json = json.load(open(DATASET_PATH / "dev.json"))
@@ -144,7 +134,7 @@ with open(OUTPUT_FILE, "w") as file:
         else:
             data_point["schema"] = ""
         prompt = PROMPT_TEMPLATE.format(data_point["schema"], data_point["question"])
-        print("FIRST PROMPT: ", prompt)
+        # print("FIRST PROMPT: ", prompt)
         messages = [
             {"role": "user", "content": prompt},
         ]
@@ -154,40 +144,25 @@ with open(OUTPUT_FILE, "w") as file:
             model_inputs, **GENERATION_CONFIG, pad_token_id=tokenizer.eos_token_id
         )
         response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        response = "SELECT " + response.split("[/INST]")[-1].replace("\\","").replace("\n", " ")
-        response = extract_sql(response)
+        response = extract_sql(message=response, if_first_answer=True)
         messages.append({"role": "assistant", "content": response})
-        print("RESPONSE: ", response)
+        # print("RESPONSE: ", response)
 
         # Check if the response is executable
-        def is_valid_sql(sql):
-            glob_db = list((DATASET_PATH / "database" / data_point["db_id"]).glob("*.sqlite"))
-            if len(glob_db) != 1:
-                raise ValueError("Database not found")
-            db = str(glob_db[0])
-            conn = sqlite3.connect(db)
-            cursor = conn.cursor()
-            try:
-                print("response: ", cursor.execute(sql))
-                return True, "perfect !"
-            except Exception as e:
-                return False, e
-
-        is_valid, error = is_valid_sql(response)
+        is_valid, error = is_valid_sql(sql=response, db_id=data_point["db_id"])
         if not is_valid:
             # call the model again to edit the previous response
             edit_prompt = EDIT_PROMPT_TEMPLATE.format(error)
             messages.append({"role": "user", "content": edit_prompt})
-            print("EDIT PROMPT: ", edit_prompt)
+            # print("EDIT PROMPT: ", edit_prompt)
             encodeds = tokenizer.apply_chat_template(messages, return_tensors="pt")
             model_inputs = encodeds.to("cuda")
             outputs = model.generate(
                 model_inputs, **GENERATION_CONFIG, pad_token_id=tokenizer.eos_token_id
             )
             response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-            response = response.split("[/INST]")[-1].replace("\\","").replace("\n", " ").split(";")[0] + ";"
-            response = extract_sql(response)
-            print("RESPONSE: ", response)
+            response = extract_sql(message=response, if_first_answer=False)
+            # print("RESPONSE: ", response)
         file.write(response + "\n")
 
         print("-" * 100)
@@ -197,8 +172,8 @@ kmaps = build_foreign_key_map_from_json(table)
 
 scores = evaluate(gold, OUTPUT_FILE, db_dir, EVAL_TYPE, kmaps)
 
-# task.upload_artifact("output.txt", artifact_object=OUTPUT_FILE)
-# task.upload_artifact("score", artifact_object=scores)
-# task.connect(scores, name="scores")
-
-# task.close()
+if IF_LOG_CLEAR_ML:
+    task.upload_artifact("output.txt", artifact_object=OUTPUT_FILE)
+    task.upload_artifact("score", artifact_object=scores)
+    task.connect(scores, name="scores")
+    task.close()

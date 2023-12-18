@@ -1,0 +1,24 @@
+defaults:
+  - _self_
+
+edit_template: |
+  /* Error Returned: {} */a
+  /* Take in account the Error returned to edit or change the SQL query to make it executable. */
+  SELECT
+
+template: |
+  /* Some example questions and corresponding SQL queries are provided based on similar problems: */
+  /* Answer the following: What is the first and second line for all addresses? */
+  SELECT line_1 ,  line_2 FROM addresses
+
+  /* Answer the following: What is the name and directors of all the cartoons that are ordered by air date? */
+  SELECT title ,  Directed_by FROM Cartoon ORDER BY Original_air_date
+
+  /* Answer the following: Return the names of all the poker players. */
+  SELECT T1.Name FROM people AS T1 JOIN poker_player AS T2 ON T1.People_ID  =  T2.People_ID
+
+  /* Given the following database schema: */
+  {}
+
+  /* Answer the following: {} */
+  SELECT
