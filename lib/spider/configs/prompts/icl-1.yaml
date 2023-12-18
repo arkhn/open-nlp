@@ -1,0 +1,24 @@
+defaults:
+  - _self_
+
+edit_template: |
+  /* Error Returned: {} */
+  /* Take in account the Error returned to edit or change the SQL query to make it executable. */
+  SELECT
+
+template: |
+  /* Some example questions and corresponding SQL queries are provided based on similar problems: */
+  /* Answer the following: Show name, country, age for all singers ordered by age from the oldest to the youngest. */
+  SELECT name ,  country ,  age FROM singer ORDER BY age DESC
+
+  */ Answer the following: How many concerts occurred in 2014 or 2015? */
+  SELECT count(*) FROM concert WHERE YEAR  =  2014 OR YEAR  =  2015
+
+  /* Answer the following: How much does the youngest dog weigh? */
+  SELECT weight FROM pets ORDER BY pet_age LIMIT 1
+
+  /* Given the following database schema: */
+  {}
+
+  /* Answer the following: {} */
+  SELECT

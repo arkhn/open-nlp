@@ -1,0 +1,25 @@
+# @package _global_
+
+# specify here default configuration
+# order of defaults determines the order in which configs override each other
+defaults:
+  - _self_
+  - prompts: default
+
+eval_type: "all"
+max_samples: null
+pretrained_model_name_or_path: "mistralai/Mistral-7B-Instruct-v0.1"
+generation_config:
+  _target_: transformers.GenerationConfig
+  num_beams: 1
+  no_repeat_ngram_size: 2
+  num_return_sequences: 1
+  early_stopping: True
+  max_new_tokens: 200
+bnb_config:
+  _target_: transformers.BitsAndBytesConfig
+  load_in_4bit: True
+  bnb_4bit_quant_type: "nf4"
+  bnb_4bit_use_double_quant: False
+
+seed: 42
