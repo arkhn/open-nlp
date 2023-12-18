@@ -1,7 +1,7 @@
 # Cuda-based image which installs a Python Poetry environment designed to be used interactively.
 #
-# Depending on the machine configuration, you might need to add `sudo` at the beginning of all the 
-# `docker` commands below. 
+# Depending on the machine configuration, you might need to add `sudo` at the beginning of all the
+# `docker` commands below.
 #
 # To build this image, use:
 #   docker build . \
@@ -21,14 +21,14 @@
 # `--no-cache` to introduce a new configuration.
 #
 # To use this image interactively, use:
-#   docker run -it --rm --gpus all \    
+#   docker run -it --rm --gpus all \
 #       --volume $(pwd):/opt/pysetup/ \
-#       <image-name> 
+#       <image-name>
 # To share some local cache with the container, for instance HuggingFace's models, use:
-#   docker run -it --rm --gpus all \    
+#   docker run -it --rm --gpus all \
 #       --volume $(pwd):/opt/pysetup/ \
 #       --volum ~/.cache/huggingface:/root/.cache/huggingface \
-#       <image-name> 
+#       <image-name>
 
 FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
 
@@ -53,7 +53,7 @@ ENV PYTHON_VERSION=$PYTHON_VERSION \
     POETRY_VERSION=$POETRY_VERSION \
     # make poetry install to this location
     POETRY_HOME="/opt/poetry" \
-    # make poetry NOT create the virtual environment in the project's root, as it would be 
+    # make poetry NOT create the virtual environment in the project's root, as it would be
     # overwriten when setting a volume on /opt/pysetup/
     POETRY_VIRTUALENVS_IN_PROJECT=false \
     # do not ask any interactive question
@@ -62,7 +62,7 @@ ENV PYTHON_VERSION=$PYTHON_VERSION \
     # paths
     CONFIG_PATH="/root/.config" \
     SETUP_PATH="/opt/setup" \
-    PYSETUP_PATH="/opt/pysetup" 
+    PYSETUP_PATH="/opt/pysetup"
 
 # prepend poetry to path
 ENV PATH="$POETRY_HOME/bin:$PATH"
@@ -121,7 +121,7 @@ WORKDIR $PYSETUP_PATH
 COPY poetry.lock pyproject.toml ./
 
 # install runtime deps
-RUN poetry env use $PYTHON_VERSION 
+RUN poetry env use $PYTHON_VERSION
 RUN poetry install --only main --no-root
 
 # copy local code
@@ -130,6 +130,6 @@ COPY README.md ./
 
 # quicker install as runtime deps are already installed
 RUN poetry install --only main
- 
+
 # use a zsh shell when started interactively
 CMD ["/bin/zsh"]
