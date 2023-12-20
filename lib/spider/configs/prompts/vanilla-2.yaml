@@ -1,14 +1,7 @@
 defaults:
-  - _self_
+  - default
 
 edit_template: |
   /* Error Returned: {} */
   /* Take in account the Error returned to edit or change the SQL query to make it executable. Please do not generate any other opening, closing, and explanations, generate the query only. let's think step by step */
-  SELECT
-
-template: |
-  /* Given the following database schema: */
-  {}
-
-  /* Answer the following, Please do not generate any other opening, closing, and explanations. : {} */
   SELECT

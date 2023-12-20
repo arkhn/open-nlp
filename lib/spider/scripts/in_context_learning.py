@@ -2,7 +2,7 @@
 
 To run the script, here is an example command command:
     python scripts/in_context_learning.py -m \
-        prompts=default-1,default-2,icl-1,icl-2,icl-3,icl-4 \
+        prompts=default,vanilla-1,vanilla-2,icl-1,icl-2,icl-3,icl-4 \
         pretrained_model_name_or_path=mistralai/Mixtral-8x7B-Instruct-v0.1
 
 It will run the sweep over the different prompts and parameters provided.

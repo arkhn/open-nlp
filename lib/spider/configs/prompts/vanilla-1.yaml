@@ -1,5 +1,5 @@
 defaults:
-  - _self_
+  - default
 
 edit_template: |
   /* Take in account the Error returned to edit or change the SQL query to make it executable. */
