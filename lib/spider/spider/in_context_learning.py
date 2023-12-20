@@ -10,7 +10,6 @@ import os
 
 import clearml
 import hydra
-import nltk
 import torch
 import transformers
 import wandb
@@ -24,9 +23,6 @@ from spider._path import CONFIG_PATH, DATASET_PATH, ENV_FILE_PATH
 from spider.clearml_utils import setup_clearml
 from spider.evaluation import build_foreign_key_map_from_json, evaluate
 from spider.utils import extract_sql, is_valid_sql
-
-nltk.download("punkt")
-
 
 OUTPUT_FILE = DATASET_PATH / "output.txt"
 gold = DATASET_PATH / "dev_gold.sql"
