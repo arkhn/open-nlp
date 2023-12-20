@@ -20,7 +20,7 @@ from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from wandb import wandb_run
 
-from spider._path import _ROOT, DATASET_PATH
+from spider._path import CONFIG_PATH, DATASET_PATH, ENV_FILE_PATH
 from spider.clearml_utils import setup_clearml
 from spider.evaluation import build_foreign_key_map_from_json, evaluate
 from spider.utils import extract_sql, is_valid_sql
@@ -34,11 +34,11 @@ db_dir = DATASET_PATH / "database"
 table = DATASET_PATH / "tables.json"
 
 
-@hydra.main(version_base="1.3", config_path=str(_ROOT / "configs"), config_name="eval.yaml")
+@hydra.main(version_base="1.3", config_path=str(CONFIG_PATH), config_name="eval.yaml")
 def main(cfg) -> None:
     transformers.set_seed(cfg.seed)
     # loggers
-    setup_clearml(env_file_path=_ROOT / ".env")
+    setup_clearml(env_file_path=ENV_FILE_PATH)
     task = Task.init(
         project_name="spider",
         task_name="vanilla_llm",
