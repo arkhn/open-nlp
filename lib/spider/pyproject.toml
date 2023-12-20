@@ -66,6 +66,7 @@ python-dotenv = "^1.0.0"
 scipy = "^1.11.4"
 torch = "^2.1.1"
 transformers = "^4.36.2"
+wandb = "~0.16.1"
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib --cov-report term-missing:skip-covered"
