@@ -18,6 +18,7 @@ from clearml import Task
 from omegaconf import OmegaConf
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from wandb import wandb_run
 
 from spider._path import _ROOT, DATASET_PATH
 from spider.clearml_utils import setup_clearml
@@ -33,7 +34,7 @@ db_dir = DATASET_PATH / "database"
 table = DATASET_PATH / "tables.json"
 
 
-@hydra.main(version_base="1.3", config_path=_ROOT / "configs", config_name="eval.yaml")
+@hydra.main(version_base="1.3", config_path=str(_ROOT / "configs"), config_name="eval.yaml")
 def main(cfg) -> None:
     transformers.set_seed(cfg.seed)
     # loggers
@@ -44,6 +45,8 @@ def main(cfg) -> None:
         task_type=clearml.Task.TaskTypes.testing,
     )
     run = wandb.init(project="spider")
+    if not isinstance(run, wandb_run.Run):
+        raise TypeError("Run is not a valid Wandb run")
 
     dev_json = json.load(open(DATASET_PATH / "dev.json"))
     dev_json = [
