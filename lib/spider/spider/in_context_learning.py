@@ -1,5 +1,5 @@
 """To run the script, use the following command:
-python spider/in_context_learning.py -m prompts=default,icl-1,icl-2,icl-3,icl-4  \
+python spider/in_context_learning.py -m prompts=default-1,default-2,icl-1,icl-2,icl-3,icl-4  \
 pretrained_model_name_or_path=mistralai/Mixtral-8x7B-Instruct-v0.1
 
 It will run the sweep over the different prompts and the pretrained model.
@@ -16,7 +16,7 @@ import wandb
 from clearml import Task
 from omegaconf import OmegaConf
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from wandb import wandb_run
 
 from spider._path import CONFIG_PATH, DATASET_PATH, ENV_FILE_PATH
@@ -33,6 +33,7 @@ table = DATASET_PATH / "tables.json"
 @hydra.main(version_base="1.3", config_path=str(CONFIG_PATH), config_name="eval.yaml")
 def main(cfg) -> None:
     transformers.set_seed(cfg.seed)
+
     # loggers
     setup_clearml(env_file_path=ENV_FILE_PATH)
     task = Task.init(
@@ -44,6 +45,7 @@ def main(cfg) -> None:
     if not isinstance(run, wandb_run.Run):
         raise TypeError("Run is not a valid Wandb run")
 
+    # Dataset parsing
     dev_json = json.load(open(DATASET_PATH / "dev.json"))
     dev_json = [
         {
@@ -52,24 +54,28 @@ def main(cfg) -> None:
         }
         for data_point in dev_json
     ]
+
     # Model loading
+    bnb_config: BitsAndBytesConfig = hydra.utils.instantiate(cfg.bnb_config)
     model = AutoModelForCausalLM.from_pretrained(
         cfg.pretrained_model_name_or_path,
         device_map="auto",
-        quantization_config=hydra.utils.instantiate(cfg.bnb_config),
+        quantization_config=bnb_config,
         torch_dtype=torch.bfloat16,
     )
-
     tokenizer = AutoTokenizer.from_pretrained(
         cfg.pretrained_model_name_or_path,
         padding_side="left",
     )
     tokenizer.pad_token = tokenizer.eos_token
+
     generation_config = hydra.utils.instantiate(cfg.generation_config)
+
     # write results to file
     if os.path.exists(OUTPUT_FILE):
         # If it exists, delete it
         os.remove(OUTPUT_FILE)
+
     with open(OUTPUT_FILE, "w") as file:
         # Evaluation
         if cfg.max_samples is not None:
@@ -93,6 +99,7 @@ def main(cfg) -> None:
                 generation_config=generation_config,
                 pad_token_id=tokenizer.eos_token_id,
             )
+
             response = tokenizer.decode(outputs[0], skip_special_tokens=True).split("[/INST]")[1]
             response = extract_sql(message=response, if_first_answer=True)
             messages.append({"role": "assistant", "content": response})

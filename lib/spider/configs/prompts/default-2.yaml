@@ -1,0 +1,16 @@
+defaults:
+  - _self_
+
+edit_template: |
+  /* Take in account the Error returned to edit or change the SQL query to make it executable. */
+  /* Error Returned: {} */
+
+  Very important: generate only the edited SQL query and nothing else.
+  SELECT
+
+template: |
+  /* Given the following database schema: */
+  {}
+
+  /* Answer the following: {} Very important: generate only the SQL query and nothing else. */
+  SELECT
