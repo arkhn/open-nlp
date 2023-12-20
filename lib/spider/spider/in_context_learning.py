@@ -33,7 +33,7 @@ db_dir = DATASET_PATH / "database"
 table = DATASET_PATH / "tables.json"
 
 
-@hydra.main(version_base="1.3", config_path=_ROOT / "configs", config_name="eval.yaml")
+@hydra.main(version_base="1.3", config_path=str(_ROOT / "configs"), config_name="eval.yaml")
 def main(cfg) -> None:
     transformers.set_seed(cfg.seed)
     # loggers
@@ -59,8 +59,9 @@ def main(cfg) -> None:
         device_map="auto",
         quantization_config=hydra.utils.instantiate(cfg.bnb_config),
         torch_dtype=torch.bfloat16,
+        attn_implementation="flash_attention_2",
     )
-
+    model.eval()
     tokenizer = AutoTokenizer.from_pretrained(
         cfg.pretrained_model_name_or_path,
         padding_side="left",
@@ -71,39 +72,23 @@ def main(cfg) -> None:
     if os.path.exists(OUTPUT_FILE):
         # If it exists, delete it
         os.remove(OUTPUT_FILE)
-    with open(OUTPUT_FILE, "w") as file:
-        # Evaluation
-        if cfg.max_samples is not None:
-            dev_json = dev_json[: cfg.max_samples]
-        for data_point in tqdm(dev_json, total=len(dev_json)):
-            schema_paths = list((DATASET_PATH / "database" / data_point["db_id"]).glob("*.sql"))
-            if schema_paths:
-                schema_path = str(schema_paths[0])
-                with open(schema_path, "r") as schema_file:
-                    data_point["schema"] = schema_file.read()
-            else:
-                data_point["schema"] = ""
-            prompt = cfg.prompts.template.format(data_point["schema"], data_point["question"])
-            messages = [
-                {"role": "user", "content": prompt},
-            ]
-            encodeds = tokenizer.apply_chat_template(messages, return_tensors="pt")
-            model_inputs = encodeds.to("cuda")
-            outputs = model.generate(
-                model_inputs,
-                generation_config=generation_config,
-                pad_token_id=tokenizer.eos_token_id,
-            )
-            response = tokenizer.decode(outputs[0], skip_special_tokens=True).split("[/INST]")[1]
-            response = extract_sql(message=response, if_first_answer=True)
-            messages.append({"role": "assistant", "content": response})
-
-            # Check if the response is executable
-            is_valid, error = is_valid_sql(sql=response, db_id=data_point["db_id"])
-            if not is_valid:
-                # call the model again to edit the previous response
-                edit_prompt = cfg.prompts.edit_template.format(error)
-                messages.append({"role": "user", "content": edit_prompt})
+    with torch.no_grad():
+        with open(OUTPUT_FILE, "w") as file:
+            # Evaluation
+            if cfg.max_samples is not None:
+                dev_json = dev_json[: cfg.max_samples]
+            for data_point in tqdm(dev_json, total=len(dev_json)):
+                schema_paths = list((DATASET_PATH / "database" / data_point["db_id"]).glob("*.sql"))
+                if schema_paths:
+                    schema_path = str(schema_paths[0])
+                    with open(schema_path, "r") as schema_file:
+                        data_point["schema"] = schema_file.read()
+                else:
+                    data_point["schema"] = ""
+                prompt = cfg.prompts.template.format(data_point["schema"], data_point["question"])
+                messages = [
+                    {"role": "user", "content": prompt},
+                ]
                 encodeds = tokenizer.apply_chat_template(messages, return_tensors="pt")
                 model_inputs = encodeds.to("cuda")
                 outputs = model.generate(
@@ -114,9 +99,28 @@ def main(cfg) -> None:
                 response = tokenizer.decode(outputs[0], skip_special_tokens=True).split("[/INST]")[
                     1
                 ]
-                response = extract_sql(message=response, if_first_answer=False)
-        print("RESPONSE: ", response)
-        file.write(response + "\n")
+                response = extract_sql(message=response, if_first_answer=True)
+                messages.append({"role": "assistant", "content": response})
+
+                # Check if the response is executable
+                is_valid, error = is_valid_sql(sql=response, db_id=data_point["db_id"])
+                if not is_valid:
+                    # call the model again to edit the previous response
+                    edit_prompt = cfg.prompts.edit_template.format(error)
+                    messages.append({"role": "user", "content": edit_prompt})
+                    encodeds = tokenizer.apply_chat_template(messages, return_tensors="pt")
+                    model_inputs = encodeds.to("cuda")
+                    outputs = model.generate(
+                        model_inputs,
+                        generation_config=generation_config,
+                        pad_token_id=tokenizer.eos_token_id,
+                    )
+                    response = tokenizer.decode(outputs[0], skip_special_tokens=True).split(
+                        "[/INST]"
+                    )[1]
+                    response = extract_sql(message=response, if_first_answer=False)
+                print("RESPONSE: ", response)
+                file.write(response + "\n")
 
     kmaps = build_foreign_key_map_from_json(table)
     scores = evaluate(gold, OUTPUT_FILE, db_dir, cfg.eval_type, kmaps)
