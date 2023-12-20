@@ -1,3 +1,10 @@
+"""To run the script, use the following command:
+python spider/in_context_learning.py -m prompts=default,icl-1,icl-2,icl-3,icl-4  \
+pretrained_model_name_or_path=mistralai/Mixtral-8x7B-Instruct-v0.1
+
+It will run the sweep over the different prompts and the pretrained model.
+"""
+
 import json
 import os
 
@@ -21,13 +28,12 @@ nltk.download("punkt")
 
 
 OUTPUT_FILE = DATASET_PATH / "output.txt"
-
 gold = DATASET_PATH / "dev_gold.sql"
 db_dir = DATASET_PATH / "database"
 table = DATASET_PATH / "tables.json"
 
 
-@hydra.main(version_base="1.3", config_path="../configs", config_name="eval.yaml")
+@hydra.main(version_base="1.3", config_path=_ROOT / "configs", config_name="eval.yaml")
 def main(cfg) -> None:
     transformers.set_seed(cfg.seed)
     # loggers
