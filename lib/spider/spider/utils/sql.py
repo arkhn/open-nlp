@@ -32,6 +32,8 @@ def extract_sql(message: str, if_first_answer: bool = True) -> str:
     if matches:
         # join all matches with a newline character
         sql_code = "\n".join(matches)
+        if "SELECT" not in sql_code:
+            sql_code = "SELECT " + sql_code
         return sql_code.strip().split("\t")[0] + ";"
     else:
         return message.strip().split("\t")[0] + ";"
