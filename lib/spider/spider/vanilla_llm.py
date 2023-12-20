@@ -2,7 +2,6 @@ import json
 import os
 
 import clearml
-import nltk
 import torch
 import transformers
 from clearml import Task
@@ -12,8 +11,6 @@ from spider._path import _ROOT
 from spider.clearml_utils import setup_clearml
 from spider.evaluation import build_foreign_key_map_from_json, evaluate
 from spider.utils import extract_sql, is_valid_sql
-
-nltk.download("punkt")
 
 SEED = 42
 DATASET_PATH = _ROOT / "data" / "spider"
