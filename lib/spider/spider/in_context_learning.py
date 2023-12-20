@@ -115,10 +115,9 @@ def main(cfg) -> None:
                         generation_config=generation_config,
                         pad_token_id=tokenizer.eos_token_id,
                     )
-                    response = tokenizer.decode(outputs[0], skip_special_tokens=True).split(
-                        "[/INST]"
-                    )[1]
-                    response = extract_sql(message=response, if_first_answer=False)
+                response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+                response = extract_sql(message=response, if_first_answer=False)
+                print("after second correction", response)
                 print("RESPONSE: ", response)
                 file.write(response + "\n")
 
