@@ -118,8 +118,9 @@ def main(cfg) -> None:
                     1
                 ]
                 response = extract_sql(message=response, if_first_answer=False)
-        print("RESPONSE: ", response)
-        file.write(response + "\n")
+
+            print("RESPONSE: ", response)
+            file.write(response + "\n")
 
     kmaps = build_foreign_key_map_from_json(table)
     scores = evaluate(gold, OUTPUT_FILE, db_dir, cfg.eval_type, kmaps)
