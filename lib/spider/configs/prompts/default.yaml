@@ -3,12 +3,13 @@ defaults:
 
 edit_template: |
   /* Error Returned: {} */
-  /* Take in account the Error returned to edit or change the SQL query to make it executable. */
+  /* Take in account the Error returned to edit or change the SQL query to make it executable.
+  Please generate only the SQL query*/
   SELECT
 
 template: |
   /* Given the following database schema: */
   {}
 
-  /* Answer the following, Please do not generate any other opening, closing, and explanations. : {} */
+  /* Answer the following, please generate only the SQL query: {} */
   SELECT
