@@ -1,6 +1,8 @@
 defaults:
   - default
 
+name: "vanilla-1"
+
 edit_template: |
   /* Take in account the Error returned to edit or change the SQL query to make it executable. */
   /* Error Returned: {} */

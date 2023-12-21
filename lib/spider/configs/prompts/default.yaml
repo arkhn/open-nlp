@@ -1,6 +1,8 @@
 defaults:
   - _self_
 
+name: "default"
+
 edit_template: |
   /* Error Returned: {} */
   /* Take in account the Error returned to edit or change the SQL query to make it executable.

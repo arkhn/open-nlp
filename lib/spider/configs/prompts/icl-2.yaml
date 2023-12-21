@@ -1,6 +1,8 @@
 defaults:
   - default
 
+name: "icl-2"
+
 template: |
   /* Some example questions and corresponding SQL queries are provided based on similar problems: */
   /* Answer the following: How much does the youngest dog weigh? */
