@@ -13,16 +13,16 @@ import os
 
 import clearml
 import hydra
+import nltk
 import torch
 import transformers
-import wandb
+from accelerate import Accelerator
 from clearml import Task
 from omegaconf import OmegaConf
 from sentence_transformers import SentenceTransformer
 from torch.nn import functional as F
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-from wandb import wandb_run
 
 from spider._path import CONFIG_PATH, DATASET_PATH, ENV_FILE_PATH
 from spider.clearml_utils import setup_clearml
@@ -34,10 +34,13 @@ gold = DATASET_PATH / "dev_gold.sql"
 db_dir = DATASET_PATH / "database"
 table = DATASET_PATH / "tables.json"
 
+nltk.download("punkt")
+
 
 @hydra.main(version_base="1.3", config_path=str(CONFIG_PATH), config_name="eval.yaml")
 def main(cfg) -> None:
     transformers.set_seed(cfg.seed)
+    accelerator = Accelerator(log_with="wandb")
     # loggers
     setup_clearml(env_file_path=ENV_FILE_PATH)
     task = Task.init(
@@ -45,9 +48,13 @@ def main(cfg) -> None:
         task_name="vanilla_llm",
         task_type=clearml.Task.TaskTypes.testing,
     )
-    run = wandb.init(project="spider")
-    if not isinstance(run, wandb_run.Run):
-        raise TypeError("Run is not a valid Wandb run")
+    accelerator.init_trackers(
+        project_name="spider",
+        config=OmegaConf.to_container(cfg),
+    )
+
+    # if not isinstance(run, wandb_run.Run):
+    # raise TypeError("Run is not a valid Wandb run")
 
     # Dataset parsing
     dev_json = json.load(open(DATASET_PATH / "dev.json"))
@@ -77,6 +84,8 @@ def main(cfg) -> None:
 
     # Model loading
     bnb_config: BitsAndBytesConfig = hydra.utils.instantiate(cfg.bnb_config)
+    # if you use flash attention, you need to run:
+    # pip install flash-attn --no-build-isolation in the poerty shell
     model = AutoModelForCausalLM.from_pretrained(
         cfg.pretrained_model_name_or_path,
         device_map="auto",
@@ -166,14 +175,13 @@ def main(cfg) -> None:
 
     kmaps = build_foreign_key_map_from_json(table)
     scores = evaluate(gold, OUTPUT_FILE, db_dir, cfg.eval_type, kmaps)
-    run.log(scores)
+    accelerator.log(scores)
     task.upload_artifact("output.txt", artifact_object=OUTPUT_FILE)
     task.upload_artifact("score", artifact_object=scores)
     task.connect(scores, name="scores")
 
     task.close()
-    run.config.update(OmegaConf.to_container(cfg))
-    run.finish()
+    accelerator.end_training()
 
 
 if __name__ == "__main__":
