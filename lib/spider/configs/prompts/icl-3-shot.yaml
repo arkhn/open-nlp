@@ -1,0 +1,21 @@
+defaults:
+  - default
+
+name: "icl-3-shot"
+
+template: |
+  /* Some example questions and corresponding SQL queries are provided based on similar problems: */
+  /* Answer the following: {} */
+  {}
+
+  /* Answer the following: {} */
+  {}
+
+  /* Answer the following: {} */
+  {}
+
+  /* Given the following database schema: */
+  {}
+
+  /* Answer the following, please generate only the SQL query. : {} */
+  SELECT

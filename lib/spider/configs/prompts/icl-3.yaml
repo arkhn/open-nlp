@@ -1,6 +1,8 @@
 defaults:
   - default
 
+name: "icl-3"
+
 template: |
   /* Some example questions and corresponding SQL queries are provided based on similar problems: */
   /* Answer the following: What is the first and second line for all addresses? */
