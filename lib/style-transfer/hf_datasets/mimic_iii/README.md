@@ -2,24 +2,24 @@
 dataset_info:
   config_name: mimic_iii_dataset
   features:
-  - name: user_id
-    dtype: string
-  - name: text_id
-    list: int32
-  - name: keywords
-    list: string
-  - name: text
-    list: string
+    - name: user_id
+      dtype: string
+    - name: text_id
+      list: int32
+    - name: keywords
+      list: string
+    - name: text
+      list: string
   splits:
-  - name: train
-    num_bytes: 13388994
-    num_examples: 3631
-  - name: validation
-    num_bytes: 1684292
-    num_examples: 453
-  - name: test
-    num_bytes: 1584958
-    num_examples: 455
+    - name: train
+      num_bytes: 13388994
+      num_examples: 3631
+    - name: validation
+      num_bytes: 1684292
+      num_examples: 453
+    - name: test
+      num_bytes: 1584958
+      num_examples: 455
   download_size: 17014296
   dataset_size: 16658244
 ---
