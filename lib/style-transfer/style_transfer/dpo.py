@@ -14,7 +14,6 @@
 # limitations under the License.
 import logging
 import os
-import random
 from functools import partial
 from typing import Dict, Union
 
@@ -50,6 +49,7 @@ class CustomDPOTrainer(DPOTrainer):
         peft_config,
         num_generated_sequences,
         padding_value,
+        seed,
     ):
         super().__init__(
             args=args,
@@ -89,6 +89,7 @@ class CustomDPOTrainer(DPOTrainer):
             tokenize_row_fn=partial(super().tokenize_row, model=self.model),
             dpo_trainer=self,
             num_generated_sequences=num_generated_sequences,
+            seed=seed,
         )
 
     def tokenize_row(self, feature, model: Union[PreTrainedModel, nn.Module] = None) -> Dict:
@@ -109,6 +110,7 @@ class CustomDPOCollator(DPODataCollatorWithPadding):
         tokenize_row_fn,
         dpo_trainer: CustomDPOTrainer,
         num_generated_sequences,
+        seed,
     ):
         super().__init__(
             pad_token_id,
@@ -123,6 +125,7 @@ class CustomDPOCollator(DPODataCollatorWithPadding):
         self.generation_config = generation_config
         self.model = model
         self.tokenize_row_fn = tokenize_row_fn
+        self.seed = seed
 
     def __call__(self, features):
         logging.info("Generation  step ... 🌱")
@@ -152,10 +155,9 @@ class CustomDPOCollator(DPODataCollatorWithPadding):
         ).to(self.dpo_trainer.accelerator.device)
 
         reports_candidates = []
-        temperatures = [i * 0.1 for i in range(1, 11)]
-        for _ in range(self.num_generated_sequences):
+        for seed in range(self.num_generated_sequences):
             with torch.no_grad():
-                self.generation_config.temperature = random.choice(temperatures)
+                set_seed(seed)
                 reports = self.model.generate(
                     **input_ids,
                     max_new_tokens=256,
@@ -168,20 +170,27 @@ class CustomDPOCollator(DPODataCollatorWithPadding):
                     for report in self.tokenizer.batch_decode(reports, skip_special_tokens=True)
                 ]
                 reports_candidates.append(reports)
+        set_seed(self.seed)
         reports_candidates = list(map(list, zip(*reports_candidates)))
         evaluator_prompts = [
-            str.format(
-                EVAL_PROMPT,
-                prompt,
-                report,
-                ground_text,
-            )
-            for reports in reports_candidates
-            for report, prompt, ground_text in zip(
-                reports,
+            [
+                str.format(
+                    EVAL_PROMPT,
+                    prompt,
+                    report,
+                    ground_text,
+                )
+                for report in reports
+            ]
+            for reports, prompt, ground_text in zip(
+                reports_candidates,
                 dpo_batch_dict["prompt"],
                 [data_point["ground_texts"] for data_point in batch],
             )
+        ]
+
+        evaluator_prompts = [
+            e_prompt for evaluator_prompt in evaluator_prompts for e_prompt in evaluator_prompt
         ]
         batch_gen_inputs = self.evaluator_tokenizer(
             evaluator_prompts,
@@ -285,6 +294,7 @@ def main(cfg):
         bnb_config=bnb_config,
         peft_config=lora_config,
         num_generated_sequences=cfg.num_generated_sequences,
+        seed=cfg.seed,
     )
 
     dpo_trainer.train()
