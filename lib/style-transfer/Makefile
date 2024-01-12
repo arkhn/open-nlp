@@ -36,7 +36,4 @@ create-datasets-cards: ## create metadata and test hf datasets
 	datasets-cli test pmc_style_transfer.py --save_info --all_configs
 
 start: ## start the training
-	accelerate launch --config_file=accelerate-config.yaml ppo.py
-
-slurm_start: ## start the training on slurm
-	sbatch ppo.batch
+	accelerate launch --num_cpu_threads_per_process=16 --config_file=accelerate-config.yaml dpo.py
