@@ -2,6 +2,7 @@ import logging
 import re
 
 from datasets import Dataset, load_dataset
+from fastchat.conversation import get_conv_template
 from transformers import AutoTokenizer
 
 PROMPT = """As a doctor, you must write an original \
@@ -50,12 +51,57 @@ It mirrors the style of the reference answer, \
 effectively conveying information in a brief and clear manner.\n
 ###Feedback:"""
 
+SELF_REWARD_PROMPT = """Evaluate the AI Assistant's generated 'History of Present Illness' (HPI) \
+section for a discharge summary in comparison to a provided original medical report. \
+using the additive 5-point \
+scoring system described below. Points are accumulated based on the satisfaction of each
+criterion: \n
+
+- Add 1 point if the generated HPI section is relevant and mirrors \
+some aspects of the original report, even if it's incomplete or contains some differences.
+- Add another point if it resembles a significant part of the original report in style or content, \
+but does not completely match or fully replicate the original narrative.
+- Award a third point if the generated HPI closely follows the basic elements and style \
+of the original report, regardless of minor differences in wording or structure.
+- Grant a fourth point if the generated HPI is very similar to the original report \
+in style and content, addressing the patient's health journey in a manner similar to the original,\
+with well-organized and helpful information, despite slight deviations.
+- Bestow a fifth point for a generated HPI that impeccably mirrors the style and content of the \
+original report, with minimal to no deviations, reflecting a high level of accuracy and insight.\n
+
+Instruction:
+{}
+
+Original Report (to compare with):
+{}
+
+Generated response:
+{}
+
+After examining the generated section and the original report:
+Briefly justify your total score, up to 100 words.
+Conclude with the score using the format: “Score: <total points>”
+Focus on assessing the AI Assistant's capability to replicate the style and content of the \
+original report in its response. \
+Evaluate the response in alignment with this additive scoring model, \
+attributing points systematically based on the outlined criteria.
+
+Feedback:
+"""
+BEST_FEEDBACK = """ The response perfectly aligns with the medical telegraphic style, \
+characterized by concise and direct language. It mirrors the style of the reference answer, \
+effectively conveying information in a brief and clear manner. [RESULT] 5"""
+
+WORST_FEEDBACK = """ The response significantly deviates from the medical telegraphic style, \
+showing a lack of concise and direct language. It does not resemble the style of the reference \
+answer, with lengthy sentences and unrelated details. [RESULT] 1"""
+
 
 def tokenize(sample, tokenizer, max_sampler_length):
     continuation = sample["text"]
     ground_ids = tokenizer.encode(continuation, add_special_tokens=False)
     ground_ids = (
-        ground_ids if len(continuation) > max_sampler_length else ground_ids[:max_sampler_length]
+        ground_ids if len(continuation) <= max_sampler_length else ground_ids[:max_sampler_length]
     )
     sample["ground_texts"] = tokenizer.decode(ground_ids)
     keywords = ",".join(
@@ -88,7 +134,7 @@ def build_dataset(dataset_name, model_name, max_sampler_length):
     """
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.pad_token = tokenizer.eos_token
-    ds = load_dataset(dataset_name, split="train")
+    ds = load_dataset(dataset_name, split="train", trust_remote_code=True)
 
     ds_dict = {"keywords": [], "text": []}
     for keywords, text in zip(ds["keywords"], ds["text"]):
@@ -106,8 +152,6 @@ def build_dataset(dataset_name, model_name, max_sampler_length):
     )
     ds = ds.filter(lambda x: len(x["keywords"].split(",")) > 1)
     ds.set_format(type="torch")
-
-    ds = ds.train_test_split(test_size=0.2, shuffle=False)["train"]
     return ds
 
 
@@ -123,3 +167,21 @@ def extract_score(feedback):
     else:
         logging.warning(f"NO SCORE:\n {feedback}")
         return 0
+
+
+def create_evaluator_prompt(prompt):
+    conv = get_conv_template("llama-2")
+    conv.set_system_message("You are a fair evaluator language model.")
+    conv.append_message(conv.roles[0], prompt)
+    conv.append_message(conv.roles[1], None)
+    return conv.get_prompt()
+
+
+def split_dataset(dataset, sft_ratio, dpo_ratio):
+    train_dataset, test_dataset = dataset.train_test_split(
+        train_size=sft_ratio, shuffle=False
+    ).values()
+    gen_dataset, test_dataset = test_dataset.train_test_split(
+        train_size=dpo_ratio, shuffle=False
+    ).values()
+    return train_dataset, gen_dataset, test_dataset

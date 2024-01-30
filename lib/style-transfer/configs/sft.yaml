@@ -1,0 +1,47 @@
+# @package _global_
+
+training_args:
+  _target_: transformers.TrainingArguments
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4
+  logging_steps: 20
+  save_steps: 5
+  eval_steps: 50
+  evaluation_strategy: "steps"
+  report_to: "wandb"
+  remove_unused_columns: true
+  bf16: true
+  resume_from_checkpoint: "models/sft/"
+  output_dir: "models/sft/"
+  learning_rate: 2e-4
+  weight_decay: 0.001
+  warmup_ratio: 0.3
+  group_by_length: True
+  lr_scheduler_type: "constant"
+  num_train_epochs: 15
+  save_only_model: true
+  save_safetensors: false
+
+lora:
+  _target_: peft.LoraConfig
+  task_type: CAUSAL_LM
+  r: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  bias: none
+  target_modules:
+    ["q_proj", "v_proj", "k_proj", "out_proj", "fc_in", "fc_out", "wte"]
+
+bnb_config:
+  _target_: transformers.BitsAndBytesConfig
+  load_in_4bit: true
+  bnb_4bit_quant_type: nf4
+  bnb_4bit_use_double_quant: True
+  bnb_4bit_compute_dtype: bfloat16
+
+model: "mistralai/Mistral-7B-Instruct-v0.1"
+dataset: "bio-datasets/mimic_style_transfer"
+sft_ratio: 0.1
+gen_ratio: 0.7
+seed: 0
+max_seq_length: 1024
