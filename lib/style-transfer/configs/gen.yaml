@@ -1,8 +1,8 @@
 # @package _global_
 defaults:
-  - _self_
   - default
+  - _self_
 
-checkpoint: "clinical-dream-team/sft-style-transfer/checkpoint-tc5l40v2:v0"
+checkpoint: ???
 batch_size: 4
-num_generated_sequences: 4
+max_new_tokens: 1024

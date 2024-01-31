@@ -1,7 +1,7 @@
 # @package _global_
 defaults:
-  - _self_
   - default
+  - _self_
 
 training_args:
   _target_: transformers.TrainingArguments

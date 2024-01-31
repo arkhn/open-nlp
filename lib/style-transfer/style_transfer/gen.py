@@ -26,7 +26,7 @@ def main(cfg):
                 PROMPT,
                 data_point["keywords"],
             )
-            + "[INST]\n"
+            + "[/INST]\n"
         )
         return data_point
 
@@ -36,10 +36,14 @@ def main(cfg):
     )
     _, gen_dataset, _ = split_dataset(dataset, cfg.sft_ratio, cfg.gen_ratio)
     gen_dataset = dataset.remove_columns(["input_ids", "max_gen_len"])
+    dataloader = torch.utils.data.DataLoader(
+        gen_dataset,
+        batch_size=cfg.batch_size,
+    )
 
     with wandb.init(project="gen-style-transfer") as run:
-        my_model_artifact = run.use_artifact(cfg.checkpoint)
-        model_dir = my_model_artifact.download()
+        model_artifact = run.use_artifact(cfg.checkpoint)
+        model_dir = model_artifact.download()
 
         model = AutoPeftModelForCausalLM.from_pretrained(
             pretrained_model_name_or_path=model_dir,
@@ -56,15 +60,12 @@ def main(cfg):
         logging.info("Loading model to pipeline 🐉 ...")
         pipe = mii.pipeline("models/merged/")
         logging.info("Model loaded to pipeline ! 🎉")
-        dataloader = torch.utils.data.DataLoader(
-            gen_dataset,
-            batch_size=cfg.batch_size,
-        )
+
         new_dataset = []
         for batch in tqdm(dataloader):
             generated_sequences = []
             for _ in range(cfg.num_generated_sequences):
-                responses = pipe(batch["prompts"], max_new_tokens=12)
+                responses = pipe(batch["prompts"], max_new_tokens=cfg.max_new_tokens)
                 generated_sequences.append([response.generated_text for response in responses])
 
             responses = list(map(list, zip(*generated_sequences)))
@@ -80,7 +81,6 @@ def main(cfg):
             new_dataset.extend([dict(zip(batch_logs, t)) for t in zip(*batch_logs.values())])
             table = wandb.Table(dataframe=pd.DataFrame(batch_logs))
             wandb.log({"generation_predictions": table})
-            break
         df = pd.DataFrame(new_dataset)
         wandb.log({"dataframe_table": wandb.Table(dataframe=df)})
     wandb.finish()
