@@ -32,17 +32,18 @@ def main(cfg):
         )
         return data_point
 
+    dataset = dataset.map(
+        add_prompt,
+        batched=False,
+    )
+    train_dataset, gen_, test_dataset = split_dataset(dataset, cfg.sft_ratio, cfg.gen_ratio)
+
     model = AutoModelForCausalLM.from_pretrained(
         pretrained_model_name_or_path=cfg.model,
         torch_dtype=torch.bfloat16,
         device_map={"": Accelerator().local_process_index},
         quantization_config=hydra.utils.instantiate(cfg.bnb_config),
     )
-    dataset = dataset.map(
-        add_prompt,
-        batched=False,
-    )
-    train_dataset, gen_, test_dataset = split_dataset(dataset, cfg.sft_ratio, cfg.gen_ratio)
 
     args = hydra.utils.instantiate(cfg.training_args)
 
