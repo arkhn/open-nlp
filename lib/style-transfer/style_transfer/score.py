@@ -8,6 +8,7 @@ import pandas as pd
 import torch
 import wandb
 from fastchat.conversation import get_conv_template
+from sentence_transformers import SentenceTransformer, util
 from style_transfer.utils import EVAL_PROMPT
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -20,6 +21,8 @@ def main(cfg):
         json_file = json.load(dataset.files()[0].download(replace=True))
         df = pd.DataFrame(data=json_file["data"], columns=json_file["columns"])
         dataset = datasets.Dataset.from_pandas(df)
+
+        sem_model = SentenceTransformer("sentence-transformers/all-mpnet-base-v2")
 
         def add_prompt(data_point):
             for seq in range(cfg.num_generated_sequences):
@@ -60,21 +63,35 @@ def main(cfg):
         del tokenizer
         pipe = mii.pipeline("models/evaluator/")
         logging.info("Model loaded to pipeline ! 🎉")
+        logging.info("Loading the Semantic Model 🐈‍⬛")
+
+        def g_scores(batch, seq):
+            responses = pipe(batch[f"eval_prompt_{seq}"], max_new_tokens=cfg.max_new_tokens)
+            scores = [response.generated_text[-1] for response in responses]
+            scores = [
+                float(score) if score.isdigit() and 0 <= float(score) <= 5 else 0
+                for score in scores
+            ]
+            feedbacks = [
+                response.generated_text.split("[RESULT]")[0].strip() for response in responses
+            ]
+            batch.setdefault(f"eval_scores_{seq}", []).extend(scores)
+            batch.setdefault(f"eval_feedbacks_{seq}", []).extend(feedbacks)
+
+        def sem_scores(batch, seq):
+            ground_enc = sem_model.encode(batch["ground_texts"])
+            prediction_enc = sem_model.encode(batch[f"eval_prompt_{seq}"])
+            scores = [
+                util.cos_sim(ground_enc, pred_enc)[0][0].item()
+                for ground_enc, pred_enc in zip(ground_enc, prediction_enc)
+            ]
+            batch.setdefault(f"eval_sem_scores_{seq}", []).extend(scores)
 
         new_dataset = []
         for batch in tqdm(dataloader):
             for seq in range(cfg.num_generated_sequences):
-                responses = pipe(batch[f"eval_prompt_{seq}"], max_new_tokens=cfg.max_new_tokens)
-                scores = [response.generated_text[-1] for response in responses]
-                scores = [
-                    float(score) if score.isdigit() and 0 <= float(score) <= 5 else 0
-                    for score in scores
-                ]
-                feedbacks = [
-                    response.generated_text.split("[RESULT]")[0].strip() for response in responses
-                ]
-                batch.setdefault(f"eval_scores_{seq}", []).extend(scores)
-                batch.setdefault(f"eval_feedbacks_{seq}", []).extend(feedbacks)
+                g_scores(batch, seq)
+                sem_scores(batch, seq)
 
             new_dataset.extend([dict(zip(batch, t)) for t in zip(*batch.values())])
             table = wandb.Table(dataframe=pd.DataFrame(batch))
