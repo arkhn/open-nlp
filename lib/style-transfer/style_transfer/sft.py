@@ -3,8 +3,10 @@ import os
 import hydra
 import torch
 from accelerate import Accelerator
+from omegaconf import omegaconf
 from style_transfer.utils import PROMPT, build_dataset
 from transformers import AutoModelForCausalLM, set_seed
+from transformers.integrations import WandbCallback
 from trl import SFTTrainer
 from utils import split_dataset
 
@@ -49,6 +51,18 @@ def main(cfg):
 
     peft_config = hydra.utils.instantiate(cfg.lora)
     peft_config.target_modules = list(peft_config.target_modules)
+
+    class CustomWandbCallback(WandbCallback):
+        def setup(self, args, state, model, **kwargs):
+            super().setup(args, state, model, **kwargs)
+            if state.is_world_process_zero:
+                dict_conf = omegaconf.OmegaConf.to_container(
+                    cfg, resolve=True, throw_on_missing=True
+                )
+                for k_param, v_params in dict_conf.items():
+                    setattr(args, k_param, v_params)
+                self._wandb.config.update(args, allow_val_change=True)
+
     trainer = SFTTrainer(
         model=model,
         args=args,
@@ -58,6 +72,7 @@ def main(cfg):
         max_seq_length=cfg.max_seq_length,
         peft_config=peft_config,
         packing=True,
+        callbacks=[CustomWandbCallback],
     )
     trainer.train()
 

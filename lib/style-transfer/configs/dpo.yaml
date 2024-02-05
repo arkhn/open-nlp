@@ -1,61 +1,27 @@
 # @package _global_
-
-# specify here default configuration
-# order of defaults determines the order in which configs override each other
+defaults:
+  - default
+  - _self_
 
 training_args:
   _target_: transformers.TrainingArguments
   per_device_train_batch_size: 2
   per_device_eval_batch_size: 2
   max_steps: 100000
-  logging_steps: 1
-  save_steps: 2000
-  gradient_accumulation_steps: 2
+  logging_steps: 2
+  save_steps: 10
+  gradient_accumulation_steps: 4
   gradient_checkpointing: false
-  learning_rate: 2e-5
-  evaluation_strategy: "steps"
-  eval_steps: 2000
+  learning_rate: 1e-6
+  weight_decay: 1e-6
+  evaluation_strategy: "no"
   output_dir: "models/dpo"
-  report_to: "wandb"
   optim: "adafactor"
+  save_only_model: true
   remove_unused_columns: false
   bf16: false
+  seed: 0
 
-max_sampler_length: 256
 beta: 0.1
-
-dataset: "bio-datasets/mimic_style_transfer"
-
-lora:
-  _target_: peft.LoraConfig
-  task_type: CAUSAL_LM
-  r: 8
-  lora_alpha: 16
-  lora_dropout: 0.05
-  bias: none
-  target_modules:
-    ["q_proj", "v_proj", "k_proj", "out_proj", "fc_in", "fc_out", "wte"]
-
-bnb:
-  _target_: transformers.BitsAndBytesConfig
-  load_in_4bit: true
-  bnb_4bit_quant_type: nf4
-  bnb_4bit_use_double_quant: True
-  bnb_4bit_compute_dtype: bfloat16
-
-model:
-  name: "mistralai/Mistral-7B-Instruct-v0.1"
-  use_flash_attention_2: True
-
-generation_config:
-  _target_: transformers.GenerationConfig
-  min_length: -1
-  top_p: 1.0
-  temperature: 1.0
-  num_beams: 1
-  num_return_sequences: 1
-  repetition_penalty: 1.3
-  do_sample: true
-
-num_generated_sequences: 4
-seed: 0
+checkpoint: "clinical-dream-team/sft-style-transfer/checkpoint-tc5l40v2:v0"
+dataset: "clinical-dream-team/score-style-transfer/run-nuue1ag3-dataframe_table:v0"

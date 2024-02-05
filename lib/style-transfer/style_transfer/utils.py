@@ -51,51 +51,6 @@ It mirrors the style of the reference answer, \
 effectively conveying information in a brief and clear manner.\n
 ###Feedback:"""
 
-SELF_REWARD_PROMPT = """Evaluate the AI Assistant's generated 'History of Present Illness' (HPI) \
-section for a discharge summary in comparison to a provided original medical report. \
-using the additive 5-point \
-scoring system described below. Points are accumulated based on the satisfaction of each
-criterion: \n
-
-- Add 1 point if the generated HPI section is relevant and mirrors \
-some aspects of the original report, even if it's incomplete or contains some differences.
-- Add another point if it resembles a significant part of the original report in style or content, \
-but does not completely match or fully replicate the original narrative.
-- Award a third point if the generated HPI closely follows the basic elements and style \
-of the original report, regardless of minor differences in wording or structure.
-- Grant a fourth point if the generated HPI is very similar to the original report \
-in style and content, addressing the patient's health journey in a manner similar to the original,\
-with well-organized and helpful information, despite slight deviations.
-- Bestow a fifth point for a generated HPI that impeccably mirrors the style and content of the \
-original report, with minimal to no deviations, reflecting a high level of accuracy and insight.\n
-
-Instruction:
-{}
-
-Original Report (to compare with):
-{}
-
-Generated response:
-{}
-
-After examining the generated section and the original report:
-Briefly justify your total score, up to 100 words.
-Conclude with the score using the format: “Score: <total points>”
-Focus on assessing the AI Assistant's capability to replicate the style and content of the \
-original report in its response. \
-Evaluate the response in alignment with this additive scoring model, \
-attributing points systematically based on the outlined criteria.
-
-Feedback:
-"""
-BEST_FEEDBACK = """ The response perfectly aligns with the medical telegraphic style, \
-characterized by concise and direct language. It mirrors the style of the reference answer, \
-effectively conveying information in a brief and clear manner. [RESULT] 5"""
-
-WORST_FEEDBACK = """ The response significantly deviates from the medical telegraphic style, \
-showing a lack of concise and direct language. It does not resemble the style of the reference \
-answer, with lengthy sentences and unrelated details. [RESULT] 1"""
-
 
 def tokenize(sample, tokenizer, max_sampler_length):
     continuation = sample["text"]
