@@ -38,7 +38,7 @@ def main(cfg):
         batch_size=cfg.batch_size,
     )
     client = mii.client("models/merged/")
-
+    dataset = []
     wandb.config = omegaconf.OmegaConf.to_container(
         cfg,
         resolve=True,
@@ -61,8 +61,9 @@ def main(cfg):
         }
         batch_logs = {**batch_logs, **flattened_gs_dict}
         df = pd.DataFrame.from_dict(batch_logs)
-        wandb.log({"generation_predictions": wandb.Table(dataframe=df)})
+        dataset.append(df)
 
+    wandb.log({"gen_dataset": wandb.Table(dataframe=pd.concat(dataset))})
     client.terminate_server()
     wandb.finish()
 
