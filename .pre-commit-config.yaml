@@ -70,7 +70,7 @@ repos:
     hooks:
       - id: mypy
         exclude: apps/|notebooks/|tests/
-        additional_dependencies: ["types-requests"]
+        additional_dependencies: ["types-requests", "types-PyYAML"]
 
     # Safety is used to check if there are hardcoded secrets inside code and history
   - repo: https://github.com/gitleaks/gitleaks
