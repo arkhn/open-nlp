@@ -3,6 +3,6 @@ defaults:
   - default
   - _self_
 
-checkpoint: ???
-batch_size: 4
+checkpoint: clinical-dream-team/sft-style-transfer/checkpoint-pgj3j74y:v11
+batch_size: 16
 max_new_tokens: 1024
