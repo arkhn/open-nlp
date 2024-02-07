@@ -3,6 +3,8 @@ defaults:
   - _self_
 
 evaluator: "kaist-ai/Prometheus-13b-v1.0"
-dataset: "clinical-dream-team/gen-style-transfer/run-yjc36777-dataframe_table:v0"
+dataset: ???
+use_sem_score: true
+use_g_score: true
 batch_size: 4
 max_new_tokens: 1024
