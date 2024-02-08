@@ -14,8 +14,8 @@ bnb_config:
   bnb_4bit_use_double_quant: True
   bnb_4bit_compute_dtype: bfloat16
 
-model: "mistralai/Mistral-7B-Instruct-v0.1"
-dataset: "bio-datasets/mimic_style_transfer"
+model: mistralai/Mistral-7B-Instruct-v0.1
+dataset: bio-datasets/mimic_style_transfer
 sft_ratio: 0.1
 gen_ratio: 0.7
 seed: 0

@@ -41,8 +41,6 @@ def main(cfg):
     dataset = []
     wandb.config = omegaconf.OmegaConf.to_container(
         cfg,
-        resolve=True,
-        throw_on_missing=True,
     )
     wandb.init(project="gen-style-transfer")
     for batch in tqdm(dataloader):
