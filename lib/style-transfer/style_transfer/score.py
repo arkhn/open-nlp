@@ -18,8 +18,6 @@ from tqdm import tqdm
 def main(cfg):
     wandb.config = omegaconf.OmegaConf.to_container(
         cfg,
-        resolve=True,
-        throw_on_missing=True,
     )
     with wandb.init(project="score-style-transfer") as run:
         dataset = run.use_artifact(cfg.dataset)

@@ -3,4 +3,4 @@ defaults:
   - default
   - _self_
 
-dataset: "clinical-dream-team/score-style-transfer/run-nuue1ag3-dataframe_table:v0"
+dataset: clinical-dream-team/score-style-transfer/run-jrhhyjad-score_dataset:v0

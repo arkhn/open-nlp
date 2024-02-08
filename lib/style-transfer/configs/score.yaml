@@ -2,8 +2,8 @@ defaults:
   - default
   - _self_
 
-evaluator: "kaist-ai/Prometheus-13b-v1.0"
-dataset: ???
+evaluator: kaist-ai/Prometheus-13b-v1.0
+dataset: clinical-dream-team/gen-style-transfer/run-26gaddcl-gen_dataset:v0
 use_sem_score: true
 use_g_score: false
 batch_size: 4
