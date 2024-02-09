@@ -133,10 +133,14 @@ def create_evaluator_prompt(prompt):
 
 
 def split_dataset(dataset, sft_ratio, dpo_ratio):
-    train_dataset, test_dataset = dataset.train_test_split(
-        train_size=sft_ratio, shuffle=False
-    ).values()
-    gen_dataset, test_dataset = test_dataset.train_test_split(
+    # Split the dataset into train, gen and test
+    # first we split the dataset into train and test
+    sft_dataset, test_dataset = dataset.train_test_split(
         train_size=dpo_ratio, shuffle=False
     ).values()
-    return train_dataset, gen_dataset, test_dataset
+    # then we split the train dataset into train and gen
+    sft_dataset, gen_dataset = sft_dataset.train_test_split(
+        train_size=sft_ratio, shuffle=False
+    ).values()
+    logging.info(f"💾 SFT: {len(sft_dataset)}, DPO: {len(gen_dataset)} Test: {len(test_dataset)}")
+    return sft_dataset, gen_dataset, test_dataset
