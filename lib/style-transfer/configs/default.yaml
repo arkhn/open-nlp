@@ -16,7 +16,7 @@ bnb_config:
 
 model: mistralai/Mistral-7B-Instruct-v0.1
 dataset: bio-datasets/mimic_style_transfer
-sft_ratio: 0.1
+sft_ratio: 0.99
 gen_ratio: 0.7
 seed: 0
 max_seq_length: 1024
