@@ -38,7 +38,7 @@ def main(cfg):
         add_prompt,
         batched=False,
     )
-    train_dataset, gen_, test_dataset = split_dataset(dataset, cfg.sft_ratio, cfg.gen_ratio)
+    train_dataset, gen_dataset, test_dataset = split_dataset(dataset, cfg.sft_ratio, cfg.gen_ratio)
 
     model = AutoModelForCausalLM.from_pretrained(
         pretrained_model_name_or_path=cfg.model,
@@ -62,7 +62,11 @@ def main(cfg):
                 for k_param, v_params in dict_conf.items():
                     setattr(args, k_param, v_params)
                 self._wandb.config.update(args, allow_val_change=True)
+                self._wandb.config["sft_dataset_size"] = len(train_dataset)
+                self._wandb.config["gen_dataset_size"] = len(gen_dataset)
+                self._wandb.config["test_dataset_size"] = len(test_dataset)
 
+    args.run_name = f"sft-ratio-{cfg.sft_ratio}_gen-ratio-{cfg.gen_ratio}"
     trainer = SFTTrainer(
         model=model,
         args=args,
