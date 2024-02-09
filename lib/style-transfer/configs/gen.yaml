@@ -3,6 +3,6 @@ defaults:
   - default
   - _self_
 
-checkpoint: clinical-dream-team/dpo-style-transfer/checkpoint-uerwedsk:v147
+checkpoint: ???
 batch_size: 16
 max_new_tokens: 1024

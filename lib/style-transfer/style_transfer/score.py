@@ -9,21 +9,55 @@ import torch
 import wandb
 from fastchat.conversation import get_conv_template
 from omegaconf import omegaconf
+from peft import AutoPeftModelForCausalLM
 from sentence_transformers import SentenceTransformer, util
 from style_transfer.utils import EVAL_PROMPT
 from tqdm import tqdm
+from transformers import AutoTokenizer
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="score.yaml")
 def main(cfg):
+    if cfg.use_g_score:
+        model = AutoPeftModelForCausalLM.from_pretrained(
+            pretrained_model_name_or_path=cfg.evaluator,
+            torch_dtype=torch.bfloat16,
+            device_map="auto",
+        )
+        model = model.merge_and_unload()
+        model.save_pretrained("models/evaluator/")
+        tokenizer = AutoTokenizer.from_pretrained(cfg.model)
+        tokenizer.save_pretrained("models/evaluator/")
+        del model
+        del tokenizer
+        logging.info("Model + Tokenizer saved at models/evaluator/")
+        logging.info("Loading model to pipeline 🐉 ...")
+        client = mii.serve(
+            "models/evaluator/",
+            tensor_parallel=4,
+            deployment_name=cfg.evaluator,
+        )
+        logging.info("Model loaded to pipeline ! 🎉")
+    else:
+        client = None
+
     wandb.config = omegaconf.OmegaConf.to_container(
         cfg,
     )
-    with wandb.init(project="score-style-transfer") as run:
-        dataset = run.use_artifact(cfg.dataset)
-        json_file = json.load(dataset.files()[0].download(replace=True))
+    with wandb.init(
+        project="score-style-transfer",
+        name=f"sft-ratio-{cfg.sft_ratio}_gen-ratio-{cfg.gen_ratio}"
+        f"{'' if cfg.dpo_gen == 0 else f'_dpo{cfg.dpo_gen}'}",
+    ) as run:
+        gen_dataset = run.use_artifact(cfg.dataset)
+        json_file = json.load(gen_dataset.files()[0].download(replace=True))
         df = pd.DataFrame(data=json_file["data"], columns=json_file["columns"])
-        dataset = datasets.Dataset.from_pandas(df)
+        gen_dataset = datasets.Dataset.from_pandas(df)
+
+        test_dataset = run.use_artifact(cfg.test_dataset)
+        json_file = json.load(test_dataset.files()[0].download(replace=True))
+        df = pd.DataFrame(data=json_file["data"], columns=json_file["columns"])
+        test_dataset = datasets.Dataset.from_pandas(df)
 
         logging.info("Loading the Semantic Model 🐈‍⬛")
         sem_model = SentenceTransformer("sentence-transformers/all-mpnet-base-v2")
@@ -43,20 +77,30 @@ def main(cfg):
                 data_point[f"eval_prompt_{seq}"] = conv.get_prompt()
             return data_point
 
-        dataset = dataset.map(
+        gen_dataset = gen_dataset.map(
             add_prompt,
             batched=False,
         )
 
-        dataloader = torch.utils.data.DataLoader(
-            dataset,
+        gen_dataloader = torch.utils.data.DataLoader(
+            gen_dataset,
             batch_size=cfg.batch_size,
         )
 
-        client = mii.client("models/evaluator/") if cfg.use_g_score else None
+        test_dataset = test_dataset.map(
+            add_prompt,
+            batched=False,
+        )
+
+        test_dataloader = torch.utils.data.DataLoader(
+            test_dataset,
+            batch_size=cfg.batch_size,
+        )
 
         def g_scores(batch, seq):
-            responses = client(batch[f"eval_prompt_{seq}"], max_new_tokens=cfg.max_new_tokens)
+            responses = client.generate(
+                batch[f"eval_prompt_{seq}"], max_new_tokens=cfg.max_new_tokens
+            )
             scores = [response.generated_text[-1] for response in responses]
             scores = [
                 float(score) if score.isdigit() and 0 <= float(score) <= 5 else 0
@@ -77,8 +121,8 @@ def main(cfg):
             ]
             batch.setdefault(f"eval_sem_scores_{seq}", []).extend(scores)
 
-        dataset = []
-        for batch in tqdm(dataloader):
+        gen_dataset = []
+        for batch in tqdm(gen_dataloader):
             for seq in range(cfg.num_generated_sequences):
                 if cfg.use_sem_score:
                     sem_scores(batch, seq)
@@ -86,9 +130,23 @@ def main(cfg):
                     g_scores(batch, seq)
 
             df = pd.DataFrame(batch)
-            dataset.append(df)
+            gen_dataset.append(df)
 
-        wandb.log({"score_dataset": wandb.Table(dataframe=pd.concat(dataset))})
+        wandb.log({"gen_score_dataset": wandb.Table(dataframe=pd.concat(gen_dataset))})
+
+        test_dataset = []
+        for batch in tqdm(test_dataloader):
+            for seq in range(cfg.num_generated_sequences):
+                if cfg.use_sem_score:
+                    sem_scores(batch, seq)
+                if cfg.use_g_score:
+                    g_scores(batch, seq)
+
+            df = pd.DataFrame(batch)
+            test_dataset.append(df)
+
+        wandb.log({"test_score_dataset": wandb.Table(dataframe=pd.concat(test_dataset))})
+
     if cfg.use_g_score:
         client.terminate_server()
     wandb.finish()
