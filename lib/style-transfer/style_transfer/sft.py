@@ -15,7 +15,7 @@ os.environ["WANDB_LOG_MODEL"] = "checkpoint"
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="sft.yaml")
-def main(cfg):
+def sft(cfg):
     set_seed(cfg.seed)
     dataset = build_dataset(
         dataset_name=cfg.dataset,
@@ -67,6 +67,7 @@ def main(cfg):
                 self._wandb.config["test_dataset_size"] = len(test_dataset)
 
     args.run_name = f"sft-ratio-{cfg.sft_ratio}_gen-ratio-{cfg.gen_ratio}"
+    args.load_best_model_at_end = True
     trainer = SFTTrainer(
         model=model,
         args=args,
@@ -82,4 +83,4 @@ def main(cfg):
 
 
 if __name__ == "__main__":
-    main()
+    sft()

@@ -13,7 +13,7 @@ from transformers import AutoTokenizer
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="gen.yaml")
-def main(cfg):
+def gen(cfg):
     api = wandb.Api()
     model_artifact = api.artifact(cfg.checkpoint)
     model_dir = model_artifact.download()
@@ -59,7 +59,7 @@ def main(cfg):
     )
     sft_dataset, gen_dataset, test_dataset = split_dataset(dataset, cfg.sft_ratio, cfg.gen_ratio)
     gen_dataset = gen_dataset.remove_columns(["input_ids", "max_gen_len"])
-    test_dataset = sft_dataset.remove_columns(["input_ids", "max_gen_len"])
+    test_dataset = test_dataset.remove_columns(["input_ids", "max_gen_len"])
     dataloader = torch.utils.data.DataLoader(
         gen_dataset,
         batch_size=cfg.batch_size,
@@ -80,6 +80,7 @@ def main(cfg):
         project="gen-style-transfer",
         name=f"sft-ratio-{cfg.sft_ratio}_gen-ratio-{cfg.gen_ratio}",
     )
+    gen_df = None
     for batch in tqdm(dataloader):
         flattened_gs_dict = {}
         for g_seq in range(cfg.num_generated_sequences):
@@ -95,12 +96,13 @@ def main(cfg):
             "ground_texts": batch["ground_texts"],
         }
         batch_logs = {**batch_logs, **flattened_gs_dict}
-        df = pd.DataFrame.from_dict(batch_logs)
-        dataset.append(df)
+        gen_df = pd.DataFrame.from_dict(batch_logs)
+        dataset.append(gen_df)
 
     wandb.log({"gen_dataset": wandb.Table(dataframe=pd.concat(dataset))})
 
     test_dataset = []
+    test_df = None
     for batch in tqdm(test_dataloader):
         flattened_gs_dict = {}
         for g_seq in range(cfg.num_generated_sequences):
@@ -116,12 +118,12 @@ def main(cfg):
             "ground_texts": batch["ground_texts"],
         }
         batch_logs = {**batch_logs, **flattened_gs_dict}
-        df = pd.DataFrame.from_dict(batch_logs)
-        test_dataset.append(df)
+        test_df = pd.DataFrame.from_dict(batch_logs)
+        test_dataset.append(test_df)
 
     wandb.log({"test_dataset": wandb.Table(dataframe=pd.concat(test_dataset))})
     wandb.finish()
 
 
 if __name__ == "__main__":
-    main()
+    gen()

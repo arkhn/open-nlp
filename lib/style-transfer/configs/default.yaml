@@ -21,3 +21,4 @@ gen_ratio: 0.7
 seed: 0
 max_seq_length: 1024
 num_generated_sequences: 4
+dpo_gen: 0

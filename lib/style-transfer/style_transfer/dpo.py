@@ -36,7 +36,7 @@ os.environ["WANDB_LOG_MODEL"] = "checkpoint"
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="dpo.yaml")
-def main(cfg):
+def dpo(cfg):
     api = wandb.Api()
     dataset = api.artifact(cfg.dataset)
     dataset = dataset.files()[0].download(replace=True)
@@ -78,10 +78,15 @@ def main(cfg):
         filtered_columns = pd.DataFrame(df_point).filter(regex="^eval_sem_scores")
         max_labels = filtered_columns.max().idxmax()[-1]
         best_generation = df_point[f"generation_{max_labels}"].values[0]
+        best_score = filtered_columns.max().max()
         min_labels = filtered_columns.min().idxmin()[-1]
         worst_generation = df_point[f"generation_{min_labels}"].values[0]
+        worst_score = filtered_columns.min().min()
         data_point["chosen"] = best_generation
         data_point["rejected"] = worst_generation
+        data_point["chosen_score"] = best_score
+        data_point["rejected_score"] = worst_score
+        data_point["deviation_score"] = best_score - worst_score
         return data_point
 
     dataset = dataset.map(
@@ -121,4 +126,4 @@ def main(cfg):
 
 
 if __name__ == "__main__":
-    main()
+    dpo()
