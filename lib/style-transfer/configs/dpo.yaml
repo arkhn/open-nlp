@@ -23,7 +23,7 @@ training_args:
   seed: 0
 
 beta: 0.1
-checkpoint: clinical-dream-team/sft-style-transfer/checkpoint-pgj3j74y:v11
-dataset: clinical-dream-team/score-style-transfer/run-jrhhyjad-score_dataset:v0
+checkpoint: ???
+dataset: ???
 max_length: 1024
 max_prompt_length: 512

@@ -17,7 +17,7 @@ from transformers import AutoTokenizer
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="score.yaml")
-def main(cfg):
+def score(cfg):
     if cfg.use_g_score:
         model = AutoPeftModelForCausalLM.from_pretrained(
             pretrained_model_name_or_path=cfg.evaluator,
@@ -41,15 +41,12 @@ def main(cfg):
     else:
         client = None
 
-    wandb.config = omegaconf.OmegaConf.to_container(
-        cfg,
-    )
     with wandb.init(
         project="score-style-transfer",
         name=f"sft-ratio-{cfg.sft_ratio}_gen-ratio-{cfg.gen_ratio}"
         f"{'' if cfg.dpo_gen == 0 else f'_dpo{cfg.dpo_gen}'}",
     ) as run:
-        gen_dataset = run.use_artifact(cfg.dataset)
+        gen_dataset = run.use_artifact(cfg.gen_dataset)
         json_file = json.load(gen_dataset.files()[0].download(replace=True))
         df = pd.DataFrame(data=json_file["data"], columns=json_file["columns"])
         gen_dataset = datasets.Dataset.from_pandas(df)
@@ -121,7 +118,7 @@ def main(cfg):
             ]
             batch.setdefault(f"eval_sem_scores_{seq}", []).extend(scores)
 
-        gen_dataset = []
+        gen_df = []
         for batch in tqdm(gen_dataloader):
             for seq in range(cfg.num_generated_sequences):
                 if cfg.use_sem_score:
@@ -130,11 +127,11 @@ def main(cfg):
                     g_scores(batch, seq)
 
             df = pd.DataFrame(batch)
-            gen_dataset.append(df)
+            gen_df.append(df)
 
-        wandb.log({"gen_score_dataset": wandb.Table(dataframe=pd.concat(gen_dataset))})
+        wandb.log({"gen_score_dataset": wandb.Table(dataframe=pd.concat(gen_df))})
 
-        test_dataset = []
+        test_df = []
         for batch in tqdm(test_dataloader):
             for seq in range(cfg.num_generated_sequences):
                 if cfg.use_sem_score:
@@ -143,14 +140,34 @@ def main(cfg):
                     g_scores(batch, seq)
 
             df = pd.DataFrame(batch)
-            test_dataset.append(df)
+            test_df.append(df)
 
-        wandb.log({"test_score_dataset": wandb.Table(dataframe=pd.concat(test_dataset))})
+        eval_cols = [f"eval_sem_scores_{i}" for i in range(cfg.num_generated_sequences)]
+
+        df["max_score"] = df[eval_cols].max(axis=1)
+        df["min_score"] = df[eval_cols].min(axis=1)
+        df["mean_score"] = df[eval_cols].mean(axis=1)
+        df["std_score"] = df[eval_cols].std(axis=1)
+        # Determine the best generated text based on the maximum score
+        best_generation_indices = df[eval_cols].idxmax(axis=1).apply(lambda x: int(x[-1]))
+        df["best_generation"] = best_generation_indices.apply(
+            lambda x: df["generation_" + str(x)].iloc[x]
+        )
+        df["worst_generation"] = df[eval_cols].idxmin(axis=1).apply(lambda x: int(x[-1]))
+
+        wandb.log({"test/max/mean": df["max_score"].mean()})
+        wandb.log({"test/min/mean": df["min_score"].mean()})
+        wandb.log({"test/mean/mean": df["mean_score"].mean()})
+        wandb.log({"test/std/mean": df["std_score"].mean()})
+        wandb.log({"test_score_dataset": wandb.Table(dataframe=pd.concat(test_df))})
 
     if cfg.use_g_score:
         client.terminate_server()
+    wandb.config = omegaconf.OmegaConf.to_container(
+        cfg,
+    )
     wandb.finish()
 
 
 if __name__ == "__main__":
-    main()
+    score()

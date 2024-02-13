@@ -1,6 +1,0 @@
-# @package _global_
-defaults:
-  - default
-  - _self_
-
-dataset: clinical-dream-team/score-style-transfer/run-jrhhyjad-score_dataset:v0
