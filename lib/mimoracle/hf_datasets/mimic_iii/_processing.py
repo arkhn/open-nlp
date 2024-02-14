@@ -33,7 +33,7 @@ def main(
 
     # Select the discharge summaries for patients with more than min_docs_per_patient documents
     query = f"""
-        SELECT subject_id, row_id, text
+        SELECT subject_id, row_id, text, chartdate
         FROM noteevents
         WHERE category = 'Discharge summary'
         AND subject_id IN (
@@ -56,6 +56,7 @@ def main(
         subject_id = row["subject_id"]
         row_id = row["row_id"]
         note = row["text"]
+        chartdate = row["chartdate"]
 
         # Separate the note into sections, with titles and contents
         titles = re.findall(r"^[A-z-\s]+:(?:\n\n|$|\s)", note, flags=re.MULTILINE)
@@ -72,6 +73,7 @@ def main(
                     "document_id": row_id,
                     "title": title,
                     "content": content,
+                    "chartdate": chartdate,
                 }
             )
 

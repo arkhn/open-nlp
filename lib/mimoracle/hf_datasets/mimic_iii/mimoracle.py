@@ -92,6 +92,7 @@ class MimoracleDataset(datasets.GeneratorBasedBuilder):
                 "row_id": datasets.Value("string"),
                 "title": datasets.Value("string"),
                 "content": datasets.Value("string"),
+                "chartdate": datasets.Value("string"),
             }
         )
         return datasets.DatasetInfo(
@@ -129,4 +130,5 @@ class MimoracleDataset(datasets.GeneratorBasedBuilder):
                 "row_id": str(row["document_id"]),
                 "title": row["title"],
                 "content": row["content"],
+                "chartdate": row["chartdate"],
             }
