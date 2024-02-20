@@ -2,10 +2,21 @@ defaults:
   - default
   - _self_
 
-evaluator: kaist-ai/Prometheus-13b-v1.0
 gen_dataset: ???
 test_dataset: ???
-use_sem_score: true
-use_g_score: false
-batch_size: 4
+gold_test_dataset: clinical-dream-team/gen-style-transfer/run-mxxdl2q1-test_dataset:v0
+batch_size: 128
 max_new_tokens: 1024
+
+sem_model:
+  train_size: 0.25
+  epochs: 1
+  batch_size: 64
+  path: "models/sem_model"
+  name: "sentence-transformers/all-mpnet-base-v2"
+  warmup_steps: 50
+  loss:
+    _target_: sentence_transformers.losses.ContrastiveTensionLoss
+    _partial_: true
+  use_ground_truth: false
+  is_logged: false

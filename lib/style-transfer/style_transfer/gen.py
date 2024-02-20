@@ -69,8 +69,10 @@ def gen(cfg):
         batch_size=cfg.batch_size,
     )
     dataset = []
-    wandb.config = omegaconf.OmegaConf.to_container(
-        cfg,
+    wandb.config.update(
+        omegaconf.OmegaConf.to_container(
+            cfg,
+        )
     )
     wandb.config["sft_dataset_size"] = len(sft_dataset)
     wandb.config["gen_dataset_size"] = len(gen_dataset)
@@ -80,7 +82,6 @@ def gen(cfg):
         project="gen-style-transfer",
         name=f"sft-ratio-{cfg.sft_ratio}_gen-ratio-{cfg.gen_ratio}",
     )
-    gen_df = None
     for batch in tqdm(dataloader):
         flattened_gs_dict = {}
         for g_seq in range(cfg.num_generated_sequences):
@@ -95,6 +96,7 @@ def gen(cfg):
             "prompts": batch["prompts"],
             "ground_texts": batch["ground_texts"],
         }
+        print(flattened_gs_dict["generation_0"])
         batch_logs = {**batch_logs, **flattened_gs_dict}
         gen_df = pd.DataFrame.from_dict(batch_logs)
         dataset.append(gen_df)
@@ -102,7 +104,6 @@ def gen(cfg):
     wandb.log({"gen_dataset": wandb.Table(dataframe=pd.concat(dataset))})
 
     test_dataset = []
-    test_df = None
     for batch in tqdm(test_dataloader):
         flattened_gs_dict = {}
         for g_seq in range(cfg.num_generated_sequences):
