@@ -89,10 +89,13 @@ class MimoracleDataset(datasets.GeneratorBasedBuilder):
         features = datasets.Features(
             {
                 "subject_id": datasets.Value("string"),
-                "row_id": datasets.Value("string"),
-                "title": datasets.Value("string"),
-                "content": datasets.Value("string"),
+                "document_id": datasets.Value("string"),
                 "chartdate": datasets.Value("string"),
+                "text": datasets.Value("string"),
+                "section_title": datasets.Value("string"),
+                "section_content": datasets.Value("string"),
+                "section_start": datasets.Value("int32"),
+                "section_end": datasets.Value("int32"),
             }
         )
         return datasets.DatasetInfo(
@@ -127,8 +130,15 @@ class MimoracleDataset(datasets.GeneratorBasedBuilder):
         for i, row in df.iterrows():
             yield i, {
                 "subject_id": str(row["subject_id"]),
-                "row_id": str(row["document_id"]),
-                "title": row["title"],
-                "content": row["content"],
+                "document_id": str(row["document_id"]),
                 "chartdate": row["chartdate"],
+                "text": row["text"],
+                "section_title": row["section_title"],
+                "section_content": row["section_content"],
+                "section_start": row["section_start"],
+                "section_end": row["section_end"],
             }
+
+
+if __name__ == "__main__":
+    datasets.load_dataset("./mimoracle.py")

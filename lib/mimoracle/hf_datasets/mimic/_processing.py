@@ -8,6 +8,7 @@ import pandas as pd
 import typer
 from tqdm import tqdm
 
+# root of the project, where the pyproject.toml is
 ROOT = Path(__file__).parent.parent.parent
 
 
@@ -50,30 +51,29 @@ def main(
 
     if n_patients:
         df = df[:n_patients]
-
     records = []
     for _, row in tqdm(df.iterrows(), total=len(df)):
-        subject_id = row["subject_id"]
-        row_id = row["row_id"]
-        note = row["text"]
-        chartdate = row["chartdate"]
-
         # Separate the note into sections, with titles and contents
-        titles = re.findall(r"^[A-z-\s]+:(?:\n\n|$|\s)", note, flags=re.MULTILINE)
-        contents = re.split(r"^[A-z-\s]+:(?:\n\n|$|\s)", note, flags=re.MULTILINE)[1:]
-        for title, content in zip(titles, contents):
-            title = title.strip().replace(":", "")
+        titles_matches = re.finditer(r"^[A-z-\s]+:(?:\n\n|$|\s)", row["text"], flags=re.MULTILINE)
+        contents = re.split(r"^[A-z-\s]+:(?:\n\n|$|\s)", row["text"], flags=re.MULTILINE)[1:]
+        for title_match, content in zip(titles_matches, contents):
+            section_start = title_match.start()
+            section_end = title_match.end() + len(content)
+            title = title_match.group().strip().replace(":", "")
             content = content.strip()
             if len(title) < 3 or len(content.split(" ")) < 3:
                 # Skip sections with too few words or too short titles
                 continue
             records.append(
                 {
-                    "subject_id": subject_id,
-                    "document_id": row_id,
-                    "title": title,
-                    "content": content,
-                    "chartdate": chartdate,
+                    "subject_id": row["subject_id"],
+                    "document_id": row["row_id"],
+                    "chartdate": row["chartdate"],
+                    "text": row["text"],
+                    "section_title": title,
+                    "section_content": content,
+                    "section_start": section_start,
+                    "section_end": section_end,
                 }
             )
 
@@ -87,8 +87,10 @@ def main(
     df_train = df[df["subject_id"].isin(train_subject_ids)]
     df_test = df[df["subject_id"].isin(test_subject_ids)]
 
-    df_train.to_csv(ROOT / "data" / "mimoracle_train.csv")
-    df_test.to_csv(ROOT / "data" / "mimoracle_test.csv")
+    data_dir = ROOT / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    df_train.to_csv(data_dir / "mimoracle_train.csv")
+    df_test.to_csv(data_dir / "mimoracle_test.csv")
 
 
 if __name__ == "__main__":
