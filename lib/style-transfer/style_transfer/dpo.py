@@ -95,6 +95,7 @@ def dpo(cfg):
         batched=False,
     )
 
+    dataset.filter(lambda x: x["chosen_score"] > cfg.threshold)
     dataset = dataset.select_columns(["prompts", "chosen", "rejected"])
     dataset = dataset.rename_column("prompts", "prompt")
 
