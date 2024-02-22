@@ -1,4 +1,5 @@
 import logging
+import os
 
 import hydra
 import mii
@@ -10,6 +11,8 @@ from peft import AutoPeftModelForCausalLM
 from style_transfer.utils import PROMPT, build_dataset, split_dataset
 from tqdm import tqdm
 from transformers import AutoTokenizer
+
+os.environ["WANDB_START_METHOD"] = "thread"
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="gen.yaml")
@@ -69,6 +72,11 @@ def gen(cfg):
         batch_size=cfg.batch_size,
     )
     dataset = []
+
+    wandb.init(
+        project="gen-style-transfer",
+        name=f"sft-ratio-{cfg.sft_ratio}_gen-ratio-{cfg.gen_ratio}",
+    )
     wandb.config.update(
         omegaconf.OmegaConf.to_container(
             cfg,
@@ -77,11 +85,6 @@ def gen(cfg):
     wandb.config["sft_dataset_size"] = len(sft_dataset)
     wandb.config["gen_dataset_size"] = len(gen_dataset)
     wandb.config["test_dataset_size"] = len(test_dataset)
-
-    wandb.init(
-        project="gen-style-transfer",
-        name=f"sft-ratio-{cfg.sft_ratio}_gen-ratio-{cfg.gen_ratio}",
-    )
     for batch in tqdm(dataloader):
         flattened_gs_dict = {}
         for g_seq in range(cfg.num_generated_sequences):

@@ -33,6 +33,7 @@ tqdm.pandas()
 os.environ["WANDB_PROJECT"] = "dpo-style-transfer"
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 os.environ["WANDB_LOG_MODEL"] = "checkpoint"
+os.environ["WANDB_START_METHOD"] = "thread"
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="dpo.yaml")
