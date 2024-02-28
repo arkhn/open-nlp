@@ -16,7 +16,7 @@ os.environ["WANDB_START_METHOD"] = "thread"
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="gen.yaml")
-def gen(cfg):
+def main(cfg):
     api = wandb.Api()
     model_artifact = api.artifact(cfg.checkpoint)
     model_dir = model_artifact.download()
@@ -130,4 +130,4 @@ def gen(cfg):
 
 
 if __name__ == "__main__":
-    gen()
+    main()
