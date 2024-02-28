@@ -127,6 +127,7 @@ def main(cfg):
 
     wandb.log({"test_dataset": wandb.Table(dataframe=pd.concat(test_dataset))})
     wandb.finish()
+    client.terminate_server()
 
 
 if __name__ == "__main__":
