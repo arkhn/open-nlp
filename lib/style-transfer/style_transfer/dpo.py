@@ -18,6 +18,7 @@ import os
 
 import datasets
 import hydra
+import numpy as np
 import pandas as pd
 import torch
 import wandb
@@ -33,17 +34,15 @@ tqdm.pandas()
 os.environ["WANDB_PROJECT"] = "dpo-style-transfer"
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 os.environ["WANDB_LOG_MODEL"] = "checkpoint"
-os.environ["WANDB_START_METHOD"] = "thread"
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="dpo.yaml")
-def dpo(cfg):
+def main(cfg):
     api = wandb.Api()
     dataset = api.artifact(cfg.dataset)
     dataset = dataset.files()[0].download(replace=True)
     model_artifact = api.artifact(cfg.checkpoint)
     model_dir = model_artifact.download()
-    Accelerator().wait_for_everyone()
     set_seed(cfg.seed)
     lora_config = hydra.utils.instantiate(cfg.lora)
     bnb_config = hydra.utils.instantiate(cfg.bnb_config)
@@ -51,6 +50,13 @@ def dpo(cfg):
     json_file = json.load(dataset)
     df = pd.DataFrame(data=json_file["data"], columns=json_file["columns"])
     dataset = datasets.Dataset.from_pandas(df)
+    t = open(f"{model_dir}/adapter_config.json")
+    config_file = json.load(t)
+    config_file["base_model_name_or_path"] = cfg.model
+    # modify the open json
+    with open(f"{model_dir}/adapter_config.json", "w") as f:
+        json.dump(config_file, f)
+    Accelerator().wait_for_everyone()
     model = AutoPeftModelForCausalLM.from_pretrained(
         pretrained_model_name_or_path=model_dir,
         torch_dtype=torch.bfloat16,
@@ -65,6 +71,7 @@ def dpo(cfg):
         device_map={"": Accelerator().local_process_index},
         quantization_config=bnb_config,
     )
+    model.pretrained_model_name_or_path = cfg.model
     model.config.use_cache = True
     model.enable_input_require_grads()
     model._ddp_params_and_buffers_to_ignore = [
@@ -95,7 +102,8 @@ def dpo(cfg):
         batched=False,
     )
 
-    dataset.filter(lambda x: x["chosen_score"] > cfg.threshold)
+    percentile = np.percentile(dataset["chosen_score"], cfg.percentile)
+    dataset = dataset.filter(lambda x: x["chosen_score"] > percentile)
     dataset = dataset.select_columns(["prompts", "chosen", "rejected"])
     dataset = dataset.rename_column("prompts", "prompt")
 
@@ -110,8 +118,13 @@ def dpo(cfg):
                     setattr(args, k_param, v_params)
                 self._wandb.config.update(args, allow_val_change=True)
 
+    args = hydra.utils.instantiate(cfg.training_args)
+    args.run_name = (
+        f"sft-ratio-{cfg.sft_ratio}_gen-ratio-{cfg.gen_ratio}"
+        f"{'' if cfg.dpo_gen == 0 else f'_dpo{cfg.dpo_gen}'}"
+    )
     dpo_trainer = DPOTrainer(
-        args=hydra.utils.instantiate(cfg.training_args),
+        args=args,
         ref_model=None,
         model=model,
         tokenizer=tokenizer,
@@ -128,4 +141,4 @@ def dpo(cfg):
 
 
 if __name__ == "__main__":
-    dpo()
+    main()

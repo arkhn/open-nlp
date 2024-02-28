@@ -13,7 +13,7 @@ training_args:
   learning_rate: 2e-6
   weight_decay: 1e-7
   evaluation_strategy: "no"
-  num_train_epochs: 10
+  num_train_epochs: 15
   output_dir: "models/dpo"
   optim: "adafactor"
   save_only_model: true
@@ -28,3 +28,4 @@ checkpoint: ???
 dataset: ???
 max_length: 1024
 max_prompt_length: 512
+percentile: 60
