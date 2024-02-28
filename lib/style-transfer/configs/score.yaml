@@ -20,3 +20,5 @@ sem_model:
     _partial_: true
   use_ground_truth: false
   is_logged: false
+  is_trainable: true
+  checkpoint: null

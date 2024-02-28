@@ -43,6 +43,10 @@ def main(cfg):
 
         logging.info("Loading the Semantic Model 🐈‍")
         sem_model = SentenceTransformer(cfg.sem_model.name)
+        if cfg.sem_model.checkpoint:
+            model_artifact = run.use_artifact(cfg.sem_model.checkpoint)
+            model_dir = model_artifact.download()
+            sem_model = sem_model.load(model_dir)
 
         def sem_score(cfg, dataset, sem_model):
             score_dict = {}
@@ -95,25 +99,26 @@ def main(cfg):
                 )
             ]
         )
-
-        if cfg.sem_model.use_ground_truth:
-            train_examples.extend(
-                [
-                    InputExample(texts=[ground_text, ground_text], label=1)
-                    for ground_text in train_gen_dataset["ground_texts"]
-                ]
+        if cfg.sem_model.is_trainable:
+            if cfg.sem_model.use_ground_truth:
+                train_examples.extend(
+                    [
+                        InputExample(texts=[ground_text, ground_text], label=1)
+                        for ground_text in train_gen_dataset["ground_texts"]
+                    ]
+                )
+            train_gen_dataloader = torch.utils.data.DataLoader(
+                train_examples,
+                batch_size=cfg.sem_model.batch_size,
             )
-        train_gen_dataloader = torch.utils.data.DataLoader(
-            train_examples,
-            batch_size=cfg.sem_model.batch_size,
-        )
 
-        train_loss = hydra.utils.instantiate(cfg.sem_model.loss, sem_model)()
-        sem_model.fit(
-            train_objectives=[(train_gen_dataloader, train_loss)],
-            epochs=cfg.sem_model.epochs,
-            warmup_steps=cfg.sem_model.warmup_steps,
-        )
+            train_loss = hydra.utils.instantiate(cfg.sem_model.loss, sem_model)()
+            sem_model.fit(
+                train_objectives=[(train_gen_dataloader, train_loss)],
+                epochs=cfg.sem_model.epochs,
+                warmup_steps=cfg.sem_model.warmup_steps,
+            )
+
         if cfg.sem_model.is_logged:
             sem_model.save(cfg.sem_model.path)
             run.log_artifact(cfg.sem_model.path, type="model")
