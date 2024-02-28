@@ -12,10 +12,11 @@ from utils import split_dataset
 
 os.environ["WANDB_PROJECT"] = "sft-style-transfer"
 os.environ["WANDB_LOG_MODEL"] = "checkpoint"
+os.environ["WANDB_START_METHOD"] = "thread"
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="sft.yaml")
-def sft(cfg):
+def main(cfg):
     set_seed(cfg.seed)
     dataset = build_dataset(
         dataset_name=cfg.dataset,
@@ -83,4 +84,4 @@ def sft(cfg):
 
 
 if __name__ == "__main__":
-    sft()
+    main()

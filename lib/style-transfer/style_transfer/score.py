@@ -16,7 +16,7 @@ os.environ["WANDB_LOG_MODEL"] = "checkpoint"
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="score.yaml")
-def score(cfg):
+def main(cfg):
     wandb.config = omegaconf.OmegaConf.to_container(
         cfg,
     )
@@ -166,4 +166,4 @@ def score(cfg):
 
 
 if __name__ == "__main__":
-    score()
+    main()
