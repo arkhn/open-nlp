@@ -15,6 +15,7 @@
 
 import json
 import os
+import time
 
 import datasets
 import hydra
@@ -123,6 +124,8 @@ def main(cfg):
         f"sft-ratio-{cfg.sft_ratio}_gen-ratio-{cfg.gen_ratio}"
         f"{'' if cfg.dpo_gen == 0 else f'_dpo{cfg.dpo_gen}'}"
     )
+
+    args.output_dir = f"{args.output_dir}/{time.strftime('%Y-%m-%d-%H-%M-%S')}"
     dpo_trainer = DPOTrainer(
         args=args,
         ref_model=None,
