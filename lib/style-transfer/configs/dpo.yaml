@@ -13,7 +13,7 @@ training_args:
   learning_rate: 2e-6
   weight_decay: 1e-7
   evaluation_strategy: "no"
-  num_train_epochs: 15
+  num_train_epochs: 50
   output_dir: "models/dpo"
   optim: "adafactor"
   save_only_model: true
