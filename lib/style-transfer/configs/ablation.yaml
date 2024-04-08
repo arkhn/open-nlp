@@ -1,0 +1,38 @@
+# @package _global_
+defaults:
+  - default
+  - _self_
+
+dataset:
+  _target_: datasets.Dataset
+  name: 0.04-0
+  topk: 20
+  percentile: 0
+  precision: true
+  random_sampling: false
+
+training_args:
+  _target_: transformers.TrainingArguments
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4
+  logging_steps: 20
+  eval_steps: 100
+  evaluation_strategy: "steps"
+  remove_unused_columns: true
+  save_strategy: "no"
+  output_dir: "models/icd"
+  lr_scheduler_type: "constant"
+  num_train_epochs: 8
+  learning_rate: 2e-5
+
+wandb_project: style-transfer-ablation-percentile
+model: microsoft/deberta-v3-base
+hydra:
+  sweeper:
+    params:
+      dataset.topk: 20,50,100,400
+      dataset.precision: true
+      dataset.name: 0.06-2-ofzh3aqu, 0.04-2-mru97w7c
+      model: microsoft/deberta-v3-base
+      dataset.percentile: 0,20,40,60,80
+      dataset.random_sampling: true,false
