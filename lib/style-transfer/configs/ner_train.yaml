@@ -1,0 +1,32 @@
+# @package _global_
+defaults:
+  - default
+  - _self_
+
+dataset:
+  name: 0.06-2-ofzh3aqu
+  max_tokens: 72_670
+  random_sampling: true
+
+training_args:
+  _target_: transformers.TrainingArguments
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4
+  logging_steps: 20
+  eval_steps: 100
+  evaluation_strategy: "steps"
+  remove_unused_columns: true
+  save_strategy: "no"
+  output_dir: "models/ner"
+  lr_scheduler_type: "constant"
+  num_train_epochs: 10
+  learning_rate: 2e-5
+
+wandb_project: ner-token-style-transfer
+model: microsoft/deberta-v3-base
+hydra:
+  sweeper:
+    params:
+      dataset.name: 0.06-2-ofzh3aqu
+      dataset.random_sampling: true
+      dataset.max_tokens: 2_000_000, 4_000_000, 8_000_000
