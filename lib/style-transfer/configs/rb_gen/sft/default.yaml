@@ -1,8 +1,3 @@
-# @package _global_
-defaults:
-  - default
-  - _self_
-
 training_args:
   _target_: transformers.TrainingArguments
   per_device_train_batch_size: 4

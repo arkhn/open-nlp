@@ -8,15 +8,15 @@ import torch
 import wandb
 from omegaconf import omegaconf
 from peft import AutoPeftModelForCausalLM
-from style_transfer.utils import PROMPT, build_dataset, split_dataset
+from style_transfer.rb_gen.utils import PROMPT, build_dataset, split_dataset
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
 os.environ["WANDB_START_METHOD"] = "thread"
 
 
-@hydra.main(version_base="1.3", config_path="../configs", config_name="gen.yaml")
-def main(cfg):
+@hydra.main(version_base="1.3", config_path="../configs", config_name="default.yaml")
+def generate(cfg):
     api = wandb.Api()
     model_artifact = api.artifact(cfg.checkpoint)
     model_dir = model_artifact.download()
@@ -128,7 +128,3 @@ def main(cfg):
     wandb.log({"test_dataset": wandb.Table(dataframe=pd.concat(test_dataset))})
     wandb.finish()
     client.terminate_server()
-
-
-if __name__ == "__main__":
-    main()

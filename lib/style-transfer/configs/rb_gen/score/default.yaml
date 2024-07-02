@@ -1,7 +1,3 @@
-defaults:
-  - default
-  - _self_
-
 gen_dataset: ???
 test_dataset: ???
 gold_test_dataset: clinical-dream-team/gen-style-transfer/run-mxxdl2q1-test_dataset:v0
