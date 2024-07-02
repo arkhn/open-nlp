@@ -46,7 +46,6 @@ def load_wandb_ds(ds_name):
 
 
 def get_chain():
-    # Schema based on https://academic.oup.com/jamia/advance-article/doi/10.1093/jamia/ocad259/7590607
     def get_iob_tokens(_dict):
         # Tokenize the text into words
 
@@ -167,8 +166,6 @@ def main(dataset: str, gold: bool = False, test: bool = False):
         for idx, row in tqdm(ds.iterrows(), total=ds.shape[0]):
             ann_ds.append({"text": row["ground_texts"], "score": 1})
 
-    ann_ds = pd.DataFrame(ann_ds)
-
     class BatchCallback(BaseCallbackHandler):
         def __init__(self, total: int):
             super().__init__()
@@ -190,12 +187,13 @@ def main(dataset: str, gold: bool = False, test: bool = False):
         def __del__(self):
             self.progress_bar.__del__()
 
-    with BatchCallback(len(ann_ds)) as cb:  # init callback
+    ann_df = pd.DataFrame(ann_ds)
+    with BatchCallback(len(ann_df)) as cb:
         output = asyncio.run(
             chain.abatch(
                 [
                     {"input": d, "score": s}
-                    for d, s in zip(ann_ds["text"].tolist(), ann_ds["score"].tolist())
+                    for d, s in zip(ann_df["text"].tolist(), ann_df["score"].tolist())
                 ],
                 config={"callbacks": [cb], "max_concurrency": 20},
             )
