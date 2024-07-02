@@ -2,7 +2,6 @@ import logging
 import re
 
 from datasets import Dataset, load_dataset
-from fastchat.conversation import get_conv_template
 from transformers import AutoTokenizer
 
 PROMPT = """As a doctor, you must write an original \
@@ -13,43 +12,6 @@ while strictly using all the provided keywords conserving the order.
 You must adopt a medical telegraphic style, abbreviated, characterized by concise and \
 direct language.
 Keywords: {}"""
-
-EVAL_PROMPT = """###Task Description:
-An instruction (might include an Input inside it), a response to evaluate, \
-a reference answer that gets a score of 5, and a score rubric representing \
-a evaluation criteria are given.
-1. Write a detailed feedback that assess the quality of the response strictly \
-based on the given score rubric, not evaluating in general.
-2. After writing a feedback, write a score that is an integer between 1 and 5. \
-You should refer to the score rubric.
-3. The output format should look as follows: \"Feedback: (write a feedback for \
-criteria) [RESULT] (an integer number between 1 and 5)\"
-4. Please do not generate any other opening, closing, and explanations.\n
-###The instruction to Evaluate:
-{}\n
-###Response to evaluate:
-{}\n
-###Reference Answer (Score 5):
-{}\n
-###Score Rubrics:
-[Does the response reproduce the exact same writing style as the reference answer?]
-Score 1: The response significantly deviates from the medical telegraphic style, showing a lack \
-of concise and direct language. It does not resemble the style of the reference answer, \
-with lengthy sentences and unrelated details.
-Score 2: The response shows an attempt to use the medical telegraphic style, \
-but it is not consistent. There are moments of conciseness, \
-yet the overall style is not as direct or brief as the reference answer.
-Score 3: The response adopts a medical telegraphic style to a moderate extent. \
-It is more concise and direct than lower scores but still contains elements \
-that are not as efficiently presented as in the reference answer.
-Score 4: The response closely follows the medical telegraphic style, \
-with concise and direct language. It slightly differs from the reference answer in terms of \
-efficiency and clarity but still maintains a high standard of the required style.
-Score 5: The response perfectly aligns with the medical telegraphic style, characterized by \
-concise and direct language. \
-It mirrors the style of the reference answer, \
-effectively conveying information in a brief and clear manner.\n
-###Feedback:"""
 
 
 def tokenize(sample, tokenizer, max_sampler_length):
@@ -124,14 +86,6 @@ def extract_score(feedback):
         return 0
 
 
-def create_evaluator_prompt(prompt):
-    conv = get_conv_template("llama-2")
-    conv.set_system_message("You are a fair evaluator language model.")
-    conv.append_message(conv.roles[0], prompt)
-    conv.append_message(conv.roles[1], None)
-    return conv.get_prompt()
-
-
 def split_dataset(dataset, sft_ratio, dpo_ratio):
     # Split the dataset into train, gen and test
     # first we split the dataset into train and test
@@ -142,5 +96,16 @@ def split_dataset(dataset, sft_ratio, dpo_ratio):
     sft_dataset, gen_dataset = sft_dataset.train_test_split(
         train_size=sft_ratio, shuffle=False
     ).values()
-    logging.info(f"💾 SFT: {len(sft_dataset)}, DPO: {len(gen_dataset)} Test: {len(test_dataset)}")
     return sft_dataset, gen_dataset, test_dataset
+
+
+def add_prompt(data_point):
+    data_point["text"] = (
+        str.format(
+            PROMPT,
+            data_point["keywords"],
+        )
+        + "\n"
+        + data_point["text"]
+    )
+    return data_point

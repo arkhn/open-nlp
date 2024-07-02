@@ -21,15 +21,10 @@ import datasets
 import hydra
 import numpy as np
 import pandas as pd
-import torch
-import wandb
-from accelerate import Accelerator
 from omegaconf import omegaconf
-from peft import AutoPeftModelForCausalLM
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.integrations import WandbCallback
-from trl import DPOTrainer, set_seed
+from trl import DPOTrainer
 
 tqdm.pandas()
 os.environ["WANDB_PROJECT"] = "dpo-style-transfer"
@@ -38,49 +33,10 @@ os.environ["WANDB_LOG_MODEL"] = "checkpoint"
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="dpo.yaml")
-def main(cfg):
-    api = wandb.Api()
-    dataset = api.artifact(cfg.dataset)
-    dataset = dataset.files()[0].download(replace=True)
-    model_artifact = api.artifact(cfg.checkpoint)
-    model_dir = model_artifact.download()
-    set_seed(cfg.seed)
-    lora_config = hydra.utils.instantiate(cfg.lora)
-    bnb_config = hydra.utils.instantiate(cfg.bnb_config)
-    lora_config.target_modules = list(lora_config.target_modules)
-    json_file = json.load(dataset)
+def dpo_train(cfg, score_dataset, model, tokenizer):
+    json_file = json.load(score_dataset)
     df = pd.DataFrame(data=json_file["data"], columns=json_file["columns"])
     dataset = datasets.Dataset.from_pandas(df)
-    t = open(f"{model_dir}/adapter_config.json")
-    config_file = json.load(t)
-    config_file["base_model_name_or_path"] = cfg.model
-    # modify the open json
-    with open(f"{model_dir}/adapter_config.json", "w") as f:
-        json.dump(config_file, f)
-    Accelerator().wait_for_everyone()
-    model = AutoPeftModelForCausalLM.from_pretrained(
-        pretrained_model_name_or_path=model_dir,
-        torch_dtype=torch.bfloat16,
-        device_map="auto",
-    )
-    model = model.merge_and_unload()
-    model.save_pretrained("models/merged/")
-    Accelerator().wait_for_everyone()
-    model = AutoModelForCausalLM.from_pretrained(
-        pretrained_model_name_or_path="models/merged/",
-        torch_dtype=torch.bfloat16,
-        device_map={"": Accelerator().local_process_index},
-        quantization_config=bnb_config,
-    )
-    model.pretrained_model_name_or_path = cfg.model
-    model.config.use_cache = True
-    model.enable_input_require_grads()
-    model._ddp_params_and_buffers_to_ignore = [
-        name for name, buffer in model.named_buffers() if buffer.dtype == torch.bool
-    ]
-    tokenizer = AutoTokenizer.from_pretrained(cfg.model, padding_side="left")
-    tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "left"
 
     def add_preferences(data_point):
         df_point = pd.DataFrame({k: [v] for k, v in dict(data_point).items()})
@@ -134,14 +90,10 @@ def main(cfg):
         train_dataset=dataset,
         padding_value=tokenizer.eos_token_id,
         beta=cfg.beta,
-        peft_config=lora_config,
+        # peft_config=lora_config,
         callbacks=[CustomWandbCallback],
         max_length=cfg.max_length,
         max_prompt_length=cfg.max_prompt_length,
     )
 
     dpo_trainer.train()
-
-
-if __name__ == "__main__":
-    main()

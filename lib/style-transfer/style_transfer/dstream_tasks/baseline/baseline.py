@@ -9,7 +9,7 @@ import wandb
 from sentence_transformers import SentenceTransformer, util
 
 
-@hydra.main(version_base="1.3", config_path="../configs", config_name="score.yaml")
+@hydra.main(version_base="1.3", config_path="../configs", config_name="default.yaml")
 def main(cfg):
     api = wandb.Api()
     test_dataset = api.artifact(cfg.test_dataset)
