@@ -32,7 +32,6 @@ os.environ["TOKENIZERS_PARALLELISM"] = "true"
 os.environ["WANDB_LOG_MODEL"] = "checkpoint"
 
 
-@hydra.main(version_base="1.3", config_path="../configs", config_name="dpo.yaml")
 def dpo_train(cfg, score_dataset, model, tokenizer):
     json_file = json.load(score_dataset)
     df = pd.DataFrame(data=json_file["data"], columns=json_file["columns"])

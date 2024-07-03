@@ -1,15 +1,13 @@
-gen_dataset: ???
-test_dataset: ???
-gold_test_dataset: clinical-dream-team/gen-style-transfer/run-mxxdl2q1-test_dataset:v0
-batch_size: 128
-max_new_tokens: 1024
+gen_dataset: null
+test_dataset: null
+gold_test_dataset: null
 
 sem_model:
   train_size: 0.25
   epochs: 1
   batch_size: 64
   path: "models/sem_model"
-  name: "sentence-transformers/all-mpnet-base-v2"
+  name: "hf-internal-testing/tiny-random-BertModel"
   warmup_steps: 50
   loss:
     _target_: sentence_transformers.losses.ContrastiveTensionLoss

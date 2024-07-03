@@ -1,7 +1,6 @@
-import logging
-import re
-
+import datasets
 from datasets import Dataset, load_dataset
+from tokenizers.implementations import BaseTokenizer
 from transformers import AutoTokenizer
 
 PROMPT = """As a doctor, you must write an original \
@@ -14,7 +13,17 @@ direct language.
 Keywords: {}"""
 
 
-def tokenize(sample, tokenizer, max_sampler_length):
+def tokenize(sample: dict, tokenizer: BaseTokenizer, max_sampler_length: int) -> dict:
+    """Tokenize the sample.
+
+    Args:
+        sample: The sample to tokenize.
+        tokenizer: The tokenizer to use.
+        max_sampler_length: The maximum length of the input sequence.
+
+    Returns:
+        The tokenized sample.
+    """
     continuation = sample["text"]
     ground_ids = tokenizer.encode(continuation, add_special_tokens=False)
     ground_ids = (
@@ -36,18 +45,18 @@ def tokenize(sample, tokenizer, max_sampler_length):
     return sample
 
 
-def build_dataset(dataset_name, model_name, max_sampler_length):
+def build_dataset(dataset_name: str, model_name: str, max_sampler_length: 1024) -> datasets.Dataset:
     """
     Build dataset for training. This builds the dataset from `load_dataset`, one should
     customize this function to train the model on its own dataset.
 
     Args:
-        dataset_name (`str`):
-            The name of the dataset to be loaded.
+        dataset_name: The name of the dataset.
+        model_name: The name of the model.
+        max_sampler_length: The maximum length of the input sequence.
 
     Returns:
-        dataloader (`torch.utils.data.DataLoader`):
-            The dataloader for the dataset.
+        The dataset for training / testing.
     """
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.pad_token = tokenizer.eos_token
@@ -72,21 +81,19 @@ def build_dataset(dataset_name, model_name, max_sampler_length):
     return ds
 
 
-def extract_score(feedback):
-    pattern = r"(?:[\d]+|[\d]+\.[\d]+)"
-    if "[RESULT]" in feedback:
-        findall = re.findall(
-            pattern,
-            feedback.split("[RESULT]")[1],
-        )
-        return float(eval(findall[0])) if len(findall) == 1 else 0
+def split_dataset(
+    dataset: datasets.Dataset, sft_ratio: float, dpo_ratio: float
+) -> tuple[datasets.Dataset, datasets.Dataset, datasets.Dataset]:
+    """Split the dataset into train, gen and test.
 
-    else:
-        logging.warning(f"NO SCORE:\n {feedback}")
-        return 0
+    Args:
+        dataset: The dataset to split.
+        sft_ratio: The ratio of the dataset to use for SFT.
+        dpo_ratio: The ratio of the dataset to use for DPO.
 
-
-def split_dataset(dataset, sft_ratio, dpo_ratio):
+    Returns:
+        The train, gen and test datasets
+    """
     # Split the dataset into train, gen and test
     # first we split the dataset into train and test
     sft_dataset, test_dataset = dataset.train_test_split(
@@ -99,7 +106,15 @@ def split_dataset(dataset, sft_ratio, dpo_ratio):
     return sft_dataset, gen_dataset, test_dataset
 
 
-def add_prompt(data_point):
+def add_prompt(data_point) -> str:
+    """Add prompt to the data point.
+
+    Args:
+        data_point: The data point to add prompt to.
+
+    Returns:
+        The data point with prompt added.
+    """
     data_point["text"] = (
         str.format(
             PROMPT,

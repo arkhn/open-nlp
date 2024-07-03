@@ -15,19 +15,9 @@ from transformers import AutoTokenizer
 os.environ["WANDB_START_METHOD"] = "thread"
 
 
-@hydra.main(version_base="1.3", config_path="../configs", config_name="default.yaml")
-def generate(cfg):
-    api = wandb.Api()
-    model_artifact = api.artifact(cfg.checkpoint)
-    model_dir = model_artifact.download()
-    model = AutoPeftModelForCausalLM.from_pretrained(
-        pretrained_model_name_or_path=model_dir,
-        torch_dtype=torch.bfloat16,
-        device_map="auto",
-    )
+def generate(cfg, model, tokenizer, gen_dataset, test_dataset, wandb_log_dict):
     model = model.merge_and_unload()
     model.save_pretrained("models/merged/")
-    tokenizer = AutoTokenizer.from_pretrained(cfg.model)
     tokenizer.save_pretrained("models/merged/")
     del model
     del tokenizer
@@ -39,11 +29,6 @@ def generate(cfg):
         deployment_name=cfg.checkpoint,
     )
     logging.info("Model loaded to pipeline ! 🎉")
-    dataset = build_dataset(
-        dataset_name=cfg.dataset,
-        model_name=cfg.model,
-        max_sampler_length=cfg.max_seq_length,
-    )
 
     def add_prompt(data_point):
         data_point["prompts"] = (
@@ -56,35 +41,24 @@ def generate(cfg):
         )
         return data_point
 
-    dataset = dataset.map(
-        add_prompt,
-        batched=False,
-    )
-    sft_dataset, gen_dataset, test_dataset = split_dataset(dataset, cfg.sft_ratio, cfg.gen_ratio)
-    gen_dataset = gen_dataset.remove_columns(["input_ids", "max_gen_len"])
-    test_dataset = test_dataset.remove_columns(["input_ids", "max_gen_len"])
     dataloader = torch.utils.data.DataLoader(
-        gen_dataset,
+        gen_dataset.remove_columns(["input_ids", "max_gen_len"]),
         batch_size=cfg.batch_size,
     )
     test_dataloader = torch.utils.data.DataLoader(
-        test_dataset,
+        test_dataset.remove_columns(["input_ids", "max_gen_len"]),
         batch_size=cfg.batch_size,
     )
     dataset = []
 
     wandb.init(
         project="gen-style-transfer",
-        name=f"sft-ratio-{cfg.sft_ratio}_gen-ratio-{cfg.gen_ratio}",
     )
     wandb.config.update(
         omegaconf.OmegaConf.to_container(
             cfg,
         )
     )
-    wandb.config["sft_dataset_size"] = len(sft_dataset)
-    wandb.config["gen_dataset_size"] = len(gen_dataset)
-    wandb.config["test_dataset_size"] = len(test_dataset)
     for batch in tqdm(dataloader):
         flattened_gs_dict = {}
         for g_seq in range(cfg.num_generated_sequences):
