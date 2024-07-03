@@ -11,7 +11,6 @@ from sentence_transformers import InputExample, util
 os.environ["WANDB_LOG_MODEL"] = "checkpoint"
 
 
-@hydra.main(version_base="1.3", config_path="../configs", config_name="default.yaml")
 def score(cfg, eval_model, step, gen_dataset, test_dataset):
     wandb.config = omegaconf.OmegaConf.to_container(
         cfg,

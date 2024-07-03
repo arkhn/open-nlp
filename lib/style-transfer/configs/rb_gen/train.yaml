@@ -10,7 +10,7 @@ defaults:
   - override hydra/hydra_logging: colorlog
 
 model:
-  lora:
+  peft_config:
     _target_: peft.LoraConfig
     task_type: CAUSAL_LM
     r: 8
@@ -19,21 +19,16 @@ model:
     bias: none
     target_modules: ["q_proj", "v_proj", "k_proj", "out_proj", "fc_in", "fc_out", "wte"]
 
-  bnb_config:
-    _target_: transformers.BitsAndBytesConfig
-    load_in_4bit: true
-    bnb_4bit_quant_type: nf4
-    bnb_4bit_use_double_quant: True
-    bnb_4bit_compute_dtype: bfloat16
+  quantization_config: null
 
   max_seq_length: 1024
   num_generated_sequences: 4
-  name: mistralai/Mistral-7B-Instruct-v0.1
+  name: "hf-internal-testing/tiny-random-PhiModel"
 
 dataset:
-  name: bio-datasets/mimic_style_transfer
-  sft_ratio: 0.99
-  gen_ratio: 0.7
+  name: bio-datasets/mimic_style_transfer_tiny
+  sft_ratio: 0.5
+  gen_ratio: 0.5
 
 seed: 666
-max_steps: 0
+max_steps: 2
