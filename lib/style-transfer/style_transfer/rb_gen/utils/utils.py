@@ -62,7 +62,7 @@ def build_dataset(dataset_name: str, model_name: str, max_sampler_length: 1024) 
     tokenizer.pad_token = tokenizer.eos_token
     ds = load_dataset(dataset_name, split="train")
 
-    ds_dict = {"keywords": [], "text": []}
+    ds_dict: dict = {"keywords": [], "text": []}
     for keywords, text in zip(ds["keywords"], ds["text"]):
         for kw, t in zip(keywords, text):
             ds_dict["keywords"].append(kw)

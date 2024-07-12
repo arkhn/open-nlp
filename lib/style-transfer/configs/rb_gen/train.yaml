@@ -13,17 +13,16 @@ model:
   peft_config:
     _target_: peft.LoraConfig
     task_type: CAUSAL_LM
-    r: 8
+    r: 16
     lora_alpha: 16
-    lora_dropout: 0.05
+    lora_dropout: 0
     bias: none
-    target_modules: ["q_proj", "v_proj", "k_proj", "out_proj", "fc_in", "fc_out", "wte"]
-
+    target_modules: ["Wqkv", "fc1", "fc2"]
   quantization_config: null
 
   max_seq_length: 1024
   num_generated_sequences: 4
-  name: "hf-internal-testing/tiny-random-PhiModel"
+  name: "microsoft/phi-2"
 
 dataset:
   name: bio-datasets/mimic_style_transfer_tiny
