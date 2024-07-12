@@ -7,7 +7,7 @@ training_args:
   eval_steps: 5
   evaluation_strategy: "steps"
   remove_unused_columns: true
-  bf16: false
+  bf16: true
   resume_from_checkpoint: "models/sft/"
   output_dir: "models/sft/"
   learning_rate: 2e-4

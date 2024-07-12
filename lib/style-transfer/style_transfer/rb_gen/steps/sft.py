@@ -3,6 +3,7 @@ import os
 import hydra
 import wandb
 from omegaconf import omegaconf
+from transformers import AutoTokenizer
 from transformers.integrations import WandbCallback
 from trl import SFTTrainer
 
