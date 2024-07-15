@@ -1,20 +1,21 @@
 import json
 import logging
+import os
 
 import hydra
 import peft
 from omegaconf import DictConfig, ListConfig, OmegaConf
 from style_transfer.rb_gen.steps import dpo_train, generate, score, sft_train
 from style_transfer.rb_gen.utils import add_prompt, build_dataset, split_dataset
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    LlamaForCausalLM,
-    PhiForCausalLM,
-    set_seed,
-)
+from tqdm import tqdm
+from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 
 logger = logging.getLogger(__name__)
+
+os.environ["TOKENIZERS_PARALLELISM"] = "true"
+os.environ["WANDB_LOG_MODEL"] = "checkpoint"
+os.environ["WANDB_START_METHOD"] = "thread"
+tqdm.pandas()
 
 
 @hydra.main(version_base="1.3", config_path="../configs/rb_gen", config_name="train.yaml")
@@ -34,6 +35,7 @@ def main(cfg: DictConfig):
 
     logger.info("🍃 Bootstrap Model with Supervised Fine-Tuning...")
     current_model_path = "models/sft/best"
+    eval_model_path = "models/score/eval"
     model = sft_train(cfg, model, sft_dataset, test_dataset, wandb_log_dict)
     model.save_pretrained(current_model_path)
     del model
@@ -48,8 +50,32 @@ def main(cfg: DictConfig):
             test_dataset,
             wandb_log_dict,
         )
-        score_dataset = score(cfg, step, True if step == 0 else False, sth_dataset)
+        score_dataset = score(
+            cfg,
+            step,
+            True if step == 0 else False,
+            sth_dataset,
+            checkpoint=eval_model_path,
+        )
         current_model_path = dpo_train(cfg, current_model_path, tokenizer, score_dataset)
+
+    logger.info("🎉 Training Done !")
+    logger.info("🔍 Evaluating the final model ...")
+    sth_dataset = generate(
+        cfg,
+        current_model_path,
+        tokenizer,
+        gen_dataset,
+        test_dataset,
+        wandb_log_dict,
+    )
+    score(
+        cfg,
+        cfg.max_steps,
+        False,
+        sth_dataset,
+        checkpoint=eval_model_path,
+    )
 
 
 def load_model_and_tokenizer(cfg):
@@ -60,7 +86,7 @@ def load_model_and_tokenizer(cfg):
         else peft_config.target_modules
     )
 
-    model = AutoModelForCausalLM.from_pretrained("smeoni/phi-2-testing")
+    model = AutoModelForCausalLM.from_pretrained(cfg.model.name)
     model = peft.get_peft_model(
         model,
         peft_config,

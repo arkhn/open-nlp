@@ -20,9 +20,9 @@ model:
     target_modules: ["Wqkv", "fc1", "fc2"]
   quantization_config: null
 
-  max_seq_length: 1024
+  max_seq_length: 2048
   num_generated_sequences: 4
-  name: "microsoft/phi-2"
+  name: smeoni/phi-2-testing
 
 dataset:
   name: bio-datasets/mimic_style_transfer_tiny
