@@ -2,11 +2,22 @@ import hydra
 import numpy as np
 import pandas as pd
 import wandb
+from datasets import Dataset
 from peft import AutoPeftModelForCausalLM
+from transformers import PreTrainedTokenizerBase
 from trl import DPOTrainer
 
 
-def add_preferences(data_point):
+def add_preferences(data_point: dict) -> dict:
+    """Add preferences to the data point.
+    The preferences are the best and worst generations and their scores.
+    Previously added during the evaluation step.
+    We also add the deviation score which is the difference between the best and worst scores.
+    Args:
+        data_point: The data point to add preferences to.
+    Returns:
+        The data point with preferences added.
+    """
     df_point = pd.DataFrame({k: [v] for k, v in dict(data_point).items()})
     filtered_columns = pd.DataFrame(df_point).filter(regex="^evaluator_scores")
     max_labels = filtered_columns.max().idxmax()[-1]
@@ -23,7 +34,16 @@ def add_preferences(data_point):
     return data_point
 
 
-def dpo_train(cfg, model_path, tokenizer, dataset):
+def dpo_train(cfg, model_path: str, tokenizer: PreTrainedTokenizerBase, dataset: Dataset) -> str:
+    """Train the model using the reinforcement learning algorithm DPO.
+    We fix the percentile of the best candidate to keep for training.
+
+    Args:
+        cfg: The configuration for the training.
+        model_path: The path to the model.
+        tokenizer: The tokenizer.
+        dataset: The dataset to train on.
+    """
     dataset = dataset.map(
         add_preferences,
         batched=False,

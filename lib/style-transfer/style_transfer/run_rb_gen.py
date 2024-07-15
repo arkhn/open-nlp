@@ -5,10 +5,11 @@ import os
 import hydra
 import peft
 from omegaconf import DictConfig, ListConfig, OmegaConf
+from peft import PeftModel
 from style_transfer.rb_gen.steps import dpo_train, generate, score, sft_train
 from style_transfer.rb_gen.utils import add_prompt, build_dataset, split_dataset
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
+from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedTokenizerBase, set_seed
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,6 @@ def main(cfg: DictConfig):
             tokenizer,
             gen_dataset,
             test_dataset,
-            wandb_log_dict,
         )
         score_dataset = score(
             cfg,
@@ -67,7 +67,6 @@ def main(cfg: DictConfig):
         tokenizer,
         gen_dataset,
         test_dataset,
-        wandb_log_dict,
     )
     score(
         cfg,
@@ -78,7 +77,15 @@ def main(cfg: DictConfig):
     )
 
 
-def load_model_and_tokenizer(cfg):
+def load_model_and_tokenizer(cfg: DictConfig) -> tuple[PeftModel, PreTrainedTokenizerBase]:
+    """Load the model and tokenizer.
+    We load the model with PEFT and the tokenizer with padding on the left.
+    Args:
+        cfg: The configuration for the model.
+
+    Returns:
+        The model and tokenizer.
+    """
     peft_config = hydra.utils.instantiate(cfg.model.peft_config)
     peft_config.target_modules = (
         list(peft_config.target_modules)
@@ -108,6 +115,19 @@ def load_model_and_tokenizer(cfg):
 
 
 def init_datasets(cfg):
+    """Initialize the datasets.
+    We build the dataset, split it into sft, gen and test datasets
+    and add the prompt to each dataset.
+    We preemptively use the max_seq_length from the model configuration to build the dataset using
+    the build_dataset function.
+
+    Args:
+        cfg: The configuration for the model.
+
+    Returns:
+        The gen, sft and test datasets and the wandb log dictionary.
+    """
+
     dataset = build_dataset(
         dataset_name=cfg.dataset.name,
         model_name=cfg.model.name,

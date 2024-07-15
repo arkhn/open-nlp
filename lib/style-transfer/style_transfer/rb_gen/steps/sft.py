@@ -1,11 +1,31 @@
 import hydra
 import wandb
-from omegaconf import omegaconf
+from datasets import Dataset
+from omegaconf import DictConfig, omegaconf
+from peft import PeftModel
 from transformers.integrations import WandbCallback
 from trl import SFTTrainer
 
 
-def sft_train(cfg, model, sft_dataset, test_dataset, wandb_log_dict):
+def sft_train(
+    cfg: DictConfig,
+    model: PeftModel,
+    sft_dataset: Dataset,
+    test_dataset: Dataset,
+    wandb_log_dict: dict,
+):
+    """Train the model with supervised fine-tuning.
+
+    Args:
+        cfg: The configuration for the training.
+        model: The model to train.
+        sft_dataset: The dataset to use for training.
+        test_dataset: The dataset to use for evaluation.
+        wandb_log_dict: The dictionary of the dataset sizes.
+
+    Returns:
+        The trained model.
+    """
     args = hydra.utils.instantiate(cfg.sft.training_args)
 
     class CustomWandbCallback(WandbCallback):
