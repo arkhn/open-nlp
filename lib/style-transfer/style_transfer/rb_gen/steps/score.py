@@ -6,18 +6,26 @@ import pandas as pd
 import torch
 import wandb
 from datasets import Dataset
-from omegaconf import omegaconf
+from omegaconf import DictConfig, omegaconf
 from sentence_transformers import InputExample, util
+from transformers import PreTrainedModel
 
 os.environ["WANDB_LOG_MODEL"] = "checkpoint"
 
 
-def train_eval_model(cfg, eval_model, gen_dataset):
+def train_eval_model(cfg: DictConfig, eval_model: PreTrainedModel, gen_dataset: Dataset) -> Dataset:
+    """Train the evaluator model.
+
+    Args:
+        cfg: The configuration for the training.
+        eval_model: The model to train.
+        gen_dataset: The dataset to use for training.
+    """
     logging.info("🎲 Training Semantic Model ...")
     logging.info("🪚 Splitting Dataset for training...")
     gen_dataset = gen_dataset.train_test_split(train_size=cfg.score.train.train_size)
     train_gen_dataset = gen_dataset["train"]
-    gen_dataset = gen_dataset["test"].to_dict()
+    gen_dataset = gen_dataset["test"]
     train_examples = []
     train_examples.extend(
         [
@@ -49,9 +57,24 @@ def train_eval_model(cfg, eval_model, gen_dataset):
     return gen_dataset
 
 
-def dataset_scoring(cfg, dataset, evaluator):
+def dataset_scoring(cfg: DictConfig, dataset: dict, evaluator: PreTrainedModel) -> dict:
+    """Score the dataset. Using the evaluator model and cosine similarity.
+    We score the dataset by calculating the cosine similarity between the ground truth a
+    nd the generated text.
+    We iterate over the number of generated sequences and calculate the cosine similarity
+    for each sequence.
+
+    Args:
+        cfg: The configuration for the scoring.
+        dataset: The dataset to score.
+        evaluator: The model to use for scoring.
+
+    Returns:
+        The scored dataset.
+    """
+
     logging.info("🔍 Scoring the dataset ...")
-    score_dict = {}
+    score_dict: dict = {}
     ground_enc = evaluator.encode(
         dataset["ground_texts"],
         batch_size=cfg.score.batch_size,
@@ -70,7 +93,19 @@ def dataset_scoring(cfg, dataset, evaluator):
     return score_dict
 
 
-def score(cfg, step, is_trainable, dataset, checkpoint):
+def score(cfg, step: int, is_trainable: bool, dataset: Dataset, checkpoint: str) -> Dataset:
+    """Score the dataset and log the results.
+
+    Args:
+        cfg: The configuration for the scoring.
+        step: The current step.
+        is_trainable: Whether the model is trainable.
+        dataset: The dataset to score.
+        checkpoint: The checkpoint path to save the model.
+
+    Returns:
+        The scored dataset.
+    """
     wandb.config = omegaconf.OmegaConf.to_container(
         cfg,
     )
