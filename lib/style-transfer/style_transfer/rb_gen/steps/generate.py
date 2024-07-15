@@ -5,6 +5,7 @@ import shutil
 import pandas as pd
 import torch
 import wandb
+from datasets import Dataset
 from omegaconf import omegaconf
 from peft import AutoPeftModelForCausalLM
 from tqdm import tqdm
@@ -60,7 +61,6 @@ def batch_generate(cfg, dataloader, llm, wb_ds_name):
     for batch in tqdm(dataloader):
         flattened_gs_dict = {}
         for g_seq in range(cfg.model.num_generated_sequences):
-            print(batch)
             responses = llm.generate(batch["query"])
             flattened_gs_dict[f"generation_{g_seq}"] = [
                 response.outputs[0].text for response in responses
@@ -69,10 +69,8 @@ def batch_generate(cfg, dataloader, llm, wb_ds_name):
             "prompts": batch["query"],
             "ground_texts": batch["text"],
         }
-        print(flattened_gs_dict["generation_0"])
         batch_logs = {**batch_logs, **flattened_gs_dict}
         gen_df = pd.DataFrame.from_dict(batch_logs)
         dataset.append(gen_df)
     wandb.log({wb_ds_name: wandb.Table(dataframe=pd.concat(dataset))})
-
-    return dataset
+    return Dataset.from_pandas(pd.concat(dataset))

@@ -1,15 +1,8 @@
-import os
-
 import hydra
 import wandb
 from omegaconf import omegaconf
-from transformers import AutoTokenizer
 from transformers.integrations import WandbCallback
 from trl import SFTTrainer
-
-os.environ["WANDB_PROJECT"] = "style-transfer_sft"
-os.environ["WANDB_LOG_MODEL"] = "checkpoint"
-os.environ["WANDB_START_METHOD"] = "thread"
 
 
 def sft_train(cfg, model, sft_dataset, test_dataset, wandb_log_dict):
@@ -31,6 +24,9 @@ def sft_train(cfg, model, sft_dataset, test_dataset, wandb_log_dict):
                 self._wandb.config["dataset/size/gen"] = wandb_log_dict["gen_dataset_size"]
 
     args.load_best_model_at_end = True
+    wandb.init(
+        project="style-transfer_sft",
+    )
     trainer = SFTTrainer(
         model=model,
         args=args,

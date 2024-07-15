@@ -1,5 +1,5 @@
 training_args:
-  _target_: transformers.TrainingArguments
+  _target_: trl.DPOConfig
   per_device_train_batch_size: 1
   logging_steps: 2
   save_steps: 10

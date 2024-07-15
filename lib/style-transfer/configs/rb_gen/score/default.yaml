@@ -1,18 +1,18 @@
 gen_dataset: null
 test_dataset: null
 gold_test_dataset: null
+batch_size: 64
+is_logged: false
 
-sem_model:
-  train_size: 0.25
-  epochs: 1
-  batch_size: 64
-  path: "models/sem_model"
-  name: "hf-internal-testing/tiny-random-BertModel"
+model:
+  _target_: sentence_transformers.SentenceTransformer
+  model_name_or_path: "hf-internal-testing/tiny-random-BertModel"
+
+train:
   warmup_steps: 50
+  use_ground_truth: false
+  epochs: 1
+  train_size: 0.25
   loss:
     _target_: sentence_transformers.losses.ContrastiveTensionLoss
     _partial_: true
-  use_ground_truth: false
-  is_logged: false
-  is_trainable: true
-  checkpoint: null
