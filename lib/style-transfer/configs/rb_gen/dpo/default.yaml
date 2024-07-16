@@ -7,7 +7,7 @@ training_args:
   gradient_checkpointing: false
   learning_rate: 2e-6
   weight_decay: 1e-7
-  evaluation_strategy: "no"
+  eval_strategy: "no"
   num_train_epochs: 50
   output_dir: "models/dpo"
   optim: "adafactor"

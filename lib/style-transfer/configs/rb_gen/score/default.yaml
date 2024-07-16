@@ -1,6 +1,3 @@
-gen_dataset: null
-test_dataset: null
-gold_test_dataset: null
 batch_size: 64
 is_logged: false
 
