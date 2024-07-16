@@ -78,7 +78,7 @@ def generate(
     return gen_pred_dataset
 
 
-def batch_generate(cfg, dataloader, llm, wb_ds_name):
+def batch_generate(cfg, dataloader, llm, wb_ds_name) -> Dataset:
     dataset = []
     for batch in tqdm(dataloader):
         flattened_gs_dict = {}
