@@ -45,7 +45,7 @@ def tokenize(sample: dict, tokenizer: BaseTokenizer, max_sampler_length: int) ->
     return sample
 
 
-def build_dataset(dataset_name: str, model_name: str, max_sampler_length: int) -> datasets.Dataset:
+def build_dataset(dataset_name: str, model_name: str, max_sampler_length: int) -> Dataset:
     """
     Build dataset for training. This builds the dataset from `load_dataset`, one should
     customize this function to train the model on its own dataset.

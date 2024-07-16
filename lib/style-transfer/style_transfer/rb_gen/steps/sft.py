@@ -13,7 +13,7 @@ def sft_train(
     sft_dataset: Dataset,
     test_dataset: Dataset,
     wandb_log_dict: dict,
-):
+) -> PeftModel:
     """Train the model with supervised fine-tuning.
 
     Args:
