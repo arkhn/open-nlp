@@ -123,7 +123,9 @@ def score(cfg, step: int, is_trainable: bool, dataset: Dataset, checkpoint: str)
                 model_name_or_path=checkpoint,
             )
 
-        gen_dict = train_eval_model(cfg, eval_model, dataset) if is_trainable else dataset.to_dict()
+        gen_dict = (
+            train_eval_model(cfg, eval_model, dataset) if is_trainable else dataset
+        ).to_dict()
         eval_model.save(checkpoint)
         gen_dict_scores = dataset_scoring(cfg, gen_dict, eval_model)
         gen_dict.update(gen_dict_scores)
