@@ -16,24 +16,16 @@ def tokenize(sample: dict, tokenizer: BaseTokenizer, max_sampler_length: int, pr
     Returns:
         The tokenized sample.
     """
-    continuation = sample["text"]
-    ground_ids = tokenizer.encode(continuation, add_special_tokens=False)
+    ground_ids = tokenizer.encode(sample["text"], add_special_tokens=False)
     ground_ids = (
-        ground_ids if len(continuation) <= max_sampler_length else ground_ids[:max_sampler_length]
+        ground_ids if len(ground_ids) <= max_sampler_length else ground_ids[:max_sampler_length]
     )
     sample["ground_texts"] = tokenizer.decode(ground_ids)
-    keywords = ",".join(
+    sample["keywords"] = ",".join(
         [keyword for keyword in sample["keywords"].split(",") if keyword in sample["ground_texts"]]
     )
-    text_prompt = str.format(
-        prompt,
-        keywords,
-    )
-    sample["input_ids"] = tokenizer.encode("[INST] " + text_prompt + " [/INST]")
-    sample["formatted_query"] = "[INST] " + text_prompt + " [/INST]"
-    sample["query"] = text_prompt
-    sample["keywords"] = keywords
-    sample["max_gen_len"] = len(ground_ids)
+    sample["query"] = str.format(prompt, sample["keywords"])
+    sample["text"] = sample["query"] + "\n" + sample["text"]
     return sample
 
 
@@ -100,23 +92,3 @@ def split_dataset(
         train_size=sft_ratio, shuffle=False
     ).values()
     return sft_dataset, gen_dataset, test_dataset
-
-
-def add_prompt(data_point: dict, prompt: str) -> dict:
-    """Add prompt to the data point.
-
-    Args:
-        data_point: The data point to add prompt to.
-
-    Returns:
-        The data point with prompt added.
-    """
-    data_point["text"] = (
-        str.format(
-            prompt,
-            data_point["keywords"],
-        )
-        + "\n"
-        + data_point["text"]
-    )
-    return data_point
