@@ -4,6 +4,7 @@ import os
 
 import hydra
 import peft
+from datasets import Dataset
 from omegaconf import DictConfig, ListConfig, OmegaConf
 from peft import PeftModel
 from style_transfer.rb_gen.steps import dpo_train, generate, score, sft_train
@@ -114,7 +115,7 @@ def load_model_and_tokenizer(cfg: DictConfig) -> tuple[PeftModel, PreTrainedToke
     return model, tokenizer
 
 
-def init_datasets(cfg):
+def init_datasets(cfg) -> tuple[Dataset, Dataset, Dataset, dict]:
     """Initialize the datasets.
     We build the dataset, split it into sft, gen and test datasets
     and add the prompt to each dataset.
@@ -132,6 +133,7 @@ def init_datasets(cfg):
         dataset_name=cfg.dataset.name,
         model_name=cfg.model.name,
         max_sampler_length=cfg.model.max_seq_length,
+        prompt=cfg.model.prompt,
     )
     sft_dataset, gen_dataset, test_dataset = split_dataset(
         dataset,
