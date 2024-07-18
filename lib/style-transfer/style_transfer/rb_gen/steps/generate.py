@@ -53,11 +53,11 @@ def generate(
     logging.info("🎉 And it's done!")
 
     gen_dataloader = torch.utils.data.DataLoader(
-        gen_dataset.remove_columns(["input_ids", "max_gen_len"]),
+        gen_dataset,
         batch_size=cfg.gen.batch_size,
     )
     test_dataloader = torch.utils.data.DataLoader(
-        test_dataset.remove_columns(["input_ids", "max_gen_len"]),
+        test_dataset,
         batch_size=cfg.gen.batch_size,
     )
 

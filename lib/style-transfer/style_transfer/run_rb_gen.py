@@ -8,7 +8,7 @@ from datasets import Dataset
 from omegaconf import DictConfig, ListConfig, OmegaConf
 from peft import PeftModel
 from style_transfer.rb_gen.steps import dpo_train, generate, score, sft_train
-from style_transfer.rb_gen.utils import add_prompt, build_dataset, split_dataset
+from style_transfer.rb_gen.utils import build_dataset, split_dataset
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedTokenizerBase, set_seed
 
@@ -139,18 +139,6 @@ def init_datasets(cfg) -> tuple[Dataset, Dataset, Dataset, dict]:
         dataset,
         cfg.dataset.sft_ratio,
         cfg.dataset.gen_ratio,
-    )
-    sft_dataset = sft_dataset.map(
-        add_prompt,
-        batched=False,
-    )
-    gen_dataset = gen_dataset.map(
-        add_prompt,
-        batched=False,
-    )
-    test_dataset = test_dataset.map(
-        add_prompt,
-        batched=False,
     )
     logger.info(f"💾 SFT: {len(sft_dataset)}, DPO: {len(gen_dataset)} Test: {len(test_dataset)}")
     wandb_log_dict = {
