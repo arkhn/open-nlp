@@ -18,6 +18,12 @@ model:
     bias: none
     target_modules: ["Wqkv", "fc1", "fc2"]
   quantization_config: null
+  prompt: >
+    As a doctor, you must write an original | History of Present Illness (HPI) section for a
+    discharge summary. | Your response should capture the essence of a patient's health journey |
+    and recent medical experiences, while strictly using all the provided keywords conserving the
+    order. | You must adopt a medical telegraphic style, abbreviated, characterized by concise and
+    direct language. | Keywords: {}
 
   max_seq_length: 2048
   num_generated_sequences: 4

@@ -3,23 +3,15 @@ from datasets import Dataset, load_dataset
 from tokenizers.implementations import BaseTokenizer
 from transformers import AutoTokenizer
 
-PROMPT = """As a doctor, you must write an original \
-'History of Present Illness' (HPI) section for a discharge summary.
-Your response should capture the essence of a patient's health journey \
-and recent medical experiences, \
-while strictly using all the provided keywords conserving the order.
-You must adopt a medical telegraphic style, abbreviated, characterized by concise and \
-direct language.
-Keywords: {}"""
 
-
-def tokenize(sample: dict, tokenizer: BaseTokenizer, max_sampler_length: int) -> dict:
+def tokenize(sample: dict, tokenizer: BaseTokenizer, max_sampler_length: int, prompt: str) -> dict:
     """Tokenize the sample.
 
     Args:
         sample: The sample to tokenize.
         tokenizer: The tokenizer to use.
         max_sampler_length: The maximum length of the input sequence.
+        prompt: The prompt to use.
 
     Returns:
         The tokenized sample.
@@ -33,19 +25,21 @@ def tokenize(sample: dict, tokenizer: BaseTokenizer, max_sampler_length: int) ->
     keywords = ",".join(
         [keyword for keyword in sample["keywords"].split(",") if keyword in sample["ground_texts"]]
     )
-    prompt = str.format(
-        PROMPT,
+    text_prompt = str.format(
+        prompt,
         keywords,
     )
-    sample["input_ids"] = tokenizer.encode("[INST] " + prompt + " [/INST]")
-    sample["formatted_query"] = "[INST] " + prompt + " [/INST]"
-    sample["query"] = prompt
+    sample["input_ids"] = tokenizer.encode("[INST] " + text_prompt + " [/INST]")
+    sample["formatted_query"] = "[INST] " + text_prompt + " [/INST]"
+    sample["query"] = text_prompt
     sample["keywords"] = keywords
     sample["max_gen_len"] = len(ground_ids)
     return sample
 
 
-def build_dataset(dataset_name: str, model_name: str, max_sampler_length: int) -> Dataset:
+def build_dataset(
+    dataset_name: str, model_name: str, max_sampler_length: int, prompt: str
+) -> Dataset:
     """
     Build dataset for training. This builds the dataset from `load_dataset`, one should
     customize this function to train the model on its own dataset.
@@ -54,6 +48,7 @@ def build_dataset(dataset_name: str, model_name: str, max_sampler_length: int) -
         dataset_name: The name of the dataset.
         model_name: The name of the model.
         max_sampler_length: The maximum length of the input sequence.
+        prompt: The prompt to use.
 
     Returns:
         The dataset for training / testing.
@@ -74,6 +69,7 @@ def build_dataset(dataset_name: str, model_name: str, max_sampler_length: int) -
         fn_kwargs={
             "tokenizer": tokenizer,
             "max_sampler_length": max_sampler_length,
+            "prompt": prompt,
         },
     )
     ds = ds.filter(lambda x: len(x["keywords"].split(",")) > 1)
@@ -106,7 +102,7 @@ def split_dataset(
     return sft_dataset, gen_dataset, test_dataset
 
 
-def add_prompt(data_point) -> str:
+def add_prompt(data_point: dict, prompt: str) -> dict:
     """Add prompt to the data point.
 
     Args:
@@ -117,7 +113,7 @@ def add_prompt(data_point) -> str:
     """
     data_point["text"] = (
         str.format(
-            PROMPT,
+            prompt,
             data_point["keywords"],
         )
         + "\n"
