@@ -20,3 +20,4 @@ training_args:
   save_only_model: true
   save_safetensors: false
   packing: false
+  report_to: "none"

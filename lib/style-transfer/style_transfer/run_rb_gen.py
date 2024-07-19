@@ -4,8 +4,9 @@ import os
 
 import hydra
 import peft
+import wandb
 from datasets import Dataset
-from omegaconf import DictConfig, ListConfig, OmegaConf
+from omegaconf import DictConfig, ListConfig, OmegaConf, omegaconf
 from peft import PeftModel
 from style_transfer.rb_gen.steps import dpo_train, generate, score, sft_train
 from style_transfer.rb_gen.utils import build_dataset, split_dataset
@@ -27,11 +28,30 @@ def main(cfg: DictConfig):
     Args:
         cfg: The configuration for the model.
     """
+    wandb.init(project="style-transfer")
+    wandb.config.update(
+        omegaconf.OmegaConf.to_container(
+            cfg,
+        )
+    )
     set_seed(cfg.seed)
     logger.info(json.dumps(OmegaConf.to_container(cfg), indent=4))
     logger.info("💽 Building dataset ...")
     gen_dataset, sft_dataset, test_dataset, wandb_log_dict = init_datasets(cfg)
 
+    # instead use config update
+
+    wandb.config.update(
+        {
+            "dataset": {
+                "size/sft": wandb_log_dict["sft_dataset_size"],
+                "size/test": wandb_log_dict["test_dataset_size"],
+                "size/gen": wandb_log_dict["gen_dataset_size"],
+                **wandb.config.dataset,
+            }
+        },
+        allow_val_change=True,
+    )
     logger.info("🦙 load model ...")
     model, tokenizer = load_model_and_tokenizer(cfg)
 
@@ -46,6 +66,7 @@ def main(cfg: DictConfig):
     for step in range(cfg.max_steps):
         sth_dataset = generate(
             cfg,
+            step,
             current_model_path,
             tokenizer,
             gen_dataset,
@@ -58,12 +79,13 @@ def main(cfg: DictConfig):
             sth_dataset,
             checkpoint=eval_model_path,
         )
-        current_model_path = dpo_train(cfg, current_model_path, tokenizer, score_dataset)
+        current_model_path = dpo_train(cfg, step, current_model_path, tokenizer, score_dataset)
 
     logger.info("🎉 Training Done !")
     logger.info("🔍 Evaluating the final model ...")
     sth_dataset = generate(
         cfg,
+        cfg.max_steps,
         current_model_path,
         tokenizer,
         gen_dataset,
@@ -76,6 +98,7 @@ def main(cfg: DictConfig):
         sth_dataset,
         checkpoint=eval_model_path,
     )
+    wandb.finish()
 
 
 def load_model_and_tokenizer(cfg: DictConfig) -> tuple[PeftModel, PreTrainedTokenizerBase]:

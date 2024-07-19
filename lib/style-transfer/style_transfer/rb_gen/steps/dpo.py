@@ -4,6 +4,7 @@ import pandas as pd
 import wandb
 from datasets import Dataset
 from peft import AutoPeftModelForCausalLM
+from style_transfer.rb_gen.utils.utils import CustomWandbCallback
 from transformers import PreTrainedTokenizerBase
 from trl import DPOTrainer
 
@@ -34,16 +35,20 @@ def add_preferences(data_point: dict) -> dict:
     return data_point
 
 
-def dpo_train(cfg, model_path: str, tokenizer: PreTrainedTokenizerBase, dataset: Dataset) -> str:
+def dpo_train(
+    cfg, step, model_path: str, tokenizer: PreTrainedTokenizerBase, dataset: Dataset
+) -> str:
     """Train the model using the reinforcement learning algorithm DPO.
     We fix the percentile of the best candidate to keep for training.
 
     Args:
         cfg: The configuration for the training.
+        step: The current step.
         model_path: The path to the model.
         tokenizer: The tokenizer.
         dataset: The dataset to train on.
     """
+    wandb.config.update({"state": f"dpo/{step}"}, allow_val_change=True)
     dataset = dataset.map(
         add_preferences,
         batched=False,
@@ -58,16 +63,15 @@ def dpo_train(cfg, model_path: str, tokenizer: PreTrainedTokenizerBase, dataset:
     args.padding_value = tokenizer.eos_token_id
     model = AutoPeftModelForCausalLM.from_pretrained(pretrained_model_name_or_path=model_path)
     model.enable_input_require_grads()
-    wandb.init(project="style-transfer_dpo")
     dpo_trainer = DPOTrainer(
         args=args,
         ref_model=None,
         model=model,
         tokenizer=tokenizer,
         train_dataset=dataset,
+        callbacks=[CustomWandbCallback],
     )
     dpo_trainer.train()
     dpo_path = "models/dpo/"
     model.save_pretrained(dpo_path)
-    wandb.finish()
     return dpo_path

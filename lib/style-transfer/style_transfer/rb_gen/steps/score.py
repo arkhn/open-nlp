@@ -6,14 +6,16 @@ import pandas as pd
 import torch
 import wandb
 from datasets import Dataset
-from omegaconf import DictConfig, omegaconf
-from sentence_transformers import InputExample, util
-from transformers import PreTrainedModel
+from omegaconf import DictConfig
+from sentence_transformers import InputExample, SentenceTransformer, util
+from style_transfer.rb_gen.utils.utils import CustomWandbCallback
 
 os.environ["WANDB_LOG_MODEL"] = "checkpoint"
 
 
-def train_eval_model(cfg: DictConfig, eval_model: PreTrainedModel, gen_dataset: Dataset) -> Dataset:
+def train_eval_model(
+    cfg: DictConfig, eval_model: SentenceTransformer, gen_dataset: Dataset
+) -> Dataset:
     """Train the evaluator model.
 
     Args:
@@ -52,12 +54,13 @@ def train_eval_model(cfg: DictConfig, eval_model: PreTrainedModel, gen_dataset: 
         train_objectives=[(train_gen_dataloader, train_loss)],
         epochs=cfg.score.train.epochs,
         warmup_steps=cfg.score.train.warmup_steps,
+        callback=[CustomWandbCallback],
     )
     logging.info("🎉 Semantic Model Trained !")
     return gen_dataset
 
 
-def dataset_scoring(cfg: DictConfig, dataset: dict, evaluator: PreTrainedModel) -> dict:
+def dataset_scoring(cfg: DictConfig, dataset: dict, evaluator: SentenceTransformer) -> dict:
     """Score the dataset. Using the evaluator model and cosine similarity.
     We score the dataset by calculating the cosine similarity between the ground truth a
     nd the generated text.
@@ -106,43 +109,33 @@ def score(cfg, step: int, is_trainable: bool, dataset: Dataset, checkpoint: str)
     Returns:
         The scored dataset.
     """
-    wandb.config = omegaconf.OmegaConf.to_container(
-        cfg,
-    )
-    wandb.config.update({"step": step})
-    with wandb.init(
-        project="style-transfer_score",
-        config=wandb.config,
-    ):
-        logging.info("🐈 Loading the Semantic Model ...")
-        if step == 0:
-            eval_model = hydra.utils.instantiate(cfg.score.model)
-        else:
-            eval_model = hydra.utils.instantiate(
-                cfg.score.model,
-                model_name_or_path=checkpoint,
-            )
+    wandb.config.update({"state": f"score/{step}"}, allow_val_change=True)
+    logging.info("🐈 Loading the Semantic Model ...")
+    if step == 0:
+        eval_model = hydra.utils.instantiate(cfg.score.model)
+    else:
+        eval_model = hydra.utils.instantiate(
+            cfg.score.model,
+            model_name_or_path=checkpoint,
+        )
 
-        gen_dict = (
-            train_eval_model(cfg, eval_model, dataset) if is_trainable else dataset
-        ).to_dict()
-        eval_model.save(checkpoint)
-        gen_dict_scores = dataset_scoring(cfg, gen_dict, eval_model)
-        gen_dict.update(gen_dict_scores)
-        gen_df = pd.DataFrame.from_dict(gen_dict)
-        generated_sequences = [
-            f"evaluator_scores_{seq}" for seq in range(cfg.model.num_generated_sequences)
-        ]
+    gen_dict = (train_eval_model(cfg, eval_model, dataset) if is_trainable else dataset).to_dict()
+    eval_model.save(checkpoint)
+    gen_dict_scores = dataset_scoring(cfg, gen_dict, eval_model)
+    gen_dict.update(gen_dict_scores)
+    gen_df = pd.DataFrame.from_dict(gen_dict)
+    generated_sequences = [
+        f"evaluator_scores_{seq}" for seq in range(cfg.model.num_generated_sequences)
+    ]
 
-        gen_df["max_score"] = gen_df[generated_sequences].max(axis=1)
-        gen_df["min_score"] = gen_df[generated_sequences].min(axis=1)
-        gen_df["mean_score"] = gen_df[generated_sequences].mean(axis=1)
+    gen_df["max_score"] = gen_df[generated_sequences].max(axis=1)
+    gen_df["min_score"] = gen_df[generated_sequences].min(axis=1)
+    gen_df["mean_score"] = gen_df[generated_sequences].mean(axis=1)
 
-        wandb.log({"gen_score_dataset": wandb.Table(dataframe=gen_df)})
-        wandb.log({"gen/max/mean": gen_df["max_score"].mean()})
-        wandb.log({"gen/min/mean": gen_df["min_score"].mean()})
-        wandb.log({"gen/mean": gen_df["mean_score"].mean()})
+    wandb.log({f"{wandb.config['state']}/dataset/score": wandb.Table(dataframe=gen_df)})
+    wandb.log({f"{wandb.config['state']}/max/mean": gen_df["max_score"].mean()})
+    wandb.log({f"{wandb.config['state']}/min/mean": gen_df["min_score"].mean()})
+    wandb.log({f"{wandb.config['state']}/mean": gen_df["mean_score"].mean()})
 
-    wandb.finish()
     del eval_model
     return Dataset.from_pandas(gen_df)
