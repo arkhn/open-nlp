@@ -16,6 +16,7 @@ training_args:
   save_safetensors: false
   bf16: true
   seed: 0
+  report_to: "none"
 
 beta: 0.1
 threshold: 0.5
