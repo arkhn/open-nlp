@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 import wandb
 from datasets import Dataset
-from omegaconf import DictConfig, omegaconf
+from omegaconf import DictConfig
 from peft import AutoPeftModelForCausalLM
 from tqdm import tqdm
 from transformers import PreTrainedTokenizerBase
@@ -17,6 +17,7 @@ os.environ["WANDB_START_METHOD"] = "thread"
 
 def generate(
     cfg: DictConfig,
+    step: int,
     best_model_path: str,
     tokenizer: PreTrainedTokenizerBase,
     gen_dataset: Dataset,
@@ -38,6 +39,7 @@ def generate(
         The generated dataset.
     """
     logging.info("✨ Merging Model and save Tokenizer both at models/merged/")
+    wandb.config.update({"state": f"gen/{step}"}, allow_val_change=True)
     model = AutoPeftModelForCausalLM.from_pretrained(
         best_model_path,
         torch_dtype=torch.bfloat16,
@@ -60,21 +62,12 @@ def generate(
         test_dataset,
         batch_size=cfg.gen.batch_size,
     )
-
-    wandb.init(
-        project="style-transfer_gen",
+    gen_pred_dataset = batch_generate(
+        cfg, gen_dataloader, llm, f"{wandb.config['state']}/gen_dataset"
     )
-    wandb.config.update(
-        omegaconf.OmegaConf.to_container(
-            cfg,
-        )
-    )
-
-    gen_pred_dataset = batch_generate(cfg, gen_dataloader, llm, "gen_dataset")
-    _ = batch_generate(cfg, test_dataloader, llm, "test_dataset")
+    _ = batch_generate(cfg, test_dataloader, llm, f"{wandb.config['state']}/test_dataset")
     del llm
     shutil.rmtree("models/merged/")
-    wandb.finish()
     return gen_pred_dataset
 
 
