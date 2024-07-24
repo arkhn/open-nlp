@@ -1,3 +1,5 @@
+import glob
+
 import hydra
 import wandb
 from datasets import Dataset
@@ -36,5 +38,10 @@ def sft_train(
         eval_dataset=test_dataset,
         callbacks=[CustomWandbCallback],
     )
-    trainer.train()
+    # ensure that the "./models/sft" folder exists before training
+    if glob.glob("models/sft/*"):
+        trainer.train(resume_from_checkpoint=True)
+
+    else:
+        trainer.train()
     return model
