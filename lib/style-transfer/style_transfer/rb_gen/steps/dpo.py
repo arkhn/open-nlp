@@ -59,6 +59,7 @@ def dpo_train(
     dataset = dataset.select_columns(["prompts", "chosen", "rejected"])
     dataset = dataset.rename_column("prompts", "prompt")
 
+    cfg.dpo.training_args.output_dir = f"models/dpo/{step}"
     args = hydra.utils.instantiate(cfg.dpo.training_args)
     args.padding_value = tokenizer.eos_token_id
     model = AutoPeftModelForCausalLM.from_pretrained(pretrained_model_name_or_path=model_path)
