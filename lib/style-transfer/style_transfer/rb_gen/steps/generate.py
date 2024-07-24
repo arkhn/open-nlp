@@ -1,6 +1,9 @@
+import json
 import logging
 import os
 import shutil
+import sqlite3
+from typing import Callable
 
 import pandas as pd
 import torch
@@ -13,6 +16,7 @@ from transformers import PreTrainedTokenizerBase
 from vllm import LLM
 
 os.environ["WANDB_START_METHOD"] = "thread"
+CACHE_PATH = "./cache.sqlite"
 
 
 def generate(
@@ -64,23 +68,32 @@ def generate(
         batch_size=cfg.gen.batch_size,
     )
     gen_pred_dataset = batch_generate(
-        cfg, gen_dataloader, llm, f"{wandb.config['state']}/gen_dataset"
+        cfg, step, gen_dataloader, llm, f"{wandb.config['state']}/gen_dataset"
     )
-    _ = batch_generate(cfg, test_dataloader, llm, f"{wandb.config['state']}/test_dataset")
+    _ = batch_generate(
+        cfg,
+        step,
+        test_dataloader,
+        llm,
+        f"{wandb.config['state']}/test_dataset",
+    )
+
+    wandb.log_artifact(CACHE_PATH, type="data")
     del llm
     shutil.rmtree("models/merged/")
     return gen_pred_dataset
 
 
-def batch_generate(cfg, dataloader, llm, wb_ds_name) -> Dataset:
+def batch_generate(cfg, step, dataloader, llm, wb_ds_name) -> Dataset:
     dataset = []
     for batch in tqdm(dataloader):
         flattened_gs_dict = {}
         for g_seq in range(cfg.model.num_generated_sequences):
-            responses = llm.generate(batch["query"])
-            flattened_gs_dict[f"generation_{g_seq}"] = [
-                response.outputs[0].text for response in responses
-            ]
+            flattened_gs_dict[f"generation_{g_seq}"] = predict(
+                llm=llm,
+                prompts=batch["query"],
+                id=f"{wandb.run.id}_{step}_{g_seq}_{cfg}_{wb_ds_name}",
+            )
         batch_logs = {
             "prompts": batch["query"],
             "ground_texts": batch["text"],
@@ -90,3 +103,60 @@ def batch_generate(cfg, dataloader, llm, wb_ds_name) -> Dataset:
         dataset.append(gen_df)
     wandb.log({wb_ds_name: wandb.Table(dataframe=pd.concat(dataset))})
     return Dataset.from_pandas(pd.concat(dataset))
+
+
+def cached(func: Callable) -> Callable:
+    """Cache the results of the function using SQLite.
+
+    Args:
+        func: The function to cache.
+
+    Returns:
+        The cached function.
+    """
+
+    def wrapper(**kwargs):
+        conn = sqlite3.connect(CACHE_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+                CREATE TABLE IF NOT EXISTS cache (
+                    id TEXT PRIMARY KEY,
+                    prompts TEXT,
+                    result TEXT
+                )
+            """
+        )
+        func_kwargs = {k: v for k, v in kwargs.items() if k != "id"}
+        key = f"{kwargs['id']}-{json.dumps(kwargs['prompts'])}"
+
+        cursor.execute("SELECT result FROM cache WHERE id = ?", (key,))
+        row = cursor.fetchone()
+        if row:
+            result = json.loads(row[0])
+        else:
+            result = func(**func_kwargs)
+            cursor.execute(
+                "INSERT INTO cache (id, prompts, result) VALUES (?, ?, ?)",
+                (key, json.dumps(kwargs["prompts"]), json.dumps(result)),
+            )
+            conn.commit()
+
+        conn.close()
+        return result
+
+    return wrapper
+
+
+@cached
+def predict(llm: LLM, prompts: list[str]) -> list[str]:
+    """Predict next tokens for the prompts using the LLM.
+
+    Args:
+        llm: The LLM model.
+        prompts: The prompts to generate the next token for.
+
+    Returns:
+        The generated tokens.
+    """
+    return [response.outputs[0].text for response in llm.generate(prompts)]

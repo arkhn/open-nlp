@@ -1,3 +1,5 @@
+import glob
+
 import hydra
 import numpy as np
 import pandas as pd
@@ -72,7 +74,11 @@ def dpo_train(
         train_dataset=dataset,
         callbacks=[CustomWandbCallback],
     )
-    dpo_trainer.train()
-    dpo_path = "models/dpo/"
+    if glob.glob(f"{args.output_dir}/*"):
+        dpo_trainer.train(resume_from_checkpoint=True)
+    else:
+        dpo_trainer.train()
+
+    dpo_path = args.output_dir
     model.save_pretrained(dpo_path)
     return dpo_path
