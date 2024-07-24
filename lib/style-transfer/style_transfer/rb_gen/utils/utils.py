@@ -251,7 +251,9 @@ class CustomWandbCallback(WandbCallback):
                     self._wandb.run.summary[k] = v
             non_scalar_logs = {k: v for k, v in logs.items() if k not in single_value_scalars}
             non_scalar_logs = CustomWandbCallback.rewrite_logs(non_scalar_logs)
-            self._wandb.log({**non_scalar_logs, "train/global_step": state.global_step})
+            self._wandb.log(
+                {**non_scalar_logs, f"{wandb.config['state']}/train/global_step": state.global_step}
+            )
 
     def rewrite_logs(d):
         new_d = {}

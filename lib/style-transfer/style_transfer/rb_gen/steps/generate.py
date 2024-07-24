@@ -30,6 +30,7 @@ def generate(
 
     Args:
         cfg: The configuration for the generation.
+        step: The current step.
         best_model_path: The path to the best model.
         tokenizer: The tokenizer to use.
         gen_dataset: The dataset to generate the synthetic candidates for.

@@ -27,7 +27,7 @@ def sft_train(
         The trained model.
     """
     args = hydra.utils.instantiate(cfg.sft.training_args)
-    wandb.config.update({"state": "sft"})
+    wandb.config.update({"state": "sft"}, allow_val_change=True)
     args.load_best_model_at_end = True
     trainer = SFTTrainer(
         model=model,

@@ -28,11 +28,17 @@ def main(cfg: DictConfig):
     Args:
         cfg: The configuration for the model.
     """
-    wandb.init(project="style-transfer")
+    wandb.init(
+        project="style-transfer",
+        id=f"{cfg.model.name.replace('/','-')}-{wandb.util.generate_id()}",
+        resume="allow",
+        settings=wandb.Settings(code_dir="."),
+    )
     wandb.config.update(
         omegaconf.OmegaConf.to_container(
             cfg,
-        )
+        ),
+        allow_val_change=True,
     )
     set_seed(cfg.seed)
     logger.info(json.dumps(OmegaConf.to_container(cfg), indent=4))
