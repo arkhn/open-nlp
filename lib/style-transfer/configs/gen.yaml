@@ -1,8 +1,0 @@
-# @package _global_
-defaults:
-  - default
-  - _self_
-
-checkpoint: ???
-batch_size: 16
-max_new_tokens: 1024

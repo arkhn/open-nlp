@@ -34,21 +34,8 @@ exclude_lines = [
 ]
 
 [tool.isort]
-known_local_folder = [
-  'style-transfer',
-  'tests'
-]
-line_length = 100
-profile = 'black'
-
 [tool.poetry]
-authors = ["Arkhn's AI Team <ai@arkhn.com>"]
-description = "a package to experiement style transfer using RLF, LLM, ReST ?"
-license = "Apache-2.0"
-name = "style-transfer"
-readme = "README.md"
-repository = "https://github.com/arkhn/ai-lembic/tree/main/experiements/style-transfer"
-version = "0.1.0"
+authors = ["xxx"]
 
 [tool.poetry.dependencies]
 accelerate = "^0.26.1"

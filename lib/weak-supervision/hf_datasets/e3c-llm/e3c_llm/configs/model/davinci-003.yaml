@@ -1,3 +1,0 @@
-_target_: prediction_utils.model.InstructGPT
-model_name: text-davinci-003
-temperature: 0.0
