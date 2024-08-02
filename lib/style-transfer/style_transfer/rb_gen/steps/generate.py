@@ -1,3 +1,4 @@
+import gc
 import json
 import logging
 import os
@@ -14,6 +15,7 @@ from peft import AutoPeftModelForCausalLM
 from tqdm import tqdm
 from transformers import PreTrainedTokenizerBase
 from vllm import LLM
+from vllm.distributed import destroy_model_parallel, destroy_distributed_environment
 
 os.environ["WANDB_START_METHOD"] = "thread"
 CACHE_PATH = "./cache.sqlite"
@@ -55,7 +57,10 @@ def generate(
     del model
     del tokenizer
     logging.info("🫧 Building VLLM Pipeline ...")
-    llm = LLM(model="models/merged/")
+    llm = LLM(
+        model="models/merged/",
+        tensor_parallel_size=torch.cuda.device_count(),
+    )
 
     logging.info("🎉 And it's done!")
 
@@ -79,7 +84,12 @@ def generate(
     )
 
     wandb.log_artifact(CACHE_PATH, type="data")
+    destroy_model_parallel()
+    destroy_distributed_environment()
+    del llm.llm_engine.model_executor
     del llm
+    gc.collect()
+    torch.cuda.empty_cache()
     shutil.rmtree("models/merged/")
     return gen_pred_dataset
 
