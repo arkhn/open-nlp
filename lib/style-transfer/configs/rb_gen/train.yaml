@@ -27,7 +27,7 @@ model:
 
   max_seq_length: 2048
   num_generated_sequences: 4
-  name: smeoni/phi-2-testing
+  name: microsoft/phi-1
 
 dataset:
   name: bio-datasets/mimic_style_transfer_tiny

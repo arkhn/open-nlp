@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+  - default
+  - _self_
+
+wandb_project: style-transfer-bs-seed
+dataset:
+  topk: 100

@@ -1,0 +1,12 @@
+# @package _global_
+defaults:
+  - default
+  - _self_
+
+dataset:
+  topk: 20
+
+hydra:
+  sweeper:
+    params:
+      dataset.name: supsampling

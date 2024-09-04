@@ -1,0 +1,32 @@
+# @package _global_
+defaults:
+  - _self_
+
+dataset:
+  name: 0.06-2-ofzh3aqu
+  random_sampling: true
+  percentile: 0
+
+training_args:
+  _target_: transformers.TrainingArguments
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4
+  logging_steps: 20
+  warmup_steps: 50
+  eval_steps: 100
+  evaluation_strategy: "steps"
+  remove_unused_columns: true
+  save_strategy: "no"
+  output_dir: "models/ner"
+  num_train_epochs: 10
+  learning_rate: 2e-5
+
+wandb_project: style-transfer-ner-seed
+model: microsoft/deberta-v3-base
+seed: 0
+hydra:
+  sweeper:
+    params:
+      dataset.name: gold
+      dataset.random_sampling: true
+      seed: 0, 1, 2, 3, 4
