@@ -221,7 +221,7 @@ def main(cfg: DictConfig):
     )
 
     # EDA: Labels distribution
-    def count_labels(dataset):
+    def eda_count_labels(dataset):
         return [
             (
                 label,
@@ -233,8 +233,8 @@ def main(cfg: DictConfig):
             for label in all_labels
         ]
 
-    test_labels = count_labels(test_ds)
-    train_labels = count_labels(train_ds)
+    test_labels = eda_count_labels(test_ds)
+    train_labels = eda_count_labels(train_ds)
 
     def log_distribution(name, data):
         table = wandb.Table(data=data, columns=["entities", "value"])
