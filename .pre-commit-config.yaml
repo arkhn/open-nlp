@@ -63,6 +63,15 @@ repos:
       - id: flake8
         exclude: notebooks/
 
+  # Mypy is used to check the typing hints in Python; it is quite a restrictive tool, so we don't
+  # use it in tests
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.1
+    hooks:
+      - id: mypy
+        exclude: apps/|notebooks/|tests/
+        additional_dependencies: ["types-requests", "types-PyYAML"]
+
     # Safety is used to check if there are hardcoded secrets inside code and history
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.18.1
