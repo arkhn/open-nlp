@@ -1,0 +1,25 @@
+defaults:
+  - ../training_args
+  - _self_
+
+training_args:
+  output_dir: "models/icd"
+  num_train_epochs: 8
+
+dataset:
+  name: ???
+  topk: ???
+  precision: true
+  percentile: 10
+  random_sampling: true
+
+wandb_project: style-transfer-icd-seed
+model: microsoft/deberta-v3-base
+
+seed: ???
+hydra:
+  sweeper:
+    params:
+      dataset.name:
+        gold, 0.06-0, 0.06-1-ofzh3aqu, 0.06-2-ofzh3aqu, 0.04-0, 0.04-1-mru97w7c, 0.04-2-mru97w7c
+      seed: 0, 1, 2, 3, 4

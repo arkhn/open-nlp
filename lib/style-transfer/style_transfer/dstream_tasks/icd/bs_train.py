@@ -1,5 +1,6 @@
 import os
 from collections import Counter
+from pathlib import Path
 
 import datasets
 import evaluate
@@ -24,8 +25,15 @@ nltk.download("stopwords")
 nltk.download("punkt")
 stop_words = set(stopwords.words("english"))
 
+ABS_PATH = Path(__file__).parent.parent.parent.parent.absolute()
+DATA_PATH = ABS_PATH / "hf_datasets/mimic_iii_icd/data"
 
-@hydra.main(version_base="1.3", config_path="../configs", config_name="baseline_icd_train.yaml")
+
+@hydra.main(
+    version_base="1.3",
+    config_path=str(ABS_PATH / "configs" / "ds_stream" / "icd"),
+    config_name="bs-20.yaml",
+)
 def main(cfg: DictConfig):
     if cfg.wandb_project:
         os.environ["WANDB_PROJECT"] = cfg.wandb_project

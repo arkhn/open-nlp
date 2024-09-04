@@ -1,12 +1,8 @@
 # @package _global_
-defaults:
-  - default
-  - _self_
-
 dataset:
   _target_: datasets.Dataset
   name: 0.04-0
-  topk: 50
+  topk: 400
   percentile: 10
   precision: true
   random_sampling: true
@@ -27,11 +23,13 @@ training_args:
   num_train_epochs: 8
   learning_rate: 2e-5
 
-wandb_project: style-transfer-icd-5
+wandb_project: style-transfer-icd-seed
 model: microsoft/deberta-v3-base
+seed: 0
 hydra:
   sweeper:
     params:
       dataset.precision: true
-      dataset.name: gold, 0.06-0, 0.06-1-ofzh3aqu, 0.06-2-ofzh3aqu, 0.04-1-mru97w7c, 0.04-2-mru97w7c
+      dataset.name: combined
       model: microsoft/deberta-v3-base
+      seed: 0, 1, 2, 3, 4

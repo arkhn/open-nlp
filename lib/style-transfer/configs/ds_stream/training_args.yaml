@@ -1,21 +1,14 @@
 # @package _global_
-defaults:
-  - default
-  - _self_
-
 training_args:
   _target_: transformers.TrainingArguments
-  per_device_train_batch_size: 4
-  gradient_accumulation_steps: 4
+  per_device_train_batch_size: 32
+  gradient_accumulation_steps: 1
   logging_steps: 20
+  warmup_steps: 50
   eval_steps: 100
   evaluation_strategy: "steps"
   remove_unused_columns: true
   save_strategy: "no"
-  output_dir: "models/ner"
-  lr_scheduler_type: "constant"
+  output_dir: ???
   num_train_epochs: 10
   learning_rate: 2e-5
-
-wandb_project: multiple-ner-token-style-transfer
-model: microsoft/deberta-v3-base

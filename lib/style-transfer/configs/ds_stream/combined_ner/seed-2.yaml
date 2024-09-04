@@ -1,15 +1,11 @@
 # @package _global_
 defaults:
-  - default
   - _self_
 
 dataset:
-  _target_: datasets.Dataset
-  name: 0.04-0
-  topk: 20
-  percentile: 10
-  precision: true
+  name: 0.06-2-ofzh3aqu
   random_sampling: true
+  percentile: 0
 
 training_args:
   _target_: transformers.TrainingArguments
@@ -18,18 +14,19 @@ training_args:
   logging_steps: 20
   eval_steps: 100
   evaluation_strategy: "steps"
+  warmup_steps: 50
   remove_unused_columns: true
   save_strategy: "no"
-  output_dir: "models/icd"
-  lr_scheduler_type: "constant"
-  num_train_epochs: 8
+  output_dir: "models/ner"
+  num_train_epochs: 10
   learning_rate: 2e-5
 
-wandb_project: style-transfer-baseline-icd
+wandb_project: style-transfer-ner-seed
 model: microsoft/deberta-v3-base
+seed: 0
 hydra:
   sweeper:
     params:
-      dataset.topk: 20,50,100,400
-      dataset.precision: true
-      model: microsoft/deberta-v3-base
+      dataset.name: combined
+      dataset.random_sampling: true
+      seed: 2
