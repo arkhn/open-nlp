@@ -159,7 +159,7 @@ def main(cfg: DictConfig):
         .filter(lambda x: x["input_ids"] != [])
         .select_columns(["input_ids", "labels", "scores"])
     )
-    df = {
+    df: dict = {
         "input_ids": [],
         "labels": [],
         "scores": [],
