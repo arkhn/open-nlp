@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 os.environ["WANDB_LOG_MODEL"] = "checkpoint"
 os.environ["WANDB_START_METHOD"] = "thread"
+os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
 tqdm.pandas()
 
 

@@ -1,5 +1,6 @@
 import os
 from collections import Counter
+from pathlib import Path
 
 import datasets
 import evaluate
@@ -20,29 +21,32 @@ from transformers import (
 )
 from transformers.integrations import WandbCallback
 
-os.environ["WANDB_PROJECT"] = "icd-style-transfer"
 nltk.download("stopwords")
 nltk.download("punkt")
 stop_words = set(stopwords.words("english"))
 
+ABS_PATH = Path(__file__).parent.parent.parent.parent.absolute()
+DATA_PATH = ABS_PATH / "hf_datasets/mimic_iii_icd/data"
 
-@hydra.main(version_base="1.3", config_path="../configs", config_name="baseline_icd_train.yaml")
+
+@hydra.main(
+    version_base="1.3",
+    config_path=str(ABS_PATH / "configs" / "ds_stream"),
+    config_name="20.yaml",
+)
 def main(cfg: DictConfig):
-    if cfg.wandb_project:
-        os.environ["WANDB_PROJECT"] = cfg.wandb_project
+    os.environ["WANDB_PROJECT"] = cfg.wandb_project
     wandb.init()
     set_seed(cfg.seed)
     # load necessary files
-    train_ds = load_dataset("csv", data_files="hf_datasets/mimic_iii_icd/data/train_ds.csv")
-    test_ds = load_dataset("csv", data_files="hf_datasets/mimic_iii_icd/data/test_ds.csv")
+    train_ds = load_dataset("csv", data_files=str(DATA_PATH / "train_ds.csv"))
+    test_ds = load_dataset("csv", data_files=str(DATA_PATH / "test_ds.csv"))
     icd9_descriptions = {
         line.split("\t")[0]: line.split("\t")[1][:-1]
-        for line in open("hf_datasets/mimic_iii_icd/data/ICD9_descriptions").readlines()
+        for line in open(str(DATA_PATH / "ICD9_descriptions")).readlines()
     }
-    df = pd.read_csv("hf_datasets/mimic_iii_icd/data/train_ds.csv")
-    score_cols = list(df.filter(regex="eval_sem.*").columns)
-    gen_cols = list(df.filter(regex="generation.*").columns)
-    del df
+    score_cols = list(train_ds["train"].to_pandas().filter(regex="eval_sem.*").columns)
+    gen_cols = list(train_ds["train"].to_pandas().filter(regex="generation.*").columns)
 
     # load tokenizer, metrics, training args
     tokenizer = AutoTokenizer.from_pretrained(cfg.model)
@@ -51,17 +55,14 @@ def main(cfg: DictConfig):
     def sigmoid(x):
         return 1 / (1 + np.exp(-x))
 
-    current_max_f1 = [0]
-
     def compute_metrics(eval_pred):
         predictions, labels = eval_pred
         predictions = sigmoid(predictions)
-        predictions = (predictions > 0.5).astype(int).reshape(-1)
+        predictions = predictions > 0.5
+        labels = labels.astype(float)
         current_metrics = metrics.compute(
-            predictions=predictions, references=labels.astype(int).reshape(-1)
+            predictions=predictions.astype(float).reshape(-1), references=labels.reshape(-1)
         )
-        current_max_f1[0] = max(current_max_f1[0], current_metrics["f1"])
-        current_metrics["max_f1"] = current_max_f1[0]
         return current_metrics
 
     training_args = hydra.utils.instantiate(cfg.training_args)
@@ -79,17 +80,27 @@ def main(cfg: DictConfig):
         ]
         return example
 
+    def special_sampling(example):
+        if cfg.dataset.name == "combined":
+            return example["dataset_ids"] in ["0.06-0", "0.06-1-ofzh3aqu", "0.06-2-ofzh3aqu"]
+        elif cfg.dataset.name == "supsampling":
+            return example["dataset_ids"] == "gold"
+
     train_ds = (
-        (
-            train_ds.filter(lambda x: x["LABELS"] is not None)
-            .filter(lambda example: example["dataset_ids"] == cfg.dataset.name)
-            .map(preprocess_labels)
+        train_ds.filter(lambda x: x["LABELS"] is not None)
+        .filter(
+            lambda example: (
+                example["dataset_ids"] == cfg.dataset.name
+                if cfg.dataset.name != "combined" and cfg.dataset.name != "supsampling"
+                else special_sampling(example)
+            )
         )
-        if cfg.dataset.name != "all"
-        else train_ds.filter(lambda x: x["LABELS"] is not None)
-        .filter(lambda x: x["dataset_ids"] != "gold" and "0.04" not in x["dataset_ids"])
         .map(preprocess_labels)
     )
+    train_ds["train"] = datasets.concatenate_datasets(
+        [train_ds["train"]] * 4 if cfg.dataset.name == "supsampling" else [train_ds["train"]]
+    )
+
     test_ds = test_ds.map(preprocess_labels)
 
     # collect all labels
@@ -117,7 +128,7 @@ def main(cfg: DictConfig):
 
         texts = []
         score = []
-        if cfg.dataset.name != "gold":
+        if cfg.dataset.name != "gold" and cfg.dataset.name != "supsampling":
             for score_col, gen_col in zip(score_cols, gen_cols):
                 score.append(
                     1 if example[score_col] >= percentile or cfg.dataset.random_sampling else 0
