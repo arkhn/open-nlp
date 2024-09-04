@@ -15,7 +15,7 @@ from peft import AutoPeftModelForCausalLM
 from tqdm import tqdm
 from transformers import PreTrainedTokenizerBase
 from vllm import LLM
-from vllm.distributed import destroy_model_parallel, destroy_distributed_environment
+from vllm.distributed import destroy_distributed_environment, destroy_model_parallel
 
 os.environ["WANDB_START_METHOD"] = "thread"
 CACHE_PATH = "./cache.sqlite"
