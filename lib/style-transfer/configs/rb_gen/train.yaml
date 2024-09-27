@@ -35,4 +35,4 @@ dataset:
   gen_ratio: 0.5
 
 seed: 666
-max_steps: 2
+max_steps: 1

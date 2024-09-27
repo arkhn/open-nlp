@@ -15,6 +15,7 @@ dataset:
 
 wandb_project: style-transfer-icd-seed
 model: microsoft/deberta-v3-base
+threshold: 0.5
 
 seed: ???
 hydra:

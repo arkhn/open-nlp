@@ -3,24 +3,22 @@ defaults:
   - _self_
 
 training_args:
-  output_dir: "models/icd"
+  output_dir: "models/ner"
   num_train_epochs: 8
 
 dataset:
   name: ???
-  topk: 100
   precision: true
   percentile: 10
   random_sampling: true
 
-wandb_project: style-transfer-icd-ablation-seed
+wandb_project: style-transfer-ner-ablation-seed
 model: microsoft/deberta-v3-base
-threshold: 0.5
 
 seed: ???
 hydra:
   sweeper:
     params:
-      dataset.name: 0.06-2-ofzh3aqu, 0.04-2-mru97w7c
+      dataset.name: 0.06-2-ofzh3aqu
       dataset.random_sampling: true, false
       seed: 0, 1, 2, 3, 4

@@ -1,35 +1,7 @@
 # @package _global_
+defaults:
+  - default
+  - _self_
+
 dataset:
-  _target_: datasets.Dataset
-  name: 0.04-0
   topk: 400
-  percentile: 10
-  precision: true
-  random_sampling: true
-
-training_args:
-  _target_: transformers.TrainingArguments
-  per_device_train_batch_size: 4
-  per_device_eval_batch_size: 16
-  gradient_accumulation_steps: 4
-  weight_decay: 0.01
-  warmup_steps: 50
-  logging_steps: 20
-  eval_steps: 100
-  evaluation_strategy: "steps"
-  remove_unused_columns: true
-  save_strategy: "no"
-  output_dir: "models/icd"
-  num_train_epochs: 8
-  learning_rate: 2e-5
-
-wandb_project: style-transfer-icd-seed
-model: microsoft/deberta-v3-base
-seed: 0
-hydra:
-  sweeper:
-    params:
-      dataset.precision: true
-      dataset.name: combined
-      model: microsoft/deberta-v3-base
-      seed: 0, 1, 2, 3, 4

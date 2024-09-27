@@ -57,7 +57,7 @@ def build_dataset(
     """
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.pad_token = tokenizer.eos_token
-    ds = load_dataset(dataset_name, split="train")
+    ds = load_dataset(dataset_name, split="train", trust_remote_code=True)
 
     ds_dict: dict = {"keywords": [], "text": []}
     for keywords, text in zip(ds["keywords"], ds["text"]):
