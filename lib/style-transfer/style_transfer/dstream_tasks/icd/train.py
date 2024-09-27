@@ -58,7 +58,7 @@ def main(cfg: DictConfig):
     def compute_metrics(eval_pred):
         predictions, labels = eval_pred
         predictions = sigmoid(predictions)
-        predictions = predictions > 0.5
+        predictions = predictions > cfg.threshold
         labels = labels.astype(float)
         current_metrics = metrics.compute(
             predictions=predictions.astype(float).reshape(-1), references=labels.reshape(-1)
@@ -83,6 +83,8 @@ def main(cfg: DictConfig):
     def special_sampling(example):
         if cfg.dataset.name == "combined":
             return example["dataset_ids"] in ["0.06-0", "0.06-1-ofzh3aqu", "0.06-2-ofzh3aqu"]
+        elif cfg.dataset.name == "combined-4":
+            return example["dataset_ids"] in ["0.04-0", "0.04-1-mru97w7c", "0.04-2-mru97w7c"]
         elif cfg.dataset.name == "supsampling":
             return example["dataset_ids"] == "gold"
 
@@ -91,7 +93,9 @@ def main(cfg: DictConfig):
         .filter(
             lambda example: (
                 example["dataset_ids"] == cfg.dataset.name
-                if cfg.dataset.name != "combined" and cfg.dataset.name != "supsampling"
+                if cfg.dataset.name != "combined"
+                and cfg.dataset.name != "supsampling"
+                and cfg.dataset.name != "combined-4"
                 else special_sampling(example)
             )
         )

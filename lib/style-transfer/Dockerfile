@@ -1,5 +1,5 @@
 # Use the NVIDIA CUDA image as the base
-FROM nvcr.io/nvidia/cuda:11.8.0-devel-ubuntu22.04
+FROM nvidia/cuda:12.6.1-devel-ubi8
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -16,18 +16,18 @@ ENV PYTHONUNBUFFERED=1 \
     PATH="/opt/poetry/bin:$PATH"
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN dnf update -y && dnf install -y \
     curl \
-    build-essential \
+    gcc \
+    gcc-c++ \
+    make \
     python3.11 \
-    python3.11-dev \
-    python3.11-venv \
+    python3.11-devel \
     python3-pip \
-    && rm -rf /var/lib/apt/lists/*
+    && dnf clean all
 
 # Set Python 3.11 as default
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
-    && update-alternatives --set python3 /usr/bin/python3.11
+RUN alternatives --set python3 /usr/bin/python3.11
 
 # Install Poetry
 RUN curl -sSL https://install.python-poetry.org | python3 -

@@ -41,11 +41,12 @@ def main(cfg: DictConfig):
         ),
         allow_val_change=True,
     )
+    wandb.run.log_code("./style_transfer")
     set_seed(cfg.seed)
+    logger.info("wandb_dir: {}".format(wandb.run.dir))
     logger.info(json.dumps(OmegaConf.to_container(cfg), indent=4))
     logger.info("💽 Building dataset ...")
     gen_dataset, sft_dataset, test_dataset, wandb_log_dict = init_datasets(cfg)
-
     # instead use config update
 
     wandb.config.update(
@@ -61,14 +62,12 @@ def main(cfg: DictConfig):
     )
     logger.info("🦙 load model ...")
     model, tokenizer = load_model_and_tokenizer(cfg)
-
     logger.info("🍃 Bootstrap Model with Supervised Fine-Tuning...")
     current_model_path = "models/sft/best"
     eval_model_path = "models/score/eval"
     model = sft_train(cfg, model, sft_dataset, test_dataset, wandb_log_dict)
     model.save_pretrained(current_model_path)
     del model
-
     logger.info("Bootstrapping done,  Iterative Reward-based Generation Training begins...")
     for step in range(cfg.max_steps):
         sth_dataset = generate(
