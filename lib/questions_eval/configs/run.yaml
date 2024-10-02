@@ -1,0 +1,31 @@
+# @package _global_
+defaults:
+  - _self_
+  - model: gpt-4o.yaml
+
+samples: 1
+
+prompts:
+  transcription: >-
+    Given the following medical instruction and description, generate a synthetic transcription:
+
+    Instruction: {instruction} Description: {description}
+
+    Synthetic Transcription:
+
+  question: >-
+    Given the following transcription, generate a yes/no question that can be answered using the
+    information in the transcription. The question must be formulated in a way that the correct
+    answer is always 'yes':
+
+    Transcription: {transcription}
+
+    Question:
+
+  evaluation: >-
+    Compare the following pairs of transcriptions and questions:
+
+    Transcription : {transcription}
+
+    Question : {question} Based on the given transcription, answer the question with only 'yes',
+    'no', or 'idk' (if you don't know or can't determine from the information provided). Answer:
