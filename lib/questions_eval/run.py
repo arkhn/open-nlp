@@ -140,7 +140,7 @@ def main(cfg: DictConfig):
         f"{stat}/score/{score_type}": (
             df_joined[f"{score_type}_score"].agg(stat)
             if stat == "sum"
-            else df_joined[f"{score_type}_score"].agg(stat) / len(df_joined)
+            else df_joined[f"{score_type}_score"].agg("sum") / len(df_joined)
         )
         for stat in ["sum", "mean"]
         for score_type in ["raw", "synthetic", "real", "strict_synthetic_qa", "strict_qa"]
