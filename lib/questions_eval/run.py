@@ -16,13 +16,13 @@ def is_yes(result):
     return "yes" in result[:5].lower()
 
 
-def generate_data(row, transcription_chain, question_chain):
+def generate_data(row, num_questions, transcription_chain, question_chain):
     synthetic_transcription = transcription_chain.invoke(
         {"instruction": row["instruction"], "description": row["description"]}
     ).strip()
 
     data = []
-    for _ in range(2):
+    for _ in range(num_questions):
         real_question = question_chain.invoke({"transcription": row["transcription"]}).strip()
         synthetic_question = question_chain.invoke(
             {"transcription": synthetic_transcription}
@@ -110,7 +110,7 @@ def main(cfg: DictConfig):
         for _, row in df.progress_apply(
             generate_data,
             axis=1,
-            args=[transcription_chain, question_chain],
+            args=[cfg.num_questions, transcription_chain, question_chain],
         ).items()
         for item in row
     ]

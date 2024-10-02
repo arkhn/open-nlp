@@ -4,6 +4,7 @@ defaults:
   - model: gpt-4o.yaml
 
 samples: 1
+num_questions: 2
 
 prompts:
   transcription: >-
