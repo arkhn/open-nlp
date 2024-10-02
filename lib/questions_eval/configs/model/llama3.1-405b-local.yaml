@@ -1,0 +1,2 @@
+_target_: langchain_community.llms.huggingface_text_gen_inference.HuggingFaceTextGenInference
+inference_server_url: http://20:216:186:42:8080
