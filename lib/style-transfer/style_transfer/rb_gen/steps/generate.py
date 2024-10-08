@@ -27,7 +27,6 @@ def generate(
     best_model_path: str,
     tokenizer: PreTrainedTokenizerBase,
     gen_dataset: Dataset,
-    test_dataset: Dataset,
 ) -> Dataset:
     """Generate the synthetic candidates for the dataset.
     To improve the speed of the prediction we use VLLM pipeline.
@@ -40,7 +39,6 @@ def generate(
         best_model_path: The path to the best model.
         tokenizer: The tokenizer to use.
         gen_dataset: The dataset to generate the synthetic candidates for.
-        test_dataset: The dataset to generate the synthetic candidates for.
 
     Returns:
         The generated dataset.
@@ -66,23 +64,14 @@ def generate(
 
     logging.info("🎉 And it's done!")
 
+    shuffled_gen_dataset = gen_dataset.shuffle(seed=cfg.seed)
+    subset_gen_dataset = shuffled_gen_dataset.select(range(cfg.dataset.num_generated_samples))
     gen_dataloader = torch.utils.data.DataLoader(
-        gen_dataset,
-        batch_size=cfg.gen.batch_size,
-    )
-    test_dataloader = torch.utils.data.DataLoader(
-        test_dataset,
+        subset_gen_dataset if step != 0 else gen_dataset,
         batch_size=cfg.gen.batch_size,
     )
     gen_pred_dataset = batch_generate(
         cfg, step, gen_dataloader, llm, f"{wandb.config['state']}/gen_dataset"
-    )
-    _ = batch_generate(
-        cfg,
-        step,
-        test_dataloader,
-        llm,
-        f"{wandb.config['state']}/test_dataset",
     )
 
     wandb.log_artifact(CACHE_PATH, type="data")
