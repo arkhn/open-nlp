@@ -31,7 +31,7 @@ def main(cfg: DictConfig):
     """
     wandb.init(
         project="style-transfer",
-        id=f"{cfg.model.name.replace('/','-')}-{wandb.util.generate_id()}",
+        id=f"{cfg.model.name.replace('/', '-')}-{wandb.util.generate_id()}",
         resume="allow",
         settings=wandb.Settings(code_dir="."),
     )

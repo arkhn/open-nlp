@@ -7,7 +7,7 @@
 #SBATCH --partition=gpu_p5
 #SBATCH --account=oha@a100
 #SBATCH -C a100
-#SBATCH --qos=qos_gpu-dev
+#SBATCH --qos=qos_gpu_a100-dev
 
 module purge
 module load singularity

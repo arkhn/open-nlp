@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=10
 #SBATCH --output=log/conversion%j.out
 #SBATCH --partition=prepost
-#SBATCH --account=oha@cpu
+#SBATCH --account=oha@v100
 
 module purge
 module load singularity
