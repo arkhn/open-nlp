@@ -1,32 +1,49 @@
 # @package _global_
 defaults:
   - _self_
-  - model: gpt-4o.yaml
+  - model: gpt-4o-mini.yaml
+  - question_model: gpt-4o.yaml
 
-samples: 1
-num_questions: 2
+samples: 2
+num_questions: 5
 
 prompts:
   transcription: >-
-    Given the following medical instruction and description, generate a synthetic transcription:
-
-    Instruction: {instruction} Description: {description}
+    As a clinician assistant, you must write a clinical report given these patients information.
+    keywords: {keywords}, {derived_keywords}
+    description: {description}
+    medical specialty: {medical_specialty}
 
     Synthetic Transcription:
 
   question: >-
-    Given the following transcription, generate a yes/no question that can be answered using the
-    information in the transcription. The question must be formulated in a way that the correct
-    answer is always 'yes':
+    As a clinical assistant, please formulate {num_questions} critical, concise and closed-ended
+    questions (in a YES/NO format) that thoroughly scrutinize the document. The questions
+    generated should ALWAYS result in a ‘YES’ based on the given text. Questions should be
+    about the content of the document and not include any qualifier of the clarity, justification 
+    or definition. 
+    **Note**
+    The questions have to be STRICTLY closed-ended and should not be subjective or open to
+    human interpretation.
+    You should return in a JSON format. The JSON should be a list of dictionaries where each
+    dictionary will have two keys:
+    - ‘question’: specifying the question
+    - ‘answer’: either YES or NO.
+    The given text should be able to answer ‘YES’ for each generated question.
+    
+    Document: {transcription}
 
-    Transcription: {transcription}
-
-    Question:
+    JSON:
 
   evaluation: >-
-    Compare the following pairs of transcriptions and questions:
+    As a clinical assistant, answer the following questions with a YES or NO, grounded on the
+    text content only. Do not use any external knowledge. If you cannot answer the question
+    based on the provided text, please respond with ‘IDK’.
+    
+    **Note**
+    You should respond either YES, NO or IDK.
 
-    Transcription : {transcription}
+    Document : {transcription}
 
-    Question : {question} Based on the given transcription, answer the question with only 'yes',
-    'no', or 'idk' (if you don't know or can't determine from the information provided). Answer:
+    Question : {question}
+    Answer:
