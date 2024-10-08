@@ -76,7 +76,6 @@ def main(cfg: DictConfig):
             current_model_path,
             tokenizer,
             gen_dataset,
-            test_dataset,
         )
         score_dataset = score(
             cfg,
@@ -95,7 +94,6 @@ def main(cfg: DictConfig):
         current_model_path,
         tokenizer,
         gen_dataset,
-        test_dataset,
     )
     score(
         cfg,
