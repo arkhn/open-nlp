@@ -6,6 +6,7 @@ import shutil
 import sqlite3
 from typing import Callable
 
+import hydra
 import pandas as pd
 import torch
 import wandb
@@ -60,6 +61,7 @@ def generate(
     llm = LLM(
         model="models/merged/",
         tensor_parallel_size=torch.cuda.device_count(),
+        ngram_prompt_lookup_max=10,
     )
 
     logging.info("🎉 And it's done!")
@@ -87,12 +89,14 @@ def generate(
 
 def batch_generate(cfg, step, dataloader, llm, wb_ds_name) -> Dataset:
     dataset = []
+    sampling_params = hydra.utils.instantiate(cfg.gen.sampling_params)
     for batch in tqdm(dataloader):
         flattened_gs_dict = {}
         for g_seq in range(cfg.model.num_generated_sequences):
             flattened_gs_dict[f"generation_{g_seq}"] = predict(
                 llm=llm,
                 prompts=batch["query"],
+                sampling_params=sampling_params,
                 id=f"{wandb.run.id}_{step}_{g_seq}_{cfg}_{wb_ds_name}",
             )
         batch_logs = {
@@ -150,7 +154,7 @@ def cached(func: Callable) -> Callable:
 
 
 @cached
-def predict(llm: LLM, prompts: list[str]) -> list[str]:
+def predict(llm: LLM, prompts: list[str], sampling_params) -> list[str]:
     """Predict next tokens for the prompts using the LLM.
 
     Args:
@@ -160,4 +164,4 @@ def predict(llm: LLM, prompts: list[str]) -> list[str]:
     Returns:
         The generated tokens.
     """
-    return [response.outputs[0].text for response in llm.generate(prompts)]
+    return [response.outputs[0].text for response in llm.generate(prompts, sampling_params)]
