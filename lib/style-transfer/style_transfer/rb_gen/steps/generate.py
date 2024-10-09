@@ -54,8 +54,8 @@ def generate(
     tokenizer.save_pretrained("models/merged/")
     del model
     del tokenizer
-    # gc.collect()
-    # torch.cuda.empty_cache()
+    gc.collect()
+    torch.cuda.empty_cache()
     logging.info("🫧 Building VLLM Pipeline ...")
     llm = LLM(
         model="models/merged/",
