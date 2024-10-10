@@ -58,18 +58,14 @@ def generate(
     gc.collect()
     torch.cuda.empty_cache()
     logging.info("🫧 Building VLLM Pipeline ...")
-    llm = LLM(
-        model="models/merged/",
-        tensor_parallel_size=torch.cuda.device_count(),
-        ngram_prompt_lookup_max=10,
-    )
+    llm = hydra.utils.instantiate(cfg.gen.llm, tensor_parallel_size=torch.cuda.device_count())
 
     logging.info("🎉 And it's done!")
 
     shuffled_gen_dataset = gen_dataset.shuffle(seed=cfg.seed)
     subset_gen_dataset = shuffled_gen_dataset.select(range(cfg.dataset.num_generated_samples))
     gen_dataloader = torch.utils.data.DataLoader(
-        subset_gen_dataset if step != 0 else gen_dataset,
+        subset_gen_dataset,
         batch_size=cfg.gen.batch_size,
     )
     gen_pred_dataset = batch_generate(

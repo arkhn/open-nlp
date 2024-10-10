@@ -1,14 +1,14 @@
 training_args:
   _target_: trl.DPOConfig
-  per_device_train_batch_size: 1
+  per_device_train_batch_size: 4
   logging_steps: 2
-  save_steps: 10
-  gradient_accumulation_steps: 16
+  save_steps: 50
+  gradient_accumulation_steps: 4
   gradient_checkpointing: false
   learning_rate: 2e-6
   weight_decay: 1e-7
   eval_strategy: "no"
-  num_train_epochs: 50
+  num_train_epochs: 15
   output_dir: "models/dpo"
   optim: "adafactor"
   save_only_model: true
@@ -16,11 +16,11 @@ training_args:
   save_safetensors: false
   bf16: true
   seed: 0
+  max_length: 1024
+  max_prompt_length: 512
   report_to: "none"
 
 beta: 0.1
 checkpoint: null
 dataset: null
-max_length: 1024
-max_prompt_length: 512
 percentile: 50
