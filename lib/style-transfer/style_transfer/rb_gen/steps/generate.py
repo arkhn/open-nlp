@@ -58,7 +58,7 @@ def generate(
     gc.collect()
     torch.cuda.empty_cache()
     logging.info("🫧 Building VLLM Pipeline ...")
-    llm = hydra.utils.instantiate(cfg.gen.llm, tensor_parallel_size=torch.cuda.device_count())
+    llm = hydra.utils.instantiate(cfg.gen.llm)
 
     logging.info("🎉 And it's done!")
 
