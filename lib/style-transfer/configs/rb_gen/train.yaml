@@ -36,4 +36,4 @@ dataset:
   num_generated_samples: 6
 
 seed: 666
-max_steps: 1
+max_steps: 2
