@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=1
 python style_transfer/run_rb_gen.py model.name=meta-llama/Llama-3.2-3B-Instruct \
             model.peft_config.target_modules='["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]' \
             dataset.name=bio-datasets/mimic_style_transfer \
@@ -7,6 +7,6 @@ python style_transfer/run_rb_gen.py model.name=meta-llama/Llama-3.2-3B-Instruct 
             score.model.model_name_or_path=sentence-transformers/all-mpnet-base-v2 \
             dataset.sft_ratio=0.06 \
             dataset.gen_ratio=0.7 \
-            dataset.sft_dataset=null \
             sft.training_args.eval_steps=30 \
-            score.train.train_size=0.3
+            score.train.train_size=0.3 \
+            dataset.sft_dataset.size=300
