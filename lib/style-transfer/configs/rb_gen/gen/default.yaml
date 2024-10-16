@@ -6,7 +6,6 @@ sampling_params:
   top_p: 1.0
 llm:
   _target_: vllm.LLM
-  model: "models/merged/"
   speculative_model: "[ngram]"
   num_speculative_tokens: 5
   ngram_prompt_lookup_max: 4

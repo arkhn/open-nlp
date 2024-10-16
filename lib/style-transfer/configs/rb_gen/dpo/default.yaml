@@ -5,11 +5,10 @@ training_args:
   save_steps: 50
   gradient_accumulation_steps: 16
   gradient_checkpointing: false
-  learning_rate: 2e-6
+  learning_rate: 5e-7
   weight_decay: 1e-7
   eval_strategy: "no"
-  num_train_epochs: 10
-  output_dir: "models/dpo"
+  num_train_epochs: 5
   optim: "adafactor"
   save_only_model: true
   remove_unused_columns: false
