@@ -1,5 +1,3 @@
-import glob
-
 import hydra
 import numpy as np
 import pandas as pd
@@ -61,7 +59,7 @@ def dpo_train(
     dataset = dataset.select_columns(["prompts", "chosen", "rejected"])
     dataset = dataset.rename_column("prompts", "prompt")
 
-    cfg.dpo.training_args.output_dir = f"models/dpo/{step}"
+    cfg.dpo.training_args.output_dir = f"models/{wandb.run.id}/dpo/{step}"
     args = hydra.utils.instantiate(cfg.dpo.training_args)
     args.padding_value = tokenizer.eos_token_id
     model = AutoPeftModelForCausalLM.from_pretrained(pretrained_model_name_or_path=model_path)
@@ -74,10 +72,7 @@ def dpo_train(
         train_dataset=dataset,
         callbacks=[CustomWandbCallback],
     )
-    if glob.glob(f"{args.output_dir}/*"):
-        dpo_trainer.train(resume_from_checkpoint=True)
-    else:
-        dpo_trainer.train()
+    dpo_trainer.train()
 
     dpo_path = args.output_dir
     dpo_trainer.save_model(dpo_path)
