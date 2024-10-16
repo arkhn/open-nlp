@@ -31,6 +31,9 @@ model:
 
 dataset:
   name: bio-datasets/mimic_style_transfer_tiny
+  sft_dataset:
+    name: bio-datasets/medical_transcription_for_seed
+    size: 10
   sft_ratio: 0.5
   gen_ratio: 0.5
   num_generated_samples: 6
