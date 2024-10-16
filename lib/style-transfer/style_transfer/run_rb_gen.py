@@ -3,15 +3,13 @@ import logging
 import os
 
 import hydra
-import peft
 import wandb
 from datasets import Dataset
-from omegaconf import DictConfig, ListConfig, OmegaConf, omegaconf
-from peft import PeftModel
+from omegaconf import DictConfig, OmegaConf, omegaconf
 from style_transfer.rb_gen.steps import dpo_train, generate, score, sft_train
 from style_transfer.rb_gen.utils import build_dataset, split_dataset
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedTokenizerBase, set_seed
+from transformers import AutoTokenizer, PreTrainedTokenizerBase, set_seed
 
 logger = logging.getLogger(__name__)
 
@@ -60,14 +58,11 @@ def main(cfg: DictConfig):
         },
         allow_val_change=True,
     )
-    logger.info("🦙 load model ...")
-    model, tokenizer = load_model_and_tokenizer(cfg)
+    tokenizer = load_tokenizer(cfg)
     logger.info("🍃 Bootstrap Model with Supervised Fine-Tuning...")
-    current_model_path = "models/sft/best"
-    eval_model_path = "models/score/eval"
-    model = sft_train(cfg, model, sft_dataset, test_dataset, wandb_log_dict)
-    model.save_pretrained(current_model_path)
-    del model
+    current_model_path = f"models/{wandb.run.id}/sft/best"
+    eval_model_path = f"models/{wandb.run.id}/score/eval"
+    sft_train(cfg, sft_dataset, test_dataset, current_model_path)
     logger.info("Bootstrapping done,  Iterative Reward-based Generation Training begins...")
     for step in range(cfg.max_steps):
         sth_dataset = generate(
@@ -105,7 +100,7 @@ def main(cfg: DictConfig):
     wandb.finish()
 
 
-def load_model_and_tokenizer(cfg: DictConfig) -> tuple[PeftModel, PreTrainedTokenizerBase]:
+def load_tokenizer(cfg: DictConfig) -> PreTrainedTokenizerBase:
     """Load the model and tokenizer.
     We load the model with PEFT and the tokenizer with padding on the left.
     Args:
@@ -114,24 +109,6 @@ def load_model_and_tokenizer(cfg: DictConfig) -> tuple[PeftModel, PreTrainedToke
     Returns:
         The model and tokenizer.
     """
-    peft_config = hydra.utils.instantiate(cfg.model.peft_config)
-    peft_config.target_modules = (
-        list(peft_config.target_modules)
-        if isinstance(peft_config.target_modules, ListConfig)
-        else peft_config.target_modules
-    )
-
-    model = AutoModelForCausalLM.from_pretrained(cfg.model.name)
-    model = peft.get_peft_model(
-        model,
-        peft_config,
-    )
-    trainable_params, all_param = model.get_nb_trainable_parameters()
-    logger.info(
-        f"trainable params: {trainable_params:,d} || "
-        f"all params: {all_param:,d} || "
-        f"trainable%: {100 * trainable_params / all_param:.4f}"
-    )
     tokenizer = AutoTokenizer.from_pretrained(
         cfg.model.name,
         padding_side="left",
@@ -139,7 +116,7 @@ def load_model_and_tokenizer(cfg: DictConfig) -> tuple[PeftModel, PreTrainedToke
     )
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "left"
-    return model, tokenizer
+    return tokenizer
 
 
 def init_datasets(cfg) -> tuple[Dataset, Dataset, Dataset, dict]:

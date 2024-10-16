@@ -80,5 +80,6 @@ def dpo_train(
         dpo_trainer.train()
 
     dpo_path = args.output_dir
-    model.save_pretrained(dpo_path)
+    dpo_trainer.save_model(dpo_path)
+    del model
     return dpo_path
