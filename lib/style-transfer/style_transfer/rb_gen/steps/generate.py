@@ -62,7 +62,7 @@ def generate(
 
     logging.info("🎉 And it's done!")
 
-    shuffled_gen_dataset = gen_dataset.shuffle(seed=cfg.seed)
+    shuffled_gen_dataset = gen_dataset.shuffle(seed=cfg.seed + step)
     subset_gen_dataset = shuffled_gen_dataset.select(range(cfg.dataset.num_generated_samples))
     gen_dataloader = torch.utils.data.DataLoader(
         subset_gen_dataset,
