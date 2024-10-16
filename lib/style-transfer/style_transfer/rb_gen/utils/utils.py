@@ -65,6 +65,7 @@ def build_dataset(
             ds_dict["keywords"].append(kw)
             ds_dict["text"].append(t)
     ds = Dataset.from_dict(ds_dict)
+    ds = ds.filter(lambda x: x["text"] is not None)
     ds = ds.map(
         tokenize,
         batched=False,

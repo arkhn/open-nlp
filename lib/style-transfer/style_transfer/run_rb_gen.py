@@ -144,6 +144,16 @@ def init_datasets(cfg) -> tuple[Dataset, Dataset, Dataset, dict]:
         cfg.dataset.sft_ratio,
         cfg.dataset.gen_ratio,
     )
+
+    if cfg.dataset.sft_dataset is not None:
+        sft_dataset = build_dataset(
+            dataset_name=cfg.dataset.sft_dataset.name,
+            model_name=cfg.model.name,
+            max_sampler_length=cfg.model.max_seq_length,
+            prompt=cfg.model.prompt,
+        )
+        sft_dataset = sft_dataset.select(range(cfg.dataset.sft_dataset.size))
+
     logger.info(f"💾 SFT: {len(sft_dataset)}, DPO: {len(gen_dataset)} Test: {len(test_dataset)}")
     wandb_log_dict = {
         "sft_dataset_size": len(sft_dataset),
