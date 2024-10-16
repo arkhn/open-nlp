@@ -51,14 +51,14 @@ def generate(
         torch_dtype=torch.bfloat16,
         trust_remote_code=True,
     ).merge_and_unload()
-    model.save_pretrained("models/merged/")
-    tokenizer.save_pretrained("models/merged/")
+    model.save_pretrained(f"models/{wandb.run.id}/merged/")
+    tokenizer.save_pretrained(f"models/{wandb.run.id}/merged/")
     del model
     del tokenizer
     gc.collect()
     torch.cuda.empty_cache()
     logging.info("🫧 Building VLLM Pipeline ...")
-    llm = hydra.utils.instantiate(cfg.gen.llm)
+    llm = hydra.utils.instantiate(cfg.gen.llm, model=f"models/{wandb.run.id}/merged/")
 
     logging.info("🎉 And it's done!")
 
@@ -79,7 +79,7 @@ def generate(
     del llm
     gc.collect()
     torch.cuda.empty_cache()
-    shutil.rmtree("models/merged/")
+    shutil.rmtree(f"models/{wandb.run.id}/merged/")
     return gen_pred_dataset
 
 
