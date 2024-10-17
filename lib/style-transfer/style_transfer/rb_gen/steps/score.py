@@ -29,14 +29,15 @@ def train_eval_model(
     train_gen_dataset = gen_dataset["train"]
     gen_dataset = gen_dataset["test"]
     train_examples = []
-    train_examples.extend(
-        [
-            InputExample(texts=[pred, ground_text], label=0)
-            for pred, ground_text in zip(
-                train_gen_dataset["generation_0"], train_gen_dataset["ground_texts"]
-            )
-        ]
-    )
+    for num_seq in range(cfg.model.num_generated_sequences):
+        train_examples.extend(
+            [
+                InputExample(texts=[pred, ground_text], label=0)
+                for pred, ground_text in zip(
+                    train_gen_dataset[f"generation_{num_seq}"], train_gen_dataset["ground_texts"]
+                )
+            ]
+        )
     if cfg.score.train.use_ground_truth:
         train_examples.extend(
             [
