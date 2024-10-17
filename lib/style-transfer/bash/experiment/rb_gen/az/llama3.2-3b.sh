@@ -9,4 +9,6 @@ python style_transfer/run_rb_gen.py model.name=meta-llama/Llama-3.2-3B-Instruct 
             dataset.gen_ratio=0.7 \
             dataset.sft_dataset=null \
             sft.training_args.eval_steps=30 \
-            score.train.train_size=0.3
+            score.train.train_size=0.3 \
+            dpo.training_args.num_train_epochs=80 \
+            dpo.percentile=70
