@@ -1,6 +1,7 @@
 import hydra
 import pandas as pd
 import wandb
+import itertools
 from datasets import load_dataset
 from dotenv import load_dotenv
 from langchain.output_parsers import OutputFixingParser
@@ -56,8 +57,8 @@ def is_no(result: str) -> bool:
 def generate_data(
     row: pd.Series,
     num_questions: int,
-    transcription_chain: langchain.Chain,
-    question_chain: langchain.Chain,
+    transcription_chain,
+    question_chain,
 ) -> dict:
     """
     Generate data for a given row in the dataset
@@ -152,7 +153,7 @@ def compute_conformity(
     return float(score) / 2
 
 
-def evaluate(row: pd.Series, evaluation_chain: langchain.Chain) -> dict:
+def evaluate(row, evaluation_chain) -> dict:
     """
     Evaluate the generated data
 
@@ -164,11 +165,12 @@ def evaluate(row: pd.Series, evaluation_chain: langchain.Chain) -> dict:
         The evaluation results, including conformity, consistency and coverage
     """
     results = {}
-    for i in ["synthetic_transcription", "transcription"]:
-        for j in ["synthetic_question", "question"]:
-            results[f"{i}/{j}"] = evaluation_chain.invoke(
-                {"transcription": row[i], "question": row[j]}
-            )
+    # Same time complexity as the nested loop O(1) but better readability and maintainability
+    for i, j in itertools.product(["synthetic_transcription", "transcription"], ["synthetic_question", "question"]):
+        results[f"{i}/{j}"] = evaluation_chain.invoke(
+            {"transcription": row[i], "question": row[j]}
+        )    
+
     # Compute conformity, consistency and coverage
     coverage = 1 if is_idk(results["synthetic_transcription/question"]) else 0
     consistency = 1 if not is_idk(results["transcription/synthetic_question"]) else 0
@@ -183,14 +185,14 @@ def evaluate(row: pd.Series, evaluation_chain: langchain.Chain) -> dict:
     results["coverage"] = coverage
     return results
 
-
-def create_chain(template: str, llm: str) -> langchain.Chain:
+def create_chain(template: str, llm: str, question_llm: bool):
     """
     Create a chain of models
 
     Args:
         template: The template
         llm: The language model
+        question_llm: The chain is used for question or transcription generation
 
     Returns:
         The chain of models for transcription
@@ -201,29 +203,11 @@ def create_chain(template: str, llm: str) -> langchain.Chain:
             ("human", template),
         ]
     )
-    return chat_template | llm | StrOutputParser()
-
-
-def create_question_chain(template: str, llm: str) -> langchain.Chain:
-    """
-    Create a chain of models
-
-    Args:
-        template: The template
-        llm: The language model
-
-    Returns:
-        The chain of models for questions
-    """
-    chat_template = ChatPromptTemplate.from_messages(
-        [
-            ("system", "You are an helpful clinical assistant."),
-            ("human", template),
-        ]
-    )
-    fix_output_parser = OutputFixingParser.from_llm(llm, parser=JsonOutputParser())
-    return chat_template | llm | fix_output_parser
-
+    if question_llm == True:
+        fix_output_parser = OutputFixingParser.from_llm(llm, parser=JsonOutputParser())
+        return chat_template | llm | fix_output_parser
+    else:
+        return chat_template | llm | StrOutputParser()
 
 @hydra.main(config_path="./configs", config_name="run.yaml")
 def main(cfg: DictConfig):
@@ -235,16 +219,18 @@ def main(cfg: DictConfig):
     transcription_chain = create_chain(
         cfg.prompts.transcription,
         llm,
+        False
     )
-    question_chain = create_question_chain(
+    question_chain = create_chain(
         cfg.prompts.question,
         question_llm,
+        True
     )
     evaluation_chain = create_chain(
         cfg.prompts.evaluation,
         question_llm,
+        False
     )
-
     # Load and process dataset
     loaded_dataset = load_dataset("DataFog/medical-transcription-instruct", split="train")
     df = loaded_dataset.to_pandas().iloc[: cfg.samples]
