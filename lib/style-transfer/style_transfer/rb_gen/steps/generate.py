@@ -19,7 +19,6 @@ from vllm import LLM
 from vllm.distributed import destroy_distributed_environment, destroy_model_parallel
 
 os.environ["WANDB_START_METHOD"] = "thread"
-CACHE_PATH = "./cache.sqlite"
 
 
 def generate(
@@ -72,7 +71,7 @@ def generate(
         cfg, step, gen_dataloader, llm, f"{wandb.config['state']}/gen_dataset"
     )
 
-    wandb.log_artifact(CACHE_PATH, type="data")
+    wandb.log_artifact(f".cache-{wandb.run.id}.sqlite", type="data")
     destroy_model_parallel()
     destroy_distributed_environment()
     del llm.llm_engine.model_executor
@@ -117,7 +116,7 @@ def cached(func: Callable) -> Callable:
     """
 
     def wrapper(**kwargs):
-        conn = sqlite3.connect(CACHE_PATH)
+        conn = sqlite3.connect(f".cache-{wandb.run.id}.sqlite")
         cursor = conn.cursor()
         cursor.execute(
             """
