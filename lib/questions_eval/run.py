@@ -1,12 +1,9 @@
 import hydra
 import pandas as pd
 import wandb
-from botocore.parsers import JSONParser
-from coverage import coverage
 from datasets import load_dataset
 from dotenv import load_dotenv
 from langchain.output_parsers import OutputFixingParser
-from langchain.prompts import PromptTemplate
 from langchain.schema import StrOutputParser
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -17,19 +14,65 @@ from tqdm import tqdm
 load_dotenv()
 
 
-def is_yes(result):
+def is_yes(result: str) -> bool:
+    """
+    Check if the result is a yes
+
+    Args:
+        result: The result to check
+
+    Returns:
+        True if the result is a yes, False otherwise
+    """
     return True if "yes" in result[:5].lower() else False
 
 
-def is_idk(result):
+def is_idk(result: str) -> bool:
+    """
+    Check if the result is a 'idk' (i don't know)
+
+    Args:
+        result: The result to check
+
+    Returns:
+        True if the result is a idk, False otherwise
+    """
     return True if "idk" in result[:5].lower() else False
 
 
-def is_no(result):
+def is_no(result: str) -> bool:
+    """
+    Check if the result is a no
+
+    Args:
+        result: The result to check
+
+    Returns:
+        True if the result is a no, False otherwise
+    """
     return True if "no" in result[:5].lower() else False
 
 
-def generate_data(row, num_questions, transcription_chain, question_chain):
+def generate_data(
+    row: pd.Series,
+    num_questions: int,
+    transcription_chain: langchain.Chain,
+    question_chain: langchain.Chain,
+) -> dict:
+    """
+    Generate data for a given row in the dataset
+
+    Args:
+        row: text data
+        num_questions: number of questions to generate
+        transcription_chain: generated synthetic transcription
+        question_chain: generated synthetic questions
+
+    Returns:
+        The merged data with the following columns:
+        question, synthetic_question, answer, synthetic answer, synthetic_transcription, transcription
+
+    """
     synthetic_transcription = transcription_chain.invoke(
         {
             "keywords": row["keywords"],
@@ -73,11 +116,26 @@ def generate_data(row, num_questions, transcription_chain, question_chain):
 
 
 def compute_conformity(
-    synthetic_transcript_question,
-    transcript_synthetic_question,
-    transcript_question,
-    synthetic_transcript_synthetic_question,
-):
+    synthetic_transcript_question: str,
+    transcript_synthetic_question: str,
+    transcript_question: str,
+    synthetic_transcript_synthetic_question: str,
+) -> float:
+    """
+    Calculate conformity score.
+    It is derived by identifying the percentage of questions
+    for which the summary’s answer is "NO" and the document’s
+    is "YES", or vice versa, and computing 100 − X
+
+    Args:
+        synthetic_transcript_question: Synthetic transcript for groundtruth question
+        transcript_synthetic_question: Groundtruth transcript for synthetic question
+        transcript_question: Groundtruth transcript for groundtruth question
+        synthetic_transcript_synthetic_question: Synthetic transcript for synthetic question
+
+    Returns:
+        The conformity score
+    """
     score = 2
     if (
         is_yes(synthetic_transcript_question) != is_yes(transcript_question)
@@ -94,14 +152,24 @@ def compute_conformity(
     return float(score) / 2
 
 
-def evaluate(row, evaluation_chain):
+def evaluate(row: pd.Series, evaluation_chain: langchain.Chain) -> dict:
+    """
+    Evaluate the generated data
+
+    Args:
+        row: The row to evaluate
+        evaluation_chain: The evaluation chain
+
+    Returns:
+        The evaluation results, including conformity, consistency and coverage
+    """
     results = {}
     for i in ["synthetic_transcription", "transcription"]:
         for j in ["synthetic_question", "question"]:
             results[f"{i}/{j}"] = evaluation_chain.invoke(
                 {"transcription": row[i], "question": row[j]}
             )
-
+    # Compute conformity, consistency and coverage
     coverage = 1 if is_idk(results["synthetic_transcription/question"]) else 0
     consistency = 1 if not is_idk(results["transcription/synthetic_question"]) else 0
     conformity = compute_conformity(
@@ -116,7 +184,17 @@ def evaluate(row, evaluation_chain):
     return results
 
 
-def create_chain(template, llm):
+def create_chain(template: str, llm: str) -> langchain.Chain:
+    """
+    Create a chain of models
+
+    Args:
+        template: The template
+        llm: The language model
+
+    Returns:
+        The chain of models for transcription
+    """
     chat_template = ChatPromptTemplate.from_messages(
         [
             ("system", "You are an helpful clinical assistant."),
@@ -126,7 +204,17 @@ def create_chain(template, llm):
     return chat_template | llm | StrOutputParser()
 
 
-def create_question_chain(template, llm):
+def create_question_chain(template: str, llm: str) -> langchain.Chain:
+    """
+    Create a chain of models
+
+    Args:
+        template: The template
+        llm: The language model
+
+    Returns:
+        The chain of models for questions
+    """
     chat_template = ChatPromptTemplate.from_messages(
         [
             ("system", "You are an helpful clinical assistant."),
