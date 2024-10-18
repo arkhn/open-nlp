@@ -227,7 +227,7 @@ def main(cfg: DictConfig):
     evaluation_chain = create_chain(cfg.prompts.evaluation, question_llm, False)
 
     # Load and process dataset
-    loaded_dataset = load_dataset("DataFog/medical-transcription-instruct", split="train")
+    loaded_dataset = load_dataset(cfg.dataset, split="train")
     df = loaded_dataset.to_pandas().iloc[: cfg.samples]
 
     tqdm.pandas(desc="Generating data...")

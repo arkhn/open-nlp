@@ -6,6 +6,7 @@ defaults:
 
 samples: 2
 num_questions: 5
+dataset: "DataFog/medical-transcription-instruct"
 
 prompts:
   transcription: >-
