@@ -1,7 +1,8 @@
+import itertools
+
 import hydra
 import pandas as pd
 import wandb
-import itertools
 from datasets import load_dataset
 from dotenv import load_dotenv
 from langchain.output_parsers import OutputFixingParser
@@ -59,7 +60,7 @@ def generate_data(
     num_questions: int,
     transcription_chain,
     question_chain,
-) -> dict:
+):
     """
     Generate data for a given row in the dataset
 
@@ -71,7 +72,8 @@ def generate_data(
 
     Returns:
         The merged data with the following columns:
-        question, synthetic_question, answer, synthetic answer, synthetic_transcription, transcription
+        question, synthetic_question, answer, synthetic answer,
+        synthetic_transcription, transcription
 
     """
     synthetic_transcription = transcription_chain.invoke(
@@ -165,11 +167,11 @@ def evaluate(row, evaluation_chain) -> dict:
         The evaluation results, including conformity, consistency and coverage
     """
     results = {}
-    # Same time complexity as the nested loop O(1) but better readability and maintainability
-    for i, j in itertools.product(["synthetic_transcription", "transcription"], ["synthetic_question", "question"]):
-        results[f"{i}/{j}"] = evaluation_chain.invoke(
-            {"transcription": row[i], "question": row[j]}
-        )    
+    for i, j in itertools.product(
+        ["synthetic_transcription", "transcription"],
+        ["synthetic_question", "question"],
+    ):
+        results[f"{i}/{j}"] = evaluation_chain.invoke({"transcription": row[i], "question": row[j]})
 
     # Compute conformity, consistency and coverage
     coverage = 1 if is_idk(results["synthetic_transcription/question"]) else 0
@@ -185,17 +187,19 @@ def evaluate(row, evaluation_chain) -> dict:
     results["coverage"] = coverage
     return results
 
-def create_chain(template: str, llm: str, question_llm: bool):
+
+def create_chain(template: str, llm: str, is_question_chain: bool):
     """
     Create a chain of models
 
     Args:
-        template: The template
-        llm: The language model
-        question_llm: The chain is used for question or transcription generation
+        template: The template for the prompt
+        llm: The language model to use
+        is_question_chain: Boolean indicating whether the chain is used for
+        question generation (True) or transcription generation (False)
 
     Returns:
-        The chain of models for transcription
+        The chain of models for either question or transcription generation
     """
     chat_template = ChatPromptTemplate.from_messages(
         [
@@ -203,34 +207,25 @@ def create_chain(template: str, llm: str, question_llm: bool):
             ("human", template),
         ]
     )
-    if question_llm == True:
-        fix_output_parser = OutputFixingParser.from_llm(llm, parser=JsonOutputParser())
-        return chat_template | llm | fix_output_parser
-    else:
-        return chat_template | llm | StrOutputParser()
+    return (
+        chat_template | llm | StrOutputParser()
+        if not is_question_chain
+        else OutputFixingParser.from_llm(llm, parser=JsonOutputParser())
+    )
+
 
 @hydra.main(config_path="./configs", config_name="run.yaml")
 def main(cfg: DictConfig):
+    # Initialize WandB and log the models
     wandb.init(project="document-cross-validation", entity="clinical-dream-team")
     wandb.config.update(OmegaConf.to_container(cfg, resolve=True))
 
     llm = hydra.utils.instantiate(cfg.model)
     question_llm = hydra.utils.instantiate(cfg.question_model)
-    transcription_chain = create_chain(
-        cfg.prompts.transcription,
-        llm,
-        False
-    )
-    question_chain = create_chain(
-        cfg.prompts.question,
-        question_llm,
-        True
-    )
-    evaluation_chain = create_chain(
-        cfg.prompts.evaluation,
-        question_llm,
-        False
-    )
+    transcription_chain = create_chain(cfg.prompts.transcription, llm, False)
+    question_chain = create_chain(cfg.prompts.question, question_llm, True)
+    evaluation_chain = create_chain(cfg.prompts.evaluation, question_llm, False)
+
     # Load and process dataset
     loaded_dataset = load_dataset("DataFog/medical-transcription-instruct", split="train")
     df = loaded_dataset.to_pandas().iloc[: cfg.samples]
@@ -257,6 +252,7 @@ def main(cfg: DictConfig):
         axis=1,
     )
     json_df = json_normalize(df_questions["evaluation"])
+
     # Combine the original dataframe with the extracted JSON data
     df_questions = pd.concat([df_questions, json_df], axis=1)
     del df_questions["evaluation"]
@@ -280,7 +276,6 @@ def main(cfg: DictConfig):
     for key, value in log_dict.items():
         wandb.run.summary[key] = value
     wandb.log({"dataset/evaluation": wandb.Table(dataframe=df_joined)})
-
     wandb.finish()
 
 
