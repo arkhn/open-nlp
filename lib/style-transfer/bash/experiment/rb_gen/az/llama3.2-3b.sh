@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=$1
 python style_transfer/run_rb_gen.py model.name=meta-llama/Llama-3.2-3B-Instruct \
             model.peft_config.target_modules='["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]' \
             dataset.name=bio-datasets/mimic_style_transfer \
@@ -10,5 +10,6 @@ python style_transfer/run_rb_gen.py model.name=meta-llama/Llama-3.2-3B-Instruct 
             dataset.sft_dataset=null \
             sft.training_args.eval_steps=30 \
             score.train.train_size=0.3 \
-            dpo.training_args.num_train_epochs=80 \
-            dpo.percentile=70
+            dpo.training_args.num_train_epochs=40 \
+            dpo.percentile=70 \
+            score.batch_size=64
