@@ -1,0 +1,45 @@
+# @package _global_
+defaults:
+  - _self_
+  - model: gpt-4o-mini.yaml
+  - question_model: gpt-4o.yaml
+
+samples: 2
+num_questions: 5
+dataset: "/Users/hanh.tran/Desktop/open-nlp/lib/questions_eval/data_sample/mimoracle_train_sample.csv"
+
+prompts:
+  summary: >-
+    As a clinician assistant, you must write a summary for a specified section in clinical report given these patients information.
+    section_title: {section_title}
+    text: {text}
+
+    Synthetic Summary:
+
+  question: >-
+    As a clinical assistant, please formulate {num_questions} critical, concise and closed-ended
+    questions (in a YES/NO format) that thoroughly scrutinize the document. The questions generated
+    should ALWAYS result in a ‘YES’ based on the given text. Questions should be about the content
+    of the document and not include any qualifier of the clarity, justification or definition.
+    **Note** The questions have to be STRICTLY closed-ended and should not be subjective or open to
+    human interpretation. You should return in a JSON format. The JSON should be a list of
+    dictionaries where each dictionary will have two keys: - ‘question’: specifying the question -
+    ‘answer’: either YES or NO. The given text should be able to answer ‘YES’ for each generated
+    question.
+
+    Document: {summary}
+
+    JSON:
+
+  evaluation: >-
+    As a clinical assistant, answer the following questions with a YES or NO, grounded on the text
+    content only. Do not use any external knowledge. If you cannot answer the question based on the
+    provided text, please respond with ‘IDK’.
+
+    **Note** You should respond either YES, NO or IDK.
+
+    Document : {summary}
+
+    Question : {question} 
+    
+    Answer:
