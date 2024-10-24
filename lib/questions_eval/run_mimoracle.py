@@ -75,13 +75,6 @@ def generate_data(
         synthetic_summary, summary
 
     """
-    # print(f"section_title: {type(row['section_title'])}")
-    # print(f"text: {type(row['text'])}")
-    # pdb.set_trace()
-    # Check if the values are not None or empty
-    if not row["section_title"] or not row["text"]:
-        raise ValueError("section_title or text is missing or empty")
-
     synthetic_summary = summary_chain.invoke(
         {
             "section_title": row["section_title"],
@@ -239,8 +232,6 @@ def main(cfg: DictConfig):
     df.rename(columns={"section_content": "summary"}, inplace=True)
 
     tqdm.pandas(desc="Generating data...")
-    # print(type(summary_chain))
-    # print(type(question_chain))
     ds_questions = [
         item
         for _, row in df.progress_apply(
