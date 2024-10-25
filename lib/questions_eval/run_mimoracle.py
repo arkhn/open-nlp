@@ -1,17 +1,15 @@
-import itertools
-import pdb
-
 import hydra
-import pandas as pd
 import wandb
+import itertools
+import pandas as pd
+from pandas import json_normalize
+from tqdm import tqdm
 from dotenv import load_dotenv
 from langchain.output_parsers import OutputFixingParser
 from langchain.schema import StrOutputParser
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from omegaconf import DictConfig, OmegaConf
-from pandas import json_normalize
-from tqdm import tqdm
 
 load_dotenv()
 
@@ -275,7 +273,7 @@ def main(cfg: DictConfig):
     }
     for key, value in log_dict.items():
         wandb.run.summary[key] = value
-    wandb.log({"dataset/evaluation_mimoracle": wandb.Table(dataframe=df_joined)})
+    wandb.log({"dataset/evaluation_mimoracle_gpt4o": wandb.Table(dataframe=df_joined)})
     wandb.finish()
 
 
