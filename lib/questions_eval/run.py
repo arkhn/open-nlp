@@ -208,9 +208,13 @@ def create_chain(template: str, llm: str, is_question_chain: bool):
         ]
     )
     return (
-        chat_template | llm | (StrOutputParser()
-        if not is_question_chain
-        else OutputFixingParser.from_llm(llm, parser=JsonOutputParser()))
+        chat_template
+        | llm
+        | (
+            StrOutputParser()
+            if not is_question_chain
+            else OutputFixingParser.from_llm(llm, parser=JsonOutputParser())
+        )
     )
 
 

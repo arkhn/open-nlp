@@ -1,17 +1,19 @@
-import hydra
-import wandb
 import itertools
+
+import hydra
 import pandas as pd
-from pandas import json_normalize
-from tqdm import tqdm
+import wandb
 from dotenv import load_dotenv
 from langchain.output_parsers import OutputFixingParser
 from langchain.schema import StrOutputParser
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from omegaconf import DictConfig, OmegaConf
+from pandas import json_normalize
+from tqdm import tqdm
 
 load_dotenv()
+
 
 def is_yes(result: str) -> bool:
     """
@@ -57,7 +59,7 @@ def generate_data(
     num_questions: int,
     summary_chain,
     question_chain,
-) -> dict:
+):
     """
     Generate data for a given row in the dataset
 
@@ -79,7 +81,6 @@ def generate_data(
             "text": row["text"],
         }
     ).strip()
-    
 
     data = []
 
@@ -204,11 +205,15 @@ def create_chain(template: str, llm: str, is_question_chain: bool):
             ("human", template),
         ]
     )
-    
+
     return (
-        chat_template | llm | (StrOutputParser()
-        if not is_question_chain
-        else OutputFixingParser.from_llm(llm, parser=JsonOutputParser()))
+        chat_template
+        | llm
+        | (
+            StrOutputParser()
+            if not is_question_chain
+            else OutputFixingParser.from_llm(llm, parser=JsonOutputParser())
+        )
     )
 
 
@@ -256,9 +261,7 @@ def main(cfg: DictConfig):
     del df_questions["evaluation"]
 
     # Join df_questions and df
-    df_joined = df.merge(
-        df_questions, left_on="summary", right_on="summary", how="right"
-    )
+    df_joined = df.merge(df_questions, left_on="summary", right_on="summary", how="right")
     print(f"Shape of joined dataframe: {df_joined.shape}")
 
     # Log results in wandb
