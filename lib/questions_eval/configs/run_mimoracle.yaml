@@ -10,9 +10,8 @@ dataset: "/Users/hanh.tran/Desktop/open-nlp/lib/questions_eval/data_sample/mimor
 
 prompts:
   summary: >-
-    As a clinician assistant, you must write a summary for a specified section in clinical report given these patients information.
-    section_title: {section_title}
-    text: {text}
+    As a clinician assistant, you must write a summary for a specified section in clinical report
+    given these patients information. section_title: {section_title} text: {text}
 
     Synthetic Summary:
 
@@ -40,6 +39,6 @@ prompts:
 
     Document : {summary}
 
-    Question : {question} 
-    
+    Question : {question}
+
     Answer:
