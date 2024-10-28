@@ -276,7 +276,7 @@ def main(cfg: DictConfig):
     }
     for key, value in log_dict.items():
         wandb.run.summary[key] = value
-    wandb.log({"dataset/evaluation_mimoracle_gpt4o": wandb.Table(dataframe=df_joined)})
+    wandb.log({"dataset/evaluation_mimoracle_gpt4o_retest": wandb.Table(dataframe=df_joined)})
     wandb.finish()
 
 
