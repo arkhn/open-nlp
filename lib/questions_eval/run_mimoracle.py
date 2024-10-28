@@ -217,6 +217,38 @@ def create_chain(template: str, llm: str, is_question_chain: bool):
     )
 
 
+def merge_evaluate_df(df: pd.DataFrame, row: pd.Series, evaluation_chain) -> pd.DataFrame:
+    """
+    Evaluate the generated data
+
+    Args:
+        df: The dataframe to evaluate
+        row: The row to evaluate
+        evaluation_chain: The evaluation chain
+
+    Returns:
+        df: The concatenate dataframw with additional evaluation results,
+        including conformity, consistency and coverage
+    """
+    # Evaluate
+    tqdm.pandas(desc="Evaluating...")
+    row["evaluation"] = row.progress_apply(
+        evaluate,
+        args=[evaluation_chain],
+        axis=1,
+    )
+    json_df = json_normalize(row["evaluation"])
+
+    # Combine the original dataframe with the extracted JSON data
+    row = pd.concat([row, json_df], axis=1)
+    del row["evaluation"]
+
+    # Join df_questions and df
+    df_joined = df.merge(row, left_on="summary", right_on="summary", how="right")
+    print(f"Shape of joined dataframe: {df_joined.shape}")
+    return df_joined
+
+
 @hydra.main(config_path="./configs", config_name="run_mimoracle.yaml")
 def main(cfg: DictConfig):
     # Initialize WandB and log the models
@@ -248,21 +280,7 @@ def main(cfg: DictConfig):
     df_questions = pd.DataFrame(ds_questions)
 
     # Evaluate
-    tqdm.pandas(desc="Evaluating...")
-    df_questions["evaluation"] = df_questions.progress_apply(
-        evaluate,
-        args=[evaluation_chain],
-        axis=1,
-    )
-    json_df = json_normalize(df_questions["evaluation"])
-
-    # Combine the original dataframe with the extracted JSON data
-    df_questions = pd.concat([df_questions, json_df], axis=1)
-    del df_questions["evaluation"]
-
-    # Join df_questions and df
-    df_joined = df.merge(df_questions, left_on="summary", right_on="summary", how="right")
-    print(f"Shape of joined dataframe: {df_joined.shape}")
+    df_joined = merge_evaluate_df(df, df_questions, evaluation_chain)
 
     # Log results in wandb
     log_dict = {
