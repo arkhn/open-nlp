@@ -6,7 +6,7 @@ defaults:
 
 samples: 2
 num_questions: 5
-dataset: "/Users/hanh.tran/Desktop/open-nlp/lib/questions_eval/data_sample/mimoracle_train_sample.csv"
+dataset: "mimoracle"
 
 prompts:
   summary: >-
