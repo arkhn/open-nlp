@@ -141,4 +141,4 @@ class MimoracleDataset(datasets.GeneratorBasedBuilder):
 
 
 if __name__ == "__main__":
-    datasets.load_dataset("./mimoracle.py")
+    datasets.load_dataset("./sub_mimoracle.py")
