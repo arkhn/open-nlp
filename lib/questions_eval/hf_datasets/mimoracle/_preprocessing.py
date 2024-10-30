@@ -23,4 +23,5 @@ def _resample(df: pd.DataFrame, n_sample: int, n_section: int) -> pd.DataFrame:
 if __name__ == "__main__":
     df = load_dataset("bio-datasets/mimoracle", split="train").to_pandas()
     sample_df = _resample(df, 2, 6)
+
     sample_df.to_csv("mimoracle_sample.csv", index=False)
