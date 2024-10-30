@@ -6,7 +6,7 @@ defaults:
 
 samples: 2
 num_questions: 5
-dataset: "mimoracle"
+dataset: "sub_mimoracle"
 
 prompts:
   summary: >-
