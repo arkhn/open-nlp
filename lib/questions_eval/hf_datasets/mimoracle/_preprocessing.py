@@ -17,11 +17,16 @@ def _resample(df: pd.DataFrame, n_sample: int, n_section: int) -> pd.DataFrame:
     df = df[df.section_title.str.contains(patterns)]
     df = df.groupby("section_title").filter(lambda x: len(x) > n_sample)
     df = df.groupby("document_id").filter(lambda x: len(x) == n_section)
+    df.rename(columns={"section_content": "summary"}, inplace=True)
     return df
 
 
-if __name__ == "__main__":
-    df = load_dataset("bio-datasets/mimoracle", split="train").to_pandas()
-    sample_df = _resample(df, 2, 6)
+def save_data_sampe(input_path: str, split: str, output_path: str):
+    df = load_dataset(input_path, split=split).to_pandas()
+    df = _resample(df, 2, 6)
+    df.to_csv(output_path, index=False)
 
-    sample_df.to_csv("mimoracle_sample.csv", index=False)
+
+if __name__ == "__main__":
+    save_data_sampe("bio-datasets/mimoracle", "train", "./data/mimoracle_train.csv")
+    save_data_sampe("bio-datasets/mimoracle", "test", "./data/mimoracle_test.csv")

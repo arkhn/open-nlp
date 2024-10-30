@@ -3,6 +3,7 @@ import itertools
 import hydra
 import pandas as pd
 import wandb
+from datasets import load_dataset
 from dotenv import load_dotenv
 from langchain.output_parsers import OutputFixingParser
 from langchain.schema import StrOutputParser
@@ -331,9 +332,8 @@ def main(cfg: DictConfig):
     evaluation_chain = create_chain(cfg.prompts.evaluation, question_llm, False)
 
     # Load and process dataset
-    df = pd.read_csv(cfg.dataset).iloc[: cfg.samples]
-    # rename column
-    df.rename(columns={"section_content": "summary"}, inplace=True)
+    loaded_dataset = load_dataset(cfg.dataset, split="train")
+    df = loaded_dataset.to_pandas().iloc[: cfg.samples]
 
     tqdm.pandas(desc="Generating data...")
     ds_questions = process_questions(df, cfg.num_questions, summary_chain, question_chain)
