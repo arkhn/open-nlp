@@ -54,6 +54,44 @@ def is_no(result: str) -> bool:
     return True if "no" in result[:5].lower() else False
 
 
+def create_synthetic_summary(summary_chain, row):
+    """
+    Create synthetic summary
+
+    Args:
+        summary_chain: The chain for generating summaries
+        row: The row to generate the summary for
+
+    Returns:
+        The synthetic summary
+    """
+    return summary_chain.invoke(
+        {
+            "section_title": row["section_title"],
+            "text": row["text"],
+        }
+    ).strip()
+
+
+def create_question(question_chain, column, num_questions):
+    """
+    Create real/synthetic questions
+
+    Args:
+        question_chain: The chain for generating questions
+        row: The row to generate the question for (optiont: real or synthetic data)
+
+    Returns:
+        The generated questions
+    """
+    return question_chain.invoke(
+        {
+            "summary": column,
+            "num_questions": num_questions,
+        }
+    )
+
+
 def generate_data(
     row: pd.Series,
     num_questions: int,
@@ -75,32 +113,18 @@ def generate_data(
         synthetic_summary, summary
 
     """
-    synthetic_summary = summary_chain.invoke(
-        {
-            "section_title": row["section_title"],
-            "text": row["text"],
-        }
-    ).strip()
+    # Generate synthetic summary
+    synthetic_summary = create_synthetic_summary(summary_chain, row)
 
-    data = []
-
-    real_question = question_chain.invoke(
-        {
-            "summary": row["summary"],
-            "num_questions": num_questions,
-        }
-    )
-    synthetic_question = question_chain.invoke(
-        {
-            "summary": synthetic_summary,
-            "num_questions": num_questions,
-        }
-    )
+    # Generate questions for the real and synthetic summaries
+    real_question = create_question(question_chain, row["summary"], num_questions)
+    synthetic_question = create_question(question_chain, synthetic_summary, num_questions)
 
     min_length = min(len(real_question), len(synthetic_question))
     real_question = real_question[:min_length]
     synthetic_question = synthetic_question[:min_length]
 
+    data = []
     for sq, q in zip(synthetic_question, real_question):
         data.append(
             {
@@ -269,7 +293,7 @@ def log_wandb(df: pd.DataFrame) -> dict:
     return log_dict
 
 
-def question_processing(df: pd.DataFrame, num_questions: int, summary_chain, question_chain):
+def process_questions(df: pd.DataFrame, num_questions: int, summary_chain, question_chain):
     """
     Generate questions for the the summary
 
@@ -312,7 +336,7 @@ def main(cfg: DictConfig):
     df.rename(columns={"section_content": "summary"}, inplace=True)
 
     tqdm.pandas(desc="Generating data...")
-    ds_questions = question_processing(df, cfg.num_questions, summary_chain, question_chain)
+    ds_questions = process_questions(df, cfg.num_questions, summary_chain, question_chain)
     print(f"Shape of generated data: {len(ds_questions)}")
     df_questions = pd.DataFrame(ds_questions)
 
