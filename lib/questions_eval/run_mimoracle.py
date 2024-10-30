@@ -250,6 +250,13 @@ def merge_evaluate_df(df: pd.DataFrame, row: pd.Series, evaluation_chain) -> pd.
 
 
 def log_wandb(df: pd.DataFrame) -> dict:
+    """
+    Log the results in wandb
+    Args:
+        df: The dataframe to log
+    Returns:
+        log_dict: The dictionary containing the results
+    """
     log_dict = {
         f"{stat}/score/{score_type}": (
             df[f"{score_type}"].agg(stat)
@@ -260,6 +267,31 @@ def log_wandb(df: pd.DataFrame) -> dict:
         for score_type in ["consistency", "conformity", "coverage"]
     }
     return log_dict
+
+
+def question_processing(df: pd.DataFrame, num_questions: int, summary_chain, question_chain):
+    """
+    Generate questions for the the summary
+
+    Args:
+        df: The dataframe to generate questions for
+        num_questions: The number of questions to generate
+        summary_chain: The chain for generating summaries
+        question_chain: The chain for generating questions
+
+    Returns:
+        ds_questions: The generated questions
+    """
+    ds_questions = [
+        item
+        for _, row in df.progress_apply(
+            generate_data,
+            axis=1,
+            args=[num_questions, summary_chain, question_chain],
+        ).items()
+        for item in row
+    ]
+    return ds_questions
 
 
 @hydra.main(config_path="./configs", config_name="run_mimoracle.yaml")
@@ -280,15 +312,7 @@ def main(cfg: DictConfig):
     df.rename(columns={"section_content": "summary"}, inplace=True)
 
     tqdm.pandas(desc="Generating data...")
-    ds_questions = [
-        item
-        for _, row in df.progress_apply(
-            generate_data,
-            axis=1,
-            args=[cfg.num_questions, summary_chain, question_chain],
-        ).items()
-        for item in row
-    ]
+    ds_questions = question_processing(df, cfg.num_questions, summary_chain, question_chain)
     print(f"Shape of generated data: {len(ds_questions)}")
     df_questions = pd.DataFrame(ds_questions)
 
