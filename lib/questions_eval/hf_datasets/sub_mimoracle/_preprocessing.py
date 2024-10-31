@@ -13,7 +13,7 @@ def _preprocess(text: str) -> str:
 def _resample(df: pd.DataFrame, n_sample: int, n_section: int) -> pd.DataFrame:
     patterns = "allergies|history of present illness|past medical history|\
                 discharge medications|social history|medications on admission"
-    df["section_title"] = [_preprocess(x) for x in df["section_title"]]
+    df["section_title"] = df["section_title"].apply(_preprocess)
     df = df[df.section_title.str.contains(patterns)]
     df = df.groupby("section_title").filter(lambda x: len(x) > n_sample)
     df = df.groupby("document_id").filter(lambda x: len(x) == n_section)
