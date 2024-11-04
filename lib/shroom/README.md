@@ -40,5 +40,5 @@ Evaluation metrics:
 (updating)
 
 ## References
-[SemEval-2024 Task 6: SHROOM, a Shared-task on Hallucinations and
-Related Observable Overgeneration Mistakes](https://aclanthology.org/2024.semeval-1.273.pdf)
+
+[SemEval-2024 Task 6: SHROOM, a Shared-task on Hallucinations and Related Observable Overgeneration Mistakes](https://aclanthology.org/2024.semeval-1.273.pdf)
