@@ -35,7 +35,7 @@ exclude_lines = [
 
 [tool.isort]
 known_local_folder = [
-  'style-transfer',
+  'shroom',
   'tests'
 ]
 line_length = 100
