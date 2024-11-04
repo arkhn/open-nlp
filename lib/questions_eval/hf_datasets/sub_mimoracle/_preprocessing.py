@@ -28,5 +28,5 @@ def save_data_sample(input_path: str, split: str, output_path: str):
 
 
 if __name__ == "__main__":
-    save_data_sampe("bio-datasets/mimoracle", "train", "./data/mimoracle_train.csv")
-    save_data_sampe("bio-datasets/mimoracle", "test", "./data/mimoracle_test.csv")
+    save_data_sample("bio-datasets/mimoracle", "train", "./data/mimoracle_train.csv")
+    save_data_sample("bio-datasets/mimoracle", "test", "./data/mimoracle_test.csv")
