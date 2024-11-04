@@ -6,10 +6,10 @@ model:
   model_name_or_path: "sentence-transformers/all-mpnet-base-v2"
 
 train:
-  warmup_steps: 10
+  warmup_steps: 50
   use_ground_truth: true
-  epochs: 5
-  train_size: 0.3
+  epochs: 2
+  train_size: 0.6
   loss:
-    _target_: sentence_transformers.losses.ContrastiveTensionLoss
+    _target_: sentence_transformers.losses.ContrastiveLoss
     _partial_: true
