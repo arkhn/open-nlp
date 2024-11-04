@@ -1,21 +1,32 @@
 import json
 import os
-from pathlib import Path
-from openai import OpenAI
 import time
+from pathlib import Path
+
+from openai import OpenAI
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 
 def replace_tokens_with_gpt4(text):
     """Replace anonymized tokens with fake but realistic data using GPT-4."""
     try:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that replaces anonymized medical tokens with realistic but fake data. Maintain medical context and consistency."},
-                {"role": "user", "content": f"Replace anonymized tokens in this text with realistic but fake medical data. Preserve the medical context: {text}"}
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that replaces anonymized "
+                    "medical tokens with realistic but fake data. "
+                    "Maintain medical context and consistency.",
+                },
+                {
+                    "role": "user",
+                    "content": f"Replace anonymized tokens in this text with realistic but "
+                    f"fake medical data. Preserve the medical context: {text}",
+                },
             ],
-            temperature=0.7
+            temperature=0.7,
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
@@ -39,7 +50,7 @@ def filter_entries_by_keyword_count(input_file, output_file, min_keywords=50, ma
                         # Add rate limiting to avoid API throttling
                         time.sleep(1)
                         filtered_entries.append(entry)
-                
+
                 if filtered_entries:
                     filtered_data[key] = filtered_entries
 

@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""This is the huggingface dataset for yelp review style transfer.
+"""This is the huggingface dataset for MIMIC-III clinical notes with GPT4O token replacements.
 """
 
 import json
@@ -20,11 +20,12 @@ import os
 import datasets
 
 _DESCRIPTION = """\
-This dataset is a collection of clinical cases from mimic-iii that have been preprocessed
-to be used for style transfer.
+This dataset is a collection of clinical cases from MIMIC-III where sensitive tokens have been
+identified and replaced using GPT4o to maintain privacy while preserving clinical meaning.
+The dataset is preprocessed for style transfer tasks.
 """
 
-_DATASET_NAME = "mimic_iii_dataset"
+_DATASET_NAME = "mimic_iii_gpt4o_tokens"
 
 _HOMEPAGE = "https://github.com/arkhn/ai-lembic"
 
@@ -74,16 +75,18 @@ _CITATION = """\
 """
 
 
-class MimicIiiDataset(datasets.GeneratorBasedBuilder):
-    """This is the huggingface dataset for mimic III style transfer."""
+class MimicIiiGPT4ODataset(datasets.GeneratorBasedBuilder):
+    """This is the huggingface dataset for MIMIC-III with GPT4O token replacements for style
+    transfer."""
 
     VERSION = datasets.Version("0.1.0")
     BUILDER_CONFIGS = [
         datasets.BuilderConfig(
             name=_DATASET_NAME,
             version=VERSION,
-            description="This is a collection of clinical cases from mimic iii "
-            "that have been preprocessed to be used for style transfer.",
+            description="This is a collection of clinical cases from MIMIC-III "
+            "with GPT4O token replacements for privacy preservation, "
+            "preprocessed for style transfer tasks.",
         ),
     ]
 
