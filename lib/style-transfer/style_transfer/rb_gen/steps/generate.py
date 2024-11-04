@@ -94,7 +94,7 @@ def batch_generate(cfg, step, dataloader, llm, wb_ds_name) -> Dataset:
             )
         batch_logs = {
             "prompts": batch["query"],
-            "ground_texts": batch["text"],
+            "ground_texts": batch["ground_texts"],
         }
         batch_logs = {**batch_logs, **flattened_gs_dict}
         gen_df = pd.DataFrame.from_dict(batch_logs)
