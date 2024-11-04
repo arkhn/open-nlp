@@ -1,11 +1,12 @@
 import hydra
 import numpy as np
 import pandas as pd
+import peft
 import wandb
 from datasets import Dataset
-from peft import AutoPeftModelForCausalLM
+from omegaconf import ListConfig
 from style_transfer.rb_gen.utils.utils import CustomWandbCallback
-from transformers import PreTrainedTokenizerBase
+from transformers import AutoModelForCausalLM, PreTrainedTokenizerBase
 from trl import DPOTrainer
 
 
@@ -62,15 +63,29 @@ def dpo_train(
     cfg.dpo.training_args.output_dir = f"models/{wandb.run.id}/dpo/{step}"
     args = hydra.utils.instantiate(cfg.dpo.training_args)
     args.padding_value = tokenizer.eos_token_id
-    model = AutoPeftModelForCausalLM.from_pretrained(pretrained_model_name_or_path=model_path)
+    model = AutoModelForCausalLM.from_pretrained(
+        pretrained_model_name_on_path=f"models/{wandb.run.id}/merged/"
+    )
     model.enable_input_require_grads()
+    peft_config = hydra.utils.instantiate(cfg.model.peft_config)
+    peft_config.target_modules = (
+        list(peft_config.target_modules)
+        if isinstance(peft_config.target_modules, ListConfig)
+        else peft_config.target_modules
+    )
+    model = peft.get_peft_model(
+        model,
+        peft_config,
+    )
+    model.add_adapter(peft_config=peft_config, adapter_name="reference")
     dpo_trainer = DPOTrainer(
         args=args,
-        ref_model=None,
         model=model,
         tokenizer=tokenizer,
         train_dataset=dataset,
         callbacks=[CustomWandbCallback],
+        model_adapter_name="default",
+        ref_adapter_name="reference",
     )
     dpo_trainer.train()
 

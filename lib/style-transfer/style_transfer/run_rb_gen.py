@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import shutil
 
 import hydra
 import wandb
@@ -14,7 +15,7 @@ from transformers import AutoTokenizer, PreTrainedTokenizerBase, set_seed
 logger = logging.getLogger(__name__)
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
-os.environ["WANDB_LOG_MODEL"] = "checkpoint"
+os.environ["WANDB_LOG_MODEL"] = "none"
 os.environ["WANDB_START_METHOD"] = "thread"
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
 tqdm.pandas()
@@ -65,6 +66,7 @@ def main(cfg: DictConfig):
     sft_train(cfg, sft_dataset, test_dataset, current_model_path)
     logger.info("Bootstrapping done,  Iterative Reward-based Generation Training begins...")
     for step in range(cfg.max_steps):
+        logger.info(f"🔄 Step {step} ...")
         sth_dataset = generate(
             cfg,
             step,
@@ -97,6 +99,7 @@ def main(cfg: DictConfig):
         sth_dataset,
         checkpoint=eval_model_path,
     )
+    shutil.rmtree(f"models/{wandb.run.id}/merged/")
     wandb.finish()
 
 

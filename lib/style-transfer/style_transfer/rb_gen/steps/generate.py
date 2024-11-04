@@ -2,7 +2,6 @@ import gc
 import json
 import logging
 import os
-import shutil
 import sqlite3
 from typing import Callable
 
@@ -78,7 +77,6 @@ def generate(
     del llm
     gc.collect()
     torch.cuda.empty_cache()
-    shutil.rmtree(f"models/{wandb.run.id}/merged/")
     return gen_pred_dataset
 
 
