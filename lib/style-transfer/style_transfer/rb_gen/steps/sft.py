@@ -60,13 +60,17 @@ def sft_train(
 
     cfg.sft.training_args.output_dir = f"models/{wandb.run.id}/sft"
     args = hydra.utils.instantiate(cfg.sft.training_args)
-    wandb.config.update({"state": "sft"}, allow_val_change=True)
+    test_sft_dataset = None
+    if cfg.dataset.sft_dataset is not None:
+        sft_dataset, test_sft_dataset = sft_dataset.train_test_split(
+            train_size=0.1, shuffle=False
+        ).values()
     args.load_best_model_at_end = True
     trainer = SFTTrainer(
         model=model,
         args=args,
         train_dataset=sft_dataset,
-        eval_dataset=test_dataset,
+        eval_dataset=test_dataset if test_sft_dataset is None else test_sft_dataset,
         callbacks=[CustomWandbCallback],
     )
     trainer.train()
