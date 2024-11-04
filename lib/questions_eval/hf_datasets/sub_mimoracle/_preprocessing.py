@@ -21,7 +21,7 @@ def _resample(df: pd.DataFrame, n_sample: int, n_section: int) -> pd.DataFrame:
     return df
 
 
-def save_data_sampe(input_path: str, split: str, output_path: str):
+def save_data_sample(input_path: str, split: str, output_path: str):
     df = load_dataset(input_path, split=split).to_pandas()
     df = _resample(df, 2, 6)
     df.to_csv(output_path, index=False)
