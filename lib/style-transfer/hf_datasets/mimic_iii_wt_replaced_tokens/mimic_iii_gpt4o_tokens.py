@@ -14,10 +14,10 @@
 """This is the huggingface dataset for MIMIC-III clinical notes with GPT4O token replacements.
 """
 
-import json
 import os
 
 import datasets
+import pyarrow.parquet as pq
 
 _DESCRIPTION = """\
 This dataset is a collection of clinical cases from MIMIC-III where sensitive tokens have been
@@ -25,16 +25,16 @@ identified and replaced using GPT4o to maintain privacy while preserving clinica
 The dataset is preprocessed for style transfer tasks.
 """
 
-_DATASET_NAME = "mimic_iii_gpt4o_tokens"
+_DATASET_NAME = "mimic-iii-gpt4o-tokens"
 
-_HOMEPAGE = "https://github.com/arkhn/ai-lembic"
+_HOMEPAGE = "https://github.com/arkhn/open-nlp"
 
 _LICENSE = "http://www.apache.org/licenses/LICENSE-2.0"
 
 _URLS = {
-    "train": "data/train.jsonl",
-    "dev": "data/dev.jsonl",
-    "test": "data/test.jsonl",
+    "train": "data/train.parquet",
+    "dev": "data/dev.parquet",
+    "test": "data/test.parquet",
 }
 
 _CITATION = """\
@@ -75,7 +75,7 @@ _CITATION = """\
 """
 
 
-class MimicIiiGPT4ODataset(datasets.GeneratorBasedBuilder):
+class MimicIiiGPT4OTokensDataset(datasets.GeneratorBasedBuilder):
     """This is the huggingface dataset for MIMIC-III with GPT4O token replacements for style
     transfer."""
 
@@ -95,7 +95,6 @@ class MimicIiiGPT4ODataset(datasets.GeneratorBasedBuilder):
     def _info(self):
         features = datasets.Features(
             {
-                "user_id": datasets.Value("string"),
                 "text_id": [datasets.Value("int32")],
                 "keywords": [datasets.Value("string")],
                 "text": [datasets.Value("string")],
@@ -136,15 +135,11 @@ class MimicIiiGPT4ODataset(datasets.GeneratorBasedBuilder):
         ]
 
     def _generate_examples(self, filepath, split):
-        with open(filepath, encoding="utf-8") as f:
-            guid = 0
-            for key, row in enumerate(f):
-                data_object = json.loads(row)
-                user_id, data = list(data_object.items())[0]
-                yield guid, {
-                    "user_id": user_id,
-                    "text_id": [entry["id"] for entry in data],
-                    "keywords": [entry["keywords"] for entry in data],
-                    "text": [entry["text"] for entry in data],
-                }
-                guid += 1
+        table = pq.read_table(filepath)
+        df = table.to_pandas()
+        for guid, row in df.iterrows():
+            yield guid, {
+                "text_id": [row["id"]],
+                "keywords": [row["keywords"]],
+                "text": [row["text"]],
+            }
