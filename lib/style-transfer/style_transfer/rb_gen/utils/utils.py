@@ -61,6 +61,10 @@ def build_dataset(
 
     ds_dict: dict = {"keywords": [], "text": []}
     for keywords, text in zip(ds["keywords"], ds["text"]):
+        if isinstance(keywords, str):
+            keywords = [keywords]
+        if isinstance(text, str):
+            text = [text]
         for kw, t in zip(keywords, text):
             ds_dict["keywords"].append(kw)
             ds_dict["text"].append(t)
