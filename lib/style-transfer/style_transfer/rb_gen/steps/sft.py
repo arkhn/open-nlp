@@ -64,7 +64,7 @@ def sft_train(
     test_sft_dataset = None
     if cfg.dataset.sft_dataset is not None:
         sft_dataset, test_sft_dataset = sft_dataset.train_test_split(
-            train_size=0.1, shuffle=False
+            train_size=0.5, shuffle=False
         ).values()
     args.load_best_model_at_end = True
     trainer = SFTTrainer(
