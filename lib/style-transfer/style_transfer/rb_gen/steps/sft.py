@@ -60,6 +60,7 @@ def sft_train(
 
     cfg.sft.training_args.output_dir = f"models/{wandb.run.id}/sft"
     args = hydra.utils.instantiate(cfg.sft.training_args)
+    wandb.config.update({"state": "sft"}, allow_val_change=True)
     test_sft_dataset = None
     if cfg.dataset.sft_dataset is not None:
         sft_dataset, test_sft_dataset = sft_dataset.train_test_split(
