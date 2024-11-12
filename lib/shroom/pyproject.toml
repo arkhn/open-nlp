@@ -55,6 +55,8 @@ python = "~3.11"
 pandas = "^2.2.3"
 scipy = "^1.14.1"
 tqdm = "^4.66.6"
+jupyter = "^1.1.1"
+lab = "^8.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.4.2"
