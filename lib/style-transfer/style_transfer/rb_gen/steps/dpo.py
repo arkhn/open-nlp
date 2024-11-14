@@ -64,7 +64,7 @@ def dpo_train(
     args = hydra.utils.instantiate(cfg.dpo.training_args)
     args.padding_value = tokenizer.eos_token_id
     model = AutoModelForCausalLM.from_pretrained(
-        pretrained_model_name_on_path=f"models/{wandb.run.id}/merged/"
+        pretrained_model_name_or_path=f"models/{wandb.run.id}/merged/"
     )
     model.enable_input_require_grads()
     peft_config = hydra.utils.instantiate(cfg.model.peft_config)

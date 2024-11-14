@@ -7,7 +7,7 @@ import hydra
 import wandb
 from datasets import Dataset
 from omegaconf import DictConfig, OmegaConf, omegaconf
-from style_transfer.rb_gen.steps import dpo_train, generate, score, sft_train
+from style_transfer.rb_gen.steps import dpo_train, generate, recalibrate_scoring, score, sft_train
 from style_transfer.rb_gen.utils import build_dataset, split_dataset
 from tqdm import tqdm
 from transformers import AutoTokenizer, PreTrainedTokenizerBase, set_seed
@@ -74,12 +74,22 @@ def main(cfg: DictConfig):
             tokenizer,
             gen_dataset,
         )
-        score_dataset = score(
-            cfg,
-            step,
-            True if step == 0 else False,
-            sth_dataset,
-            checkpoint=eval_model_path,
+        score_dataset = (
+            score(
+                cfg,
+                step,
+                True if step == 0 else False,
+                sth_dataset,
+                checkpoint=eval_model_path,
+            )
+            if cfg.score.method == "classic"
+            else recalibrate_scoring(
+                cfg,
+                step,
+                True if step == 0 else False,
+                sth_dataset,
+                checkpoint=eval_model_path,
+            )
         )
         current_model_path = dpo_train(cfg, step, current_model_path, tokenizer, score_dataset)
 
@@ -92,13 +102,16 @@ def main(cfg: DictConfig):
         tokenizer,
         gen_dataset,
     )
-    score(
-        cfg,
-        cfg.max_steps,
-        False,
-        sth_dataset,
-        checkpoint=eval_model_path,
-    )
+    if cfg.score.method == "classic":
+        score(
+            cfg,
+            cfg.max_steps,
+            False,
+            sth_dataset,
+            checkpoint=eval_model_path,
+        )
+    else:
+        recalibrate_scoring(cfg, cfg.max_steps, False, sth_dataset, checkpoint=eval_model_path)
     shutil.rmtree(f"models/{wandb.run.id}/merged/")
     wandb.finish()
 
