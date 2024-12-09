@@ -1,0 +1,43 @@
+training_args:
+  _target_: trl.DPOConfig
+  per_device_train_batch_size: 2
+  logging_steps: 2
+  save_steps: 50
+  gradient_accumulation_steps: 8
+  gradient_checkpointing: false
+  learning_rate: 5e-5
+  weight_decay: 1e-7
+  eval_strategy: "no"
+  num_train_epochs: 5
+  output_dir: "models/dpo/"
+  optim: "adafactor"
+  save_only_model: true
+  remove_unused_columns: false
+  save_safetensors: false
+  bf16: true
+  seed: 0
+  max_length: 1024
+  max_prompt_length: 512
+  report_to: "none"
+
+model:
+  peft_config:
+    _target_: peft.LoraConfig
+    task_type: CAUSAL_LM
+    r: 16
+    lora_alpha: 16
+    lora_dropout: 0
+    bias: none
+    target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+  quantization_config: null
+  prompt: >
+    As a doctor, you must write an original History of Present Illness (HPI) section for a discharge
+    summary. Your response should capture the essence of a patient's health journey and recent
+    medical experiences, while strictly using all the provided keywords conserving the order. You
+    must adopt a medical telegraphic style, abbreviated, characterized by concise and direct
+    language. Keywords: {}
+
+beta: 0.1
+checkpoint: null
+dataset: null
+percentile: 50
