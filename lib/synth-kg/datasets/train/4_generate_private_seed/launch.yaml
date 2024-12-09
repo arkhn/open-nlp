@@ -1,0 +1,11 @@
+resources:
+  cloud: lambda
+  accelerators: H100
+
+workdir: .
+
+setup: |
+  pip install vllm pandas pyarrow
+
+run: |
+  python generate_private_seed.py
