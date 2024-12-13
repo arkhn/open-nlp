@@ -1,0 +1,26 @@
+resources:
+ cloud: aws
+ instance_type: m6i.8xlarge
+
+workdir: .
+
+file_mounts:
+  /fingpt-merge:  # The directory path on the remote VM where the bucket will be mounted
+    name: fingpt-merge
+    store: s3  # Specifies that the storage is an S3 bucket
+    mode: MOUNT  # Options: MOUNT (default) or COPY
+    persistent: true  # Whether the bucket persists after task completion; defaults to true
+
+setup: |
+  git clone -b v0.0.9 https://github.com/OptimalScale/LMFlow.git
+  cd LMFlow
+  conda create -n lmflow python=3.9 -y
+  conda activate lmflow
+  conda install -y mpi4py
+  pip install -e .
+
+run: |
+  cd LMFlow && bash ./scripts/run_merge_lora.sh \
+    --model_name_or_path NousResearch/Llama-2-13b-hf \
+    --lora_model_path FinGPT/fingpt-sentiment_llama2-13b_lora \
+    --output_model_path /fingpt-merge
