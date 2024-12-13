@@ -1,0 +1,10 @@
+Instruction: Generate a realistic and engaging financial news headlines using the provided keywords and sentiment.
+The headline should accurately reflect market trends and sentiment while maintaining a professional tone.
+Incorporate the keywords seamlessly into a concise headline format suitable for financial contexts.
+Return only the headline as the output and only this.
+
+Input:
+- Keywords: {keywords}
+- Sentiment: {sentiment}
+
+Output:

@@ -1,0 +1,15 @@
+### Instruction:
+You are assisting as a medical AI. Your task is to provide a concise and natural-sounding response to a patient's medical question.
+Ensure that your answer incorporates the following clinical keywords or terms, maintaining their exact sequence:
+### Examples:
+Examples 1:
+Hi and welcome to Chat Doctor. Thank you for your quarry. Cancer is the less common thing that could be. Tooth tumors are rare especially in your age, but it must be ruled out of course. It can be any benign mass, abscess, tooth tissue, neuroma, or calcification. CT would show exact size and signs of infiltration but i don't think it would be serious. Even if this is, it can be surgical managed. Wish you good health.
+Examples 2:
+Hello welcome to ChatDoctornoro virus infections are not so serious as you think. These infections occur mostly in crowded places like hospitals, nursing homes, schools. In most of the patients it gets cured unless it has complications like severe deny Chat Doctor. It is highly contagious infection. Close contact with patient can also spread the infection. Hope I have answered your question, if you have further questions I will be happy to help.
+Examples 3:
+Hello, How old are you? Since when you're suffering from this condition? Pseudocodes Infection is multi- Chat Doctor. Heart failure or anemia or poor immunity status also may present like this. Pseudocodes treated with Cefoperazone and Sulbactam, Piperacillin Tazobactam or Reopened or Eminem etc. For heart failure, you may have to get it done angiography with stenting. Please consult your Cardiologist he will examine and treat you accordingly. Hope I have answered your query. Let me know if I can assist you further. Take care
+### Keywords:
+{keywords}
+### Question:
+{question}
+### Response:

@@ -1,0 +1,12 @@
+### Instruction:
+You are assisting as a medical AI. Your task is to craft a realistic, natural-sounding question that a patient might ask their physician. Ensure the question closely mirrors authentic patient-physician conversations, while including and maintaining the exact sequence of the following clinical keywords or terms:
+### Examples:
+Example 1:
+I had a alt reading about 2+ months ago of 43 then retested today and got a 60 alt reading my other readings came back normal should I be concerned?Im 40 years 5ft 3 and weigh 192albs have a history of chronic vertigo and insomnia, and chronic sinus problems. I take valium 5 mg 4 times a day, fluticansone 2 puffs each nose once a day, qvair two puffs twice a day to prevent weasing, claritin for allergies, and I do sinus rinses as needed. I am female.My doctor says none of the medicine has liver side effects, and I dont drink alcohol but a sip on the rare occasion. He thinks it could be do my weight and Im working on this with gradual exercise when Im able too. Should I be worried with this test result? I had one other result that was high my triglcyerides read 198 ? WWW.WWWW.WW
+Examples 2:
+hi doc.. my child is 4 1/2 yr old boy, past 15 days his poops are little abnormal, just after eating or drinking milk he is passing his stools, normally he goes only once or max twice a day, but now he goes around 4-5 times a day, he happened to eat uncooked chicken when he was on vaccation, day next there is this abnormal change and bad smell coming through his mouth. when consulted pediatric, he gave cepodom 100 mg for 5 days, but still the problem continues and today my child happened to vomit this evening. pl suggest as what to do.
+Example 3:
+Good Morning,When i was cleaning toilet,I have mixed Harpic and Bleach almost 250 Ml,It created a fume and i exposed in it,almost 3 hrs i was sneezing and coughing and felt dizziness,Now its almost one moth over,But still i am sneezing ang coughing in the morning and night time with heavily clogged nose and extreme amouunt of puss/cougChatDoctores from nose as well.Is it a disease caused by the exposure.Kindly let me know.
+### Keywords:
+{keywords}
+### Output:
