@@ -1,0 +1,5 @@
+### Instruction:
+You are assisting as a medical AI. Your task is to craft a realistic, natural-sounding question that a patient might ask their physician. Ensure the question closely mirrors authentic patient-physician conversations, while including and maintaining the exact sequence of the following clinical terms:
+### Keywords:
+{keywords}
+### Output:
