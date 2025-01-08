@@ -1,0 +1,18 @@
+resources:
+  cloud: lambda
+  accelerators: H100
+
+file_mounts:
+  /lora:  # The directory path on the remote VM where the bucket will be mounted
+    name: synth-kg-lora
+    store: s3  # Specifies that the storage is an S3 bucket
+    mode: MOUNT  # Options: MOUNT (default) or COPY
+    persistent: true  # Whether the bucket persists after task completion; defaults to true
+
+workdir: .
+
+setup: |
+  pip install transformers peft trl hydra-core wandb
+
+run: |
+  python training_steps/seed/train.py --config-name=$HYDRA_CONFIG

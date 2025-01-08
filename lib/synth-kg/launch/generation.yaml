@@ -1,0 +1,41 @@
+resources:
+  cloud: lambda
+  accelerators: H100
+
+file_mounts:
+  /lora:  # The directory path on the remote VM where the bucket will be mounted
+    name: synth-kg-lora
+    store: s3  # Specifies that the storage is an S3 bucket
+    mode: MOUNT  # Options: MOUNT (default) or COPY
+    persistent: true  # Whether the bucket persists after task completion; defaults to true
+
+workdir: .
+
+setup: |
+  git clone -b v0.0.9 https://github.com/OptimalScale/LMFlow.git
+  cd LMFlow
+  conda create -n lmflow python=3.9 -y
+  conda activate lmflow
+  conda install -y mpi4py
+  pip install -e .
+  pip install vllm
+
+run: |
+  conda activate lmflow
+  cd LMFlow
+
+  # Initialize with base model
+  BASE_MODEL=meta-llama/llama-2-7b-hf
+  OUTPUT_DIR=./merged-models
+
+  # Loop through all adapters
+  for adapter in ${ADAPTER_PATHS[@]}; do
+    bash ./scripts/run_merge_lora.sh \
+      --model_name_or_path $BASE_MODEL \
+      --lora_model_path $adapter \
+      --output_model_path $OUTPUT_DIR
+    # Update base model for next iteration
+    BASE_MODEL=$OUTPUT_DIR
+  done
+
+  cd .. && python training_steps/generation/run.py --model $OUTPUT_DIR --output_path $OUTPUT_PATH --dataset $DATASET
