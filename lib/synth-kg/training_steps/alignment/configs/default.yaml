@@ -1,0 +1,39 @@
+dpo_config:
+  _target_: trl.DPOConfig
+  beta: 0.1
+  bf16: true
+  eval_strategy: "no"
+  gradient_checkpointing: true
+  group_by_length: true
+  learning_rate: 5e-5
+  logging_steps: 10
+  lr_scheduler_kwargs: {"min_lr": 1e-6}
+  lr_scheduler_type: "cosine_with_min_lr"
+  max_length: 512
+  num_train_epochs: 10
+  output_dir: "models/dpo/"
+  per_device_train_batch_size: 5
+  remove_unused_columns: true
+  save_only_model: true
+  save_safetensors: false
+  save_strategy: "no"
+  model_adapter_name: "default"
+  ref_adapter_name: "reference"
+  seed: 0
+  warmup_ratio: 0
+
+peft_config:
+  _target_: peft.LoraConfig
+  r: 32
+  lora_alpha: 64
+  target_modules: ["q_proj", "k_proj", "v_proj", "o_proj"]
+
+model_config:
+  _target_: trl.ModelConfig
+  torch_dtype: "bfloat16"
+  model_name_or_path: meta-llama/llama-2-7b-hf
+
+dataset: ???
+tags: ???
+iteration: 1
+peft_adapters_paths: ???
