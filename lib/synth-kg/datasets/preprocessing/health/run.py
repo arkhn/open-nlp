@@ -16,7 +16,7 @@ MODEL_NAME = "llama-3.3-70b-versatile"
 TEMPERATURE = 0.7
 MAX_TOKENS = 2048
 OUTPUT_PATH = f"datasets/health/model={MODEL_NAME}_t={TEMPERATURE}_size={SAMPLE_SIZE}"
-PROMPT_PATH = "preprocessing/health/prompt.txt"
+PROMPT_PATH = "datasets/preprocessing/health/prompt.txt"
 
 load_dotenv()
 
