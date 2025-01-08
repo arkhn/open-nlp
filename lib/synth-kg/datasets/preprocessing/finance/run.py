@@ -11,21 +11,22 @@ from nltk.tokenize import word_tokenize
 from groq import Groq
 from tqdm import tqdm
 
-SAMPLE_SIZE = 1500
+SAMPLE_SIZE = 2000
 RANDOM_SEED = 42
 SEED_SIZE = 500
+EVAL_SIZE = 500
 MODEL_NAME = "llama-3.3-70b-versatile"
 TEMPERATURE = 0.7
 MAX_TOKENS = 2048
 OUTPUT_PATH = f"datasets/finance/model={MODEL_NAME}_t={TEMPERATURE}_size={SAMPLE_SIZE}"
-PROMPT_PATH = "preprocessing/finance/prompt.txt"
+PROMPT_PATH = "datasets/preprocessing/finance/prompt.txt"
 
 
 load_dotenv()
 
 
 class KeywordExtractor:
-    def __init__(self, lexicon_path: str = "preprocessing/finance/lexicons.csv"):
+    def __init__(self, lexicon_path: str = "datasets/preprocessing/finance/lexicons.csv"):
         load_dotenv()
         nltk.download("punkt", quiet=True)
         nltk.download("stopwords", quiet=True)
@@ -85,13 +86,19 @@ class DataProcessor:
         df = pd.DataFrame(sampled_data)
         df["instruction_keywords"] = df["instruction"].apply(self.extractor.extract_keywords)
 
-        seed_df = self.process_dataset(df[: self.seed_size].copy())
-        gen_df = self.process_dataset(df[self.seed_size :].copy())
+        eval_df = df[:EVAL_SIZE].copy()
+        remaining_df = df[EVAL_SIZE:].copy()
+        seed_df = self.process_dataset(remaining_df[: self.seed_size].copy())
+        gen_df = self.process_dataset(remaining_df[self.seed_size :].copy())
 
-        for path in [seed_output_path, gen_output_path]:
+        for path in [seed_output_path, gen_output_path, "datasets/finance/eval/"]:
             os.makedirs(os.path.dirname(path), exist_ok=True)
+
         seed_df.to_parquet(seed_output_path, index=False)
         gen_df.to_parquet(gen_output_path, index=False)
+        eval_df.to_parquet(
+            f"datasets/finance/eval/fingpt_sentiment_{EVAL_SIZE}.parquet", index=False
+        )
 
     @staticmethod
     def process_dataset(df: pd.DataFrame) -> pd.DataFrame:
