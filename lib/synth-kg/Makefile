@@ -77,16 +77,16 @@ health-evaluation:
 
 		# Cleanup and run evaluation script
 		sky down -y health-evaluation
-		./scripts/health-evaluation/evaluation.sh $(OUTPUT_PATH)/evaluation.parquet
+		./scripts/health-evaluation/evaluation.sh $(OUTPUT_PATH)/evaluation.parquet $(MODEL_ID)
 
 # Finance domain evaluation
 finance-evaluation:
-		sky launch -c health-evaluation -y \
+		sky launch -c finance-evaluation -y \
 			--env-file $(ENV_FILE) \
 			--env HYDRA_CONFIG=$(HYDRA_CONFIG) \
 			--env DATASET=$(DATASET_PATH) \
 			--env OUTPUT_PATH=$(OUTPUT_PATH) \
-			launch/health-evaluation.yaml
+			launch/finance-evaluation.yaml
 
 		# Cleanup and run evaluation script
 		sky down -y finance-evaluation
