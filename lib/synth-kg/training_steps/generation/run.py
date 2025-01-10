@@ -60,7 +60,7 @@ def main():
     # Create output dataframe and save
     df_output = pd.DataFrame(output_data)
     os.makedirs(f"{args.output_path}", exist_ok=True)
-    output_file = os.path.join(args.output_path, "public_generated_data.parquet")
+    output_file = os.path.join(args.output_path, "public_generated.parquet")
     df_output.to_parquet(output_file)
 
 

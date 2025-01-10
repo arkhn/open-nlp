@@ -47,7 +47,7 @@ def main():
         public_dataset[f"similarity_score_{i}"] = scores
 
     public_dataset.to_parquet(
-        f"{args.output_path}/model={args.model_path.replace('/','-')}_scored-dataset.parquet"
+        f"{args.output_path}/model={args.model_path.replace('/','-')}_scored.parquet"
     )
     # Get the best and worst scores for each row
     score_columns = [f"similarity_score_{i}" for i in range(1, args.n + 1)]
@@ -69,7 +69,7 @@ def main():
     )
 
     final_dataset.to_parquet(
-        f"{args.output_path}/model={args.model_path.replace('/','-')}_dpo-dataset.parquet"
+        f"{args.output_path}/model={args.model_path.replace('/','-')}_dpo.parquet"
     )
 
     # Create evaluation dataset with only instruction and response
@@ -78,7 +78,7 @@ def main():
     eval_dataset["response"] = final_dataset["chosen"]
 
     eval_dataset.to_parquet(
-        f"{args.output_path}/model={args.model_path.replace('/','-')}_eval-dataset.parquet"
+        f"{args.output_path}/model={args.model_path.replace('/','-')}_eval.parquet"
     )
 
 
