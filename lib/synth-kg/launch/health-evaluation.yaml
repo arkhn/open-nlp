@@ -1,0 +1,28 @@
+resources:
+  cloud: lambda
+  accelerators: H100
+
+file_mounts:
+  /lora:  # The directory path on the remote VM where the bucket will be mounted
+    name: synth-kg-lora
+    store: s3  # Specifies that the storage is an S3 bucket
+    mode: MOUNT  # Options: MOUNT (default) or COPY
+    persistent: true  # Whether the bucket persists after task completion; defaults to true
+
+workdir: .
+
+setup: |
+  pip install transformers peft trl hydra-core wandb
+  git clone -b v0.0.9 https://github.com/OptimalScale/LMFlow.git
+  cd LMFlow
+  conda create -n lmflow python=3.9 -y
+  conda activate lmflow
+  conda install -y mpi4py
+  pip install -e .
+  pip install vllm
+
+run: |
+  python eval/health/alpacare_generate.py --output_path $OUTPUT_PATH --dataset $DATASET
+  python eval/sft/train.py --config-name=$HYDRA_CONFIG --dataset $OUTPUT_PATH/evaluation_alpacare_sft.parquet
+  python eval/health/generate.py --model ./sft-merged --output_path $OUTPUT_PATH
+  
