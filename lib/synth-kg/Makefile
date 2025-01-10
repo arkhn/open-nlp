@@ -58,7 +58,36 @@ score:
 
 # Alignment Step
 alignment:
-	sky launch -c dpo -y --env-file $(ENV_FILE) --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/dpo.yaml
-	sky down -y dpo
 		sky launch -c dpo -y --env-file $(ENV_FILE) --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/dpo.yaml
 		sky down -y dpo
+
+# Health domain evaluation
+health-evaluation:
+		# Launch evaluation cluster
+		sky launch -c health-evaluation -y \
+			--env-file $(ENV_FILE) \
+			--env HYDRA_CONFIG=$(HYDRA_CONFIG) \
+			--env DATASET=$(DATASET_PATH) \
+			--env OUTPUT_PATH=$(OUTPUT_PATH) \
+			launch/health-evaluation.yaml
+
+		# Download evaluation results
+		scp health_evaluation:~/sky_workdir/$(OUTPUT_PATH)/evaluation.parquet $(OUTPUT_PATH)/evaluation.parquet
+		scp health_evaluation:~/sky_workdir/$(OUTPUT_PATH)/evaluation_alpacare_sft.parquet $(OUTPUT_PATH)/evaluation_alpacare_sft.parquet
+
+		# Cleanup and run evaluation script
+		sky down -y health-evaluation
+		./scripts/health-evaluation/evaluation.sh $(OUTPUT_PATH)/evaluation.parquet
+
+# Finance domain evaluation
+finance-evaluation:
+		sky launch -c health-evaluation -y \
+			--env-file $(ENV_FILE) \
+			--env HYDRA_CONFIG=$(HYDRA_CONFIG) \
+			--env DATASET=$(DATASET_PATH) \
+			--env OUTPUT_PATH=$(OUTPUT_PATH) \
+			launch/health-evaluation.yaml
+
+		# Cleanup and run evaluation script
+		sky down -y finance-evaluation
+		./scripts/finance-evaluation/evaluation.sh
