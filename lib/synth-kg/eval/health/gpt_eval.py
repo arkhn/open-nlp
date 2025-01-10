@@ -1,7 +1,9 @@
+import copy
 import os
-import sys
+# import sys
+import re
 
-sys.path.append("..")  # Add the parent directory to sys.path
+# sys.path.append("..")  # Add the parent directory to sys.path
 import json
 import random
 from tqdm import tqdm
@@ -10,7 +12,6 @@ import asyncio
 import openai
 import time
 import logging
-from utils import *
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,6 +20,102 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 random.seed(42)
+
+
+def load_or_convert_to_dataframe(dataset_path):
+
+    if "jsonl" in dataset_path:
+        dataset = [json.loads(l) for l in open(dataset_path, "r")]
+        # import pdb;pdb.set_trace()
+    elif "json" in dataset_path:
+        with open(dataset_path, "r") as file:
+            dataset = json.load(file)
+    else:
+        raise ValueError("Unsupported file format. Please provide a .json or .jsonl file.")
+    return dataset
+
+
+async def eval_dispatch_openai_requests(
+    messages_list,
+    model,
+    temperature,
+    max_tokens,
+    top_p,
+    frequency_penalty,
+    presence_penalty,
+    timeout_seconds=10,
+    base_wait_time=5,  # Base wait time in seconds
+    backoff_factor=1.5,  # # Adding a new parameter for timeout
+):
+    """
+    Dispatches requests to OpenAI API asynchronously.
+
+    Args:
+        messages_list: List of messages to be sent to OpenAI ChatCompletion API.
+        model: OpenAI model to use.
+        temperature: Temperature to use for the model.
+        max_tokens: Maximum number of tokens to generate.
+        top_p: Top p to use for the model.
+        frequency_penalty: Frequency penalty to use for the model.
+        presence_penalty: Presence penalty to use for the model.
+        timeout_seconds: Maximum number of seconds to wait for a response.
+
+    Returns:
+        List of responses from OpenAI API.
+    """
+
+    async def send_request(message):
+        return await openai.ChatCompletion.acreate(
+            model=model,
+            messages=message,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            frequency_penalty=frequency_penalty,
+            presence_penalty=presence_penalty,
+        )
+
+    async def request_until_success(message):
+        while True:
+            wait_time = base_wait_time
+            try:
+                return await asyncio.wait_for(send_request(message), timeout=timeout_seconds)
+            except asyncio.TimeoutError:
+                print(f"Timeout! Retrying in {wait_time} seconds...")
+                await asyncio.sleep(wait_time)  # Wait for the calculated time
+                wait_time *= backoff_factor  # Increase the wait time
+
+    async_responses = [request_until_success(x) for x in messages_list]
+    return await asyncio.gather(*async_responses)
+
+
+def eval_encode_prompt(prompt, instruction, model_output, reference_output, args):
+    """Encode multiple prompt instructions into a single string."""
+
+    if args.reference_first:
+        output_list = [reference_output, model_output]
+    else:
+        output_list = [model_output, reference_output]
+
+    mapping_dict_output = {"instruction": instruction}
+    mapping_dict_generator = {}
+    for idx in range(2):
+        mapping_dict_output["output_" + str(idx + 1)] = output_list[idx]["output"]
+        mapping_dict_generator["model_" + str(idx + 1)] = output_list[idx]["generator"]
+
+    filled_prompt = eval_make_prompt(prompt, mapping_dict_output)
+
+    return filled_prompt, mapping_dict_generator
+
+
+def eval_make_prompt(template, val_dict):
+
+    text_to_format = re.findall("{([^ \s]+?)}", template)
+    prompt = copy.deepcopy(template)
+    for to_format in text_to_format:
+        prompt = prompt.replace("{" + to_format + "}", val_dict[to_format], 1)
+
+    return prompt
 
 
 def parse_args():
