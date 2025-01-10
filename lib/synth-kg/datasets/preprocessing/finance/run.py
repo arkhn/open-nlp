@@ -77,8 +77,8 @@ class DataProcessor:
 
     def process_data(
         self,
-        seed_output_path: str = f"{OUTPUT_PATH}/private_seed_data.parquet",
-        gen_output_path: str = f"{OUTPUT_PATH}/private_data.parquet",
+        seed_output_path: str = f"{OUTPUT_PATH}/private_seed.parquet",
+        gen_output_path: str = f"{OUTPUT_PATH}/private.parquet",
     ):
         sampled_data = [
             self.reformat_data_sample(sample) for sample in self.load_and_sample_dataset()
@@ -117,8 +117,8 @@ class DataProcessor:
 
 
 def generate_public_seed(
-    input_path: str = f"{OUTPUT_PATH}/private_seed_data.parquet",
-    output_path: str = f"{OUTPUT_PATH}/public_seed_data.parquet",
+    input_path: str = f"{OUTPUT_PATH}/private_seed.parquet",
+    output_path: str = f"{OUTPUT_PATH}/public_seed.parquet",
 ):
     df = pd.read_parquet(input_path)
     client = Groq()

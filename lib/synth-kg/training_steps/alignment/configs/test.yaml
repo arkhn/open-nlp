@@ -2,5 +2,5 @@ defaults:
   - default.yaml
 
 peft_adapters_paths: [/lora/sft/mrx4y3h2]
-dataset: datasets/health/model=mrx4y3h2_size=15_step=sft/model=FremyCompany-BioLORD-2023_dpo-dataset.parquet
+dataset: datasets/health/model=mrx4y3h2_size=15_step=sft/model=FremyCompany-BioLORD-2023_dpo.parquet
 tags: [test, health]
