@@ -44,6 +44,13 @@ def parse_args():
         help="engine for evualtion",
     )
 
+    parser.add_argument(
+        "--max_test_number",
+        type=int,
+        default=1000,
+        help="max number of test",
+    )
+
     args = parser.parse_args()
     return args
 
@@ -114,13 +121,29 @@ def pairwise_mean(arr1, arr2):
     return means
 
 
-def chat_gpt_eval_model_win(data_path, compared_model, refer_model, engine):
-    refer_first_data = read_jsonl(
-        os.path.join(data_path, compared_model + "_" + engine + "_reference_first.jsonl")
+def chat_gpt_eval_model_win(data_path, compared_model, refer_model, engine, args):
+    refer_first = (
+        args.compared_model
+        + "_"
+        + args.refer_model
+        + "_"
+        + args.engine
+        + "_"
+        + str(args.max_test_number)
+        + "_reference_first.jsonl"
     )
-    refer_last_data = read_jsonl(
-        os.path.join(data_path, compared_model + "_" + engine + "_reference_last.jsonl")
+    refer_last = (
+        args.compared_model
+        + "_"
+        + args.refer_model
+        + "_"
+        + args.engine
+        + "_"
+        + str(args.max_test_number)
+        + "_reference_last.jsonl"
     )
+    refer_first_data = read_jsonl(os.path.join(data_path, refer_first))
+    refer_last_data = read_jsonl(os.path.join(data_path, refer_last))
     refer_first_score_arr = win_score_list_calculate(
         refer_first_data, engine, compared_model, refer_model
     )
@@ -136,7 +159,6 @@ def chat_gpt_eval_model_win(data_path, compared_model, refer_model, engine):
 if __name__ == "__main__":
     args = parse_args()
     eval_score = chat_gpt_eval_model_win(
-        args.data_path, args.compared_model, args.refer_model, args.engine
+        args.data_path, args.compared_model, args.refer_model, args.engine, args
     )
-
-    print(args.compared_model, str(eval_score))
+    print(f"{args.compared_model} vs. {args.refer_model} = {eval_score}")

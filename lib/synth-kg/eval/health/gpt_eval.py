@@ -1,5 +1,6 @@
 import copy
 import os
+
 # import sys
 import re
 
@@ -10,26 +11,31 @@ from tqdm import tqdm
 import argparse
 import asyncio
 import openai
+from openai import AsyncOpenAI
+
 import time
 import logging
+import pandas as pd
+from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
+load_dotenv()
+aclient = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 random.seed(42)
 
 
 def load_or_convert_to_dataframe(dataset_path):
-
     if "jsonl" in dataset_path:
         dataset = [json.loads(l) for l in open(dataset_path, "r")]
         # import pdb;pdb.set_trace()
     elif "json" in dataset_path:
         with open(dataset_path, "r") as file:
             dataset = json.load(file)
+    elif "parquet" in dataset_path:
+        dataset = pd.read_parquet(dataset_path)
+        dataset = dataset.to_dict("records")
     else:
         raise ValueError("Unsupported file format. Please provide a .json or .jsonl file.")
     return dataset
@@ -65,7 +71,7 @@ async def eval_dispatch_openai_requests(
     """
 
     async def send_request(message):
-        return await openai.ChatCompletion.acreate(
+        return await aclient.chat.completions.create(
             model=model,
             messages=message,
             temperature=temperature,
@@ -84,6 +90,9 @@ async def eval_dispatch_openai_requests(
                 print(f"Timeout! Retrying in {wait_time} seconds...")
                 await asyncio.sleep(wait_time)  # Wait for the calculated time
                 wait_time *= backoff_factor  # Increase the wait time
+            except openai.BadRequestError as e:
+                print(f"Bad request error: {str(e)}, message: {message}")
+                return None
 
     async_responses = [request_until_success(x) for x in messages_list]
     return await asyncio.gather(*async_responses)
@@ -165,7 +174,7 @@ def parse_args():
     parser.add_argument(
         "--request_batch_size",
         type=int,
-        default=5,
+        default=20,
         help="The number of requests to send to GPT3 at a time.",
     )
     parser.add_argument("--max_tokens", type=int, default=100, help="Max input tokens.")
@@ -195,13 +204,13 @@ if __name__ == "__main__":
     # import pdb;pdb.set_trace()
     model_output = load_or_convert_to_dataframe(args.model_output)
     if args.max_test_number != -1:
-        model_output = model_output[: args.test_number]
-    reference_output = load_or_convert_to_dataframe(args.reference_output)
+        model_output = model_output[: args.max_test_number]
+    reference_output = load_or_convert_to_dataframe(args.reference_output)[: args.max_test_number]
 
     if args.task_name == "alpaca_eval" or args.task_name == "medsi":
         instructions = [item["instruction"] for item in reference_output]
     elif args.task_name == "iCliniq":
-        instructions = [item["instruction"] + "\n\n" + item["input"] for item in model_output]
+        instructions = [item["instruction"] for item in model_output]
     else:
         raise ValueError("Unsupported task.")
 
@@ -233,8 +242,11 @@ if __name__ == "__main__":
     batch_size = args.request_batch_size
 
     if args.engine == "gpt-3.5-turbo":
-        system_prompt = "You are a helpful instruction-following assistant that prints the best model by selecting the best outputs for a given instruction."
-        prompt = open("../prompt/alpaca_eval_chat_gpt.txt").read() + "\n"
+        system_prompt = (
+            "You are a helpful instruction-following assistant that prints "
+            "the best model by selecting the best outputs for a given instruction."
+        )
+        prompt = open("eval/health/alpaca_eval_chat_gpt.txt").read() + "\n"
     else:
         raise ValueError("Unsupported engine.")
 
@@ -246,9 +258,27 @@ if __name__ == "__main__":
 
     if args.output_file_name is None:
         if args.reference_first:
-            args.output_file_name = args.model_name + "_" + args.engine + "_reference_first.jsonl"
+            args.output_file_name = (
+                args.model_name
+                + "_"
+                + args.refer_model_name
+                + "_"
+                + args.engine
+                + "_"
+                + str(args.max_test_number)
+                + "_reference_first.jsonl"
+            )
         else:
-            args.output_file_name = args.model_name + "_" + args.engine + "_reference_last.jsonl"
+            args.output_file_name = (
+                args.model_name
+                + "_"
+                + args.refer_model_name
+                + "_"
+                + args.engine
+                + "_"
+                + str(args.max_test_number)
+                + "_reference_last.jsonl"
+            )
     output_path = os.path.join(args.batch_dir, args.output_file_name)
     outputs = []
     if os.path.isfile(output_path):
@@ -302,7 +332,11 @@ if __name__ == "__main__":
                     for j, message in enumerate(message_list):
                         data = {
                             "prompt": message[1]["content"],
-                            "response": batch_predictions[j]["choices"][0]["message"]["content"],
+                            "response": (
+                                batch_predictions[j].choices[0].message.content
+                                if batch_predictions[j]
+                                else "a"
+                            ),
                         }
                         batch_results.append(data)
 
@@ -312,7 +346,7 @@ if __name__ == "__main__":
                     retry_cnt = 0
                     break
 
-                except openai.error.OpenAIError as e:
+                except openai.OpenAIError as e:
                     print(f"OpenAIError: {e}.")
                     if "Please reduce the length of the messages or completion" in str(e):
                         target_length = int(target_length * 0.8)

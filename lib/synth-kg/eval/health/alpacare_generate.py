@@ -21,7 +21,7 @@ def main():
     args = parse_arguments()
     df = pd.read_parquet(args.dataset)
     # Extract the specific column
-    prompts = df["response"]
+    prompts = df["response"].tolist()
 
     # Initialize the LLM with your chosen model
     llm = LLM(model="xz97/AlpaCare-llama2-13b")
@@ -41,8 +41,9 @@ def main():
     # Create output dataframe and save
     df_output = pd.DataFrame(output_data)
     os.makedirs(f"{args.output_path}", exist_ok=True)
-    output_file = os.path.join(args.output_path, "alpacare_evaluation_sft.parquet")
+    output_file = os.path.join(args.output_path, "evaluation_alpacare_sft.parquet")
     df_output.to_parquet(output_file)
+    df_output.to_parquet("./evaluation_alpacare_sft.parquet")
 
 
 if __name__ == "__main__":
