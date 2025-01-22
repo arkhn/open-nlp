@@ -26,7 +26,7 @@ def compute_similarities(model, texts1, texts2):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_path", type=str, required=True)
+    parser.add_argument("--evaluator_path", type=str, required=True)
     parser.add_argument("--private_dataset", type=str, required=True)
     parser.add_argument("--public_dataset", type=str, required=True)
     parser.add_argument("--output_path", type=str, required=True)
@@ -35,7 +35,7 @@ def main():
     )
     args = parser.parse_args()
 
-    model = SentenceTransformer(args.model_path)
+    model = SentenceTransformer(args.evaluator_path)
     private_dataset, public_dataset = load_datasets(args.private_dataset, args.public_dataset)
 
     for i in range(1, args.n + 1):
@@ -47,7 +47,7 @@ def main():
         public_dataset[f"similarity_score_{i}"] = scores
 
     public_dataset.to_parquet(
-        f"{args.output_path}/model={args.model_path.replace('/','-')}_scored.parquet"
+        f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_scored.parquet"
     )
     # Get the best and worst scores for each row
     score_columns = [f"similarity_score_{i}" for i in range(1, args.n + 1)]
@@ -60,7 +60,7 @@ def main():
 
     # Create final dataset with chosen and rejected responses
     final_dataset = pd.DataFrame()
-    final_dataset["prompts"] = public_dataset["instruction"]
+    final_dataset["prompt"] = public_dataset["instruction"]
     final_dataset["chosen"] = public_dataset.apply(
         lambda row: row[f"response_{best_response_idx[row.name]}"], axis=1
     )
@@ -69,16 +69,16 @@ def main():
     )
 
     final_dataset.to_parquet(
-        f"{args.output_path}/model={args.model_path.replace('/','-')}_dpo.parquet"
+        f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_dpo.parquet"
     )
 
     # Create evaluation dataset with only instruction and response
     eval_dataset = pd.DataFrame()
-    eval_dataset["instruction"] = final_dataset["prompts"]
+    eval_dataset["instruction"] = final_dataset["prompt"]
     eval_dataset["response"] = final_dataset["chosen"]
 
     eval_dataset.to_parquet(
-        f"{args.output_path}/model={args.model_path.replace('/','-')}_eval.parquet"
+        f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_eval.parquet"
     )
 
 
