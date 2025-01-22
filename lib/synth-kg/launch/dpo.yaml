@@ -1,6 +1,6 @@
 resources:
   cloud: lambda
-  accelerators: A100
+  accelerators: H100
 
 file_mounts:
   /lora:  # The directory path on the remote VM where the bucket will be mounted

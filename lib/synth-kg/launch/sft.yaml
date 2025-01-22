@@ -15,4 +15,4 @@ setup: |
   pip install transformers peft trl hydra-core wandb
 
 run: |
-  python training_steps/seed/train.py --config-name=$HYDRA_CONFIG
+  python training_steps/sft/train.py --config-name=$HYDRA_CONFIG
