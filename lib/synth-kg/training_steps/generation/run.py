@@ -24,10 +24,10 @@ def parse_arguments():
 
 
 def generate_responses(model, prompts, sampling_params, num_sequences):
-    response = model.generate([prompts], sampling_params=sampling_params)
+    response = model.generate(prompts, sampling_params=sampling_params)
     all_responses = []
-    for _ in range(num_sequences - 1):
-        all_responses.append([output.outputs[0].text for output in response])
+    for sequence in range(num_sequences - 1):
+        all_responses.append([output.outputs[sequence].text for output in response])
     return all_responses
 
 
@@ -54,7 +54,7 @@ def main():
 
     # Create output dataframe with multiple response columns
     output_data = {"instruction": prompts}
-    for i in range(args.num_sequences):
+    for i in range(args.num_sequences - 1):
         output_data[f"response_{i+1}"] = responses[i]
 
     # Create output dataframe and save
