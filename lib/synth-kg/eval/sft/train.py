@@ -5,7 +5,7 @@ import torch
 import wandb
 from datasets import Dataset
 from omegaconf import DictConfig, ListConfig
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import SFTTrainer, get_peft_config
 
 logger = logging.getLogger(__name__)
@@ -55,9 +55,10 @@ def main(cfg: DictConfig):
     )
     trainer.train()
     trainer.save_model(cfg.sft_config.output_dir)
-    model.merge_and_unload()
+    model = trainer.model.merge_and_unload()
     model.save_pretrained("./sft/merged")
-
+    tokenizer = AutoTokenizer.from_pretrained(model_config.model_name_or_path)
+    tokenizer.save_pretrained("./sft/merged")
 
 
 if __name__ == "__main__":
