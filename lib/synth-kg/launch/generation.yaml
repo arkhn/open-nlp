@@ -26,16 +26,19 @@ run: |
 
   # Initialize with base model
   BASE_MODEL=meta-llama/llama-2-7b-hf
-  OUTPUT_DIR=./merged-models
 
   # Loop through all adapters
-  for adapter in ${ADAPTER_PATHS[@]}; do
+  print $ADAPTERS_PATHS
+  IFS=',' read -ra ADAPTER_ARRAY <<< "$ADAPTERS_PATHS"
+  for adapter in "${ADAPTER_ARRAY[@]}"; do
+    echo "Merging adapter: $adapter ..."
     bash ./scripts/run_merge_lora.sh \
       --model_name_or_path $BASE_MODEL \
       --lora_model_path $adapter \
-      --output_model_path $OUTPUT_DIR
+      --output_model_path ./merged-models
     # Update base model for next iteration
-    BASE_MODEL=$OUTPUT_DIR
+    BASE_MODEL=./merged-models
   done
 
-  cd .. && python training_steps/generation/run.py --model $OUTPUT_DIR --output_path $OUTPUT_PATH --dataset $DATASET
+  MODEL=./LMFlow/merged-models
+  cd .. && python training_steps/generation/run.py --model $MODEL --output_path $OUTPUT_PATH --dataset $DATASET

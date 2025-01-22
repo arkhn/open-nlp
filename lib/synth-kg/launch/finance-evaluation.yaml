@@ -22,7 +22,7 @@ setup: |
 
 run: |
   conda activate lmflow
-  python eval/health/alpacare_generate.py --output_path $OUTPUT_PATH --dataset $DATASET
-  python eval/sft/train.py --config-name=$HYDRA_CONFIG dataset=./evaluation_alpacare_sft.parquet
-  python eval/health/generate.py --model ./sft/merged/ --output_path $OUTPUT_PATH
+  cp $FINANCE_EVAL_OUTPUT_PATH/evaluation_sft.parquet ./evaluation_sft.parquet
+  python eval/sft/train.py --config-name=$HYDRA_CONFIG dataset=./evaluation_sft.parquet
+  ./eval/finance/evaluate.sh ./sft/merged
   
