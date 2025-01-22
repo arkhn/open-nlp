@@ -54,6 +54,7 @@ def main(cfg):
     dpo_config.padding_value = tokenizer.eos_token_id
 
     dataset = Dataset.from_parquet(cfg.dataset)
+    dataset = dataset.filter(lambda x: x['chosen'] != '' and x['rejected'] != '')
 
     dpo_trainer = DPOTrainer(
         args=dpo_config,
