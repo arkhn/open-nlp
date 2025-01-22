@@ -1,0 +1,52 @@
+{
+  "builder_name": "csv",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "twitter-financial-news-sentiment",
+  "dataset_size": 1176882,
+  "description": "",
+  "download_checksums": {
+    "hf://datasets/zeroshot/twitter-financial-news-sentiment@ccbe24de388e287beb92dd393a335c376b350ac3/sent_train.csv": {
+      "num_bytes": 858645,
+      "checksum": null
+    },
+    "hf://datasets/zeroshot/twitter-financial-news-sentiment@ccbe24de388e287beb92dd393a335c376b350ac3/sent_valid.csv": {
+      "num_bytes": 217378,
+      "checksum": null
+    }
+  },
+  "download_size": 1076023,
+  "features": {
+    "text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "label": {
+      "dtype": "int64",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 2252905,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 939352,
+      "num_examples": 9543,
+      "dataset_name": "twitter-financial-news-sentiment"
+    },
+    "validation": {
+      "name": "validation",
+      "num_bytes": 237530,
+      "num_examples": 2388,
+      "dataset_name": "twitter-financial-news-sentiment"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}
