@@ -1,0 +1,72 @@
+{
+  "builder_name": "parquet",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "news_with_gpt_instructions",
+  "dataset_size": 29881534,
+  "description": "",
+  "download_checksums": {
+    "hf://datasets/oliverwang15/news_with_gpt_instructions@b7c333378679b2a74d7248b407c06021d3f26adb/data/train-00000-of-00001-dd971e407aecb39b.parquet": {
+      "num_bytes": 10833168,
+      "checksum": null
+    },
+    "hf://datasets/oliverwang15/news_with_gpt_instructions@b7c333378679b2a74d7248b407c06021d3f26adb/data/test-00000-of-00001-c551483ebf365496.parquet": {
+      "num_bytes": 2725041,
+      "checksum": null
+    }
+  },
+  "download_size": 13558209,
+  "features": {
+    "news": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "prompt": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "out": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "prompt_tokens": {
+      "dtype": "int64",
+      "_type": "Value"
+    },
+    "completion_tokens": {
+      "dtype": "int64",
+      "_type": "Value"
+    },
+    "total_tokens": {
+      "dtype": "int64",
+      "_type": "Value"
+    },
+    "label": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 43439743,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 23894011,
+      "num_examples": 16184,
+      "dataset_name": "news_with_gpt_instructions"
+    },
+    "test": {
+      "name": "test",
+      "num_bytes": 5987523,
+      "num_examples": 4047,
+      "dataset_name": "news_with_gpt_instructions"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}

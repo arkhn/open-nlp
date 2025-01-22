@@ -1,0 +1,82 @@
+{
+  "builder_name": "csv",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "fiqa-2018",
+  "dataset_size": 229858,
+  "description": "",
+  "download_checksums": {
+    "hf://datasets/pauri32/fiqa-2018@74b7dd5d4fc61e0fa5d979bef2c53111ea69c58a/train.csv": {
+      "num_bytes": 161385,
+      "checksum": null
+    },
+    "hf://datasets/pauri32/fiqa-2018@74b7dd5d4fc61e0fa5d979bef2c53111ea69c58a/validation.csv": {
+      "num_bytes": 16659,
+      "checksum": null
+    },
+    "hf://datasets/pauri32/fiqa-2018@74b7dd5d4fc61e0fa5d979bef2c53111ea69c58a/test.csv": {
+      "num_bytes": 25297,
+      "checksum": null
+    }
+  },
+  "download_size": 203341,
+  "features": {
+    "sentence": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "snippets": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "target": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "sentiment_score": {
+      "dtype": "float64",
+      "_type": "Value"
+    },
+    "aspects": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "format": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "label": {
+      "dtype": "int64",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 433199,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 182487,
+      "num_examples": 961,
+      "dataset_name": "fiqa-2018"
+    },
+    "validation": {
+      "name": "validation",
+      "num_bytes": 18825,
+      "num_examples": 102,
+      "dataset_name": "fiqa-2018"
+    },
+    "test": {
+      "name": "test",
+      "num_bytes": 28546,
+      "num_examples": 150,
+      "dataset_name": "fiqa-2018"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}
