@@ -15,16 +15,16 @@ def parse_arguments():
 
 
 def generate_response(model, prompts, sampling_params):
-    response = model.generate([prompts], sampling_params=sampling_params)
+    response = model.generate(prompts, sampling_params=sampling_params)
     return [output.outputs[0].text for output in response]
 
 
 def main():
     args = parse_arguments()
 
-    df = pd.read_json("datasets/health/eval/claude-2/iCliniq_output.jsonl", lines=True)
+    df = pd.read_json("datasets/health/eval/reference_outputs/claude-2/iCliniq_output.jsonl", lines=True)
     # Extract the specific column
-    prompts = df["input"]
+    prompts = df["prompt"]
 
     # Initialize the LLM with your chosen model
     llm = LLM(model=args.model)
