@@ -1,0 +1,6 @@
+defaults:
+  - default.yaml
+
+peft_adapters_paths: [/lora/sft/ftq9yrkn]
+dataset: datasets/health/model=ftq9yrkn_size=1500_step=sft/model=FremyCompany-BioLORD-2023_scored.parquet
+tags: [dpo-1, health]
