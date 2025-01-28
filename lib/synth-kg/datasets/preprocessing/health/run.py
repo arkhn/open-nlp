@@ -5,20 +5,25 @@ from typing import List
 import pandas as pd
 from datasets import load_dataset
 from dotenv import load_dotenv
-from groq import Groq
+from openai import OpenAI
 from quickumls import QuickUMLS
 from tqdm import tqdm
 
 SAMPLE_SIZE = 1500
 RANDOM_SEED = 42
 SEED_SIZE = 500
-MODEL_NAME = "llama-3.3-70b-versatile"
+MODEL_NAME = "meta-llama/llama-3.3-70b-instruct"
 TEMPERATURE = 0.7
 MAX_TOKENS = 2048
-OUTPUT_PATH = f"datasets/health/model={MODEL_NAME}_t={TEMPERATURE}_size={SAMPLE_SIZE}"
+OUTPUT_PATH = f"datasets/health/model={MODEL_NAME.replace('/', '-')}_t={TEMPERATURE}_size={SAMPLE_SIZE}-knowledge"
 PROMPT_PATH = "datasets/preprocessing/health/prompt.txt"
 
 load_dotenv()
+
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key="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",
+)
 
 
 class KeywordExtractor:
@@ -29,14 +34,11 @@ class KeywordExtractor:
         if pd.isna(text):
             return []
         matches = self.matcher.match(
-            text.removeprefix(
-                "If you are a doctor, please answer the medical questions based on "
-                "the patient's description."
-            ).strip(),
+            text.strip(),
             best_match=True,
             ignore_syntax=False,
         )
-        return [match[0]["term"] for match in matches]
+        return ", ".join([match[0]["term"] for match in matches])
 
 
 class DataProcessor:
@@ -74,8 +76,14 @@ class DataProcessor:
             self.reformat_data_sample(sample) for sample in self.load_and_sample_dataset()
         ]
         df = pd.DataFrame(sampled_data)
+        df["instruction"] = df["instruction"].apply(
+            lambda x: x.removeprefix(
+                "If you are a doctor, please answer the medical questions based on "
+                "the patient's description."
+            )
+        )
         df["instruction_keywords"] = df["instruction"].apply(self.extractor.extract_keywords)
-
+        df["response_keywords"] = df["response"].apply(self.extractor.extract_keywords)
         seed_df = self.process_dataset(df[: self.seed_size].copy())
         gen_df = self.process_dataset(df[self.seed_size :].copy())
 
@@ -87,8 +95,11 @@ class DataProcessor:
     @staticmethod
     def process_dataset(df: pd.DataFrame) -> pd.DataFrame:
         prompt = open(PROMPT_PATH).read()
-        df["new_instruction"] = df["instruction_keywords"].apply(
-            lambda x: prompt.replace("{keywords}", ", ".join(x))
+        df["new_instruction"] = df.apply(
+            lambda row: prompt.replace("{keywords}", str(row["instruction_keywords"])).replace(
+                "{knowledge_base}", str(row["response_keywords"])
+            ),
+            axis=1,
         )
         df["output"] = df["response"]
         df["response"] = df["instruction"]
@@ -101,8 +112,6 @@ def generate_public_seed(
     output_path: str = f"{OUTPUT_PATH}/public_seed.parquet",
 ):
     df = pd.read_parquet(input_path)
-    client = Groq()
-
     outputs = []
     for prompt in tqdm(df["instruction"], desc="Generating responses"):
         response = client.chat.completions.create(
