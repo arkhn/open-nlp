@@ -1,0 +1,6 @@
+defaults:
+  - default.yaml
+
+peft_adapters_paths: [/lora/sft/uga7mzbg]
+dataset: datasets/finance/model=uga7mzbg_size=1500_step=sft/model=sentence-transformers-all-mpnet-base-v2_dpo.parquet
+tags: [dpo-1, finance]

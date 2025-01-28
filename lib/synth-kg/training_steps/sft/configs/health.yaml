@@ -1,0 +1,5 @@
+defaults:
+  - default.yaml
+
+dataset: datasets/health/model=meta-llama-llama-3.3-70b-instruct_t=0.7_size=1500-knowledge/public_seed.parquet
+tags: [sft, health]
