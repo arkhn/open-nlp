@@ -9,7 +9,7 @@ refer_model_name=(
 for model in "${refer_model_name[@]}"; do
     data_path="datasets/health/eval/reference_outputs/${model}/iCliniq_output.jsonl"
     batch_dir=$(dirname "$2")
-    max_test_number=20
+    max_test_number=1000
 
     python eval/health/gpt_eval.py \
         --model_output "$2" \
