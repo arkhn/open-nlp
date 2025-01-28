@@ -75,6 +75,7 @@ score:
 # Alignment Step
 alignment:
 		sky launch -c dpo -y --env-file $(ENV_FILE) --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/dpo.yaml
+		sky down -y dpo
 
 # Health domain evaluation
 health-evaluation:
