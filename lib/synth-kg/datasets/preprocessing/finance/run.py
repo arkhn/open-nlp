@@ -10,11 +10,11 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from groq import Groq
 from tqdm import tqdm
+from openai import OpenAI
 
-SAMPLE_SIZE = 2000
+SAMPLE_SIZE = 1500
 RANDOM_SEED = 42
 SEED_SIZE = 500
-EVAL_SIZE = 500
 MODEL_NAME = "llama-3.3-70b-versatile"
 TEMPERATURE = 0.7
 MAX_TOKENS = 2048
@@ -23,17 +23,18 @@ PROMPT_PATH = "datasets/preprocessing/finance/prompt.txt"
 
 
 load_dotenv()
+client = OpenAI()
 
 
 class KeywordExtractor:
     def __init__(self, lexicon_path: str = "datasets/preprocessing/finance/lexicons.csv"):
-        load_dotenv()
         nltk.download("punkt", quiet=True)
         nltk.download("stopwords", quiet=True)
         self.stop_words = set(stopwords.words("english"))
         self.lm_lexicon = set(pd.read_csv(lexicon_path)["Word"].str.lower())
 
-    def clean_text(self, text: str) -> str:
+    @staticmethod
+    def clean_text(text: str) -> str:
         if pd.isna(text):
             return ""
         return text.split("}.")[1] if "}." in text else text
@@ -63,7 +64,23 @@ class DataProcessor:
 
     def load_and_sample_dataset(self) -> List[dict]:
         dataset = load_dataset("FinGPT/fingpt-sentiment-train")
-        return random.sample(list(dataset["train"]), self.sample_size)
+
+        # Get dataset samples
+        samples = random.sample(list(dataset["train"]), self.sample_size)
+        for sample in samples:
+            prompt = (
+                f"Replace all person names in this text with unique fictional names, maintaining consistency. "
+                f"Return the modified text and only this. Text: {sample['input']} Answer:"
+            )
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                stop=None,
+            )
+
+            # Update the instruction with anonymized text
+            sample["input"] = response.choices[0].message.content.strip()
+        return samples
 
     @staticmethod
     def reformat_data_sample(sample: dict) -> dict:
@@ -85,20 +102,17 @@ class DataProcessor:
         ]
         df = pd.DataFrame(sampled_data)
         df["instruction_keywords"] = df["instruction"].apply(self.extractor.extract_keywords)
+        df["instruction"] = df["instruction"].apply(self.extractor.clean_text)
+        df.response = df.response.apply(lambda x: x.split(" ")[1] if len(x.split(" ")) > 1 else x)
 
-        eval_df = df[:EVAL_SIZE].copy()
-        remaining_df = df[EVAL_SIZE:].copy()
-        seed_df = self.process_dataset(remaining_df[: self.seed_size].copy())
-        gen_df = self.process_dataset(remaining_df[self.seed_size :].copy())
+        seed_df = self.process_dataset(df[: self.seed_size].copy())
+        gen_df = self.process_dataset(df[self.seed_size :].copy())
 
         for path in [seed_output_path, gen_output_path, "datasets/finance/eval/"]:
             os.makedirs(os.path.dirname(path), exist_ok=True)
 
         seed_df.to_parquet(seed_output_path, index=False)
         gen_df.to_parquet(gen_output_path, index=False)
-        eval_df.to_parquet(
-            f"datasets/finance/eval/fingpt_sentiment_{EVAL_SIZE}.parquet", index=False
-        )
 
     @staticmethod
     def process_dataset(df: pd.DataFrame) -> pd.DataFrame:
