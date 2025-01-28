@@ -22,6 +22,24 @@ def main():
     df = pd.read_parquet(args.dataset)
     # Extract the specific column
     prompts = df["response"].tolist()
+    instructions = [
+        (
+            f"Human: If you are a doctor, please answer the medical questions based "
+            f"on the patient's description.\n\n"
+            f"Patient: {prompt[:1900]}\n"
+            f"\n\nAssistant:"
+        )
+        for prompt in prompts
+    ]
+    prompts = [
+        (
+            f"If you are a doctor, please answer the medical questions "
+            f"based on the patient's description.\n "
+            f"Patient: {prompt[:1900]}\n"
+            f"ChatDoctor:"
+        )
+        for prompt in prompts
+    ]
 
     # Initialize the LLM with your chosen model
     llm = LLM(model="xz97/AlpaCare-llama2-13b")
@@ -29,14 +47,14 @@ def main():
     sampling_params = SamplingParams(
         temperature=0.7,
         max_tokens=2048,
-        stop=["\n"],
+        truncate_prompt_tokens=512,
     )
 
     # Generate response per prompt
     responses = generate_response(llm, prompts, sampling_params)
 
     # Create output dataframe
-    output_data = {"instruction": prompts, "response": responses}
+    output_data = {"instruction": instructions, "response": responses}
 
     # Create output dataframe and save
     df_output = pd.DataFrame(output_data)
