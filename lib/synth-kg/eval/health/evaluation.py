@@ -1,8 +1,9 @@
-import re
-import os
-import numpy as np
-import json
 import argparse
+import json
+import os
+import re
+
+import numpy as np
 
 
 def parse_args():

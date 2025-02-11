@@ -15,7 +15,10 @@ SEED_SIZE = 500
 MODEL_NAME = "xz97/AlpaCare-llama2-13b"
 TEMPERATURE = 0.7
 MAX_TOKENS = 2048
-OUTPUT_PATH = f"datasets/health/model={MODEL_NAME.replace('/', '-')}_t={TEMPERATURE}_size={SAMPLE_SIZE}-knowledge"
+OUTPUT_PATH = (
+    f"datasets/health/model={MODEL_NAME.replace('/', '-')}_t"
+    f"={TEMPERATURE}_size={SAMPLE_SIZE}-knowledge"
+)
 PROMPT_PATH = "datasets/preprocessing/health/prompt.txt"
 
 load_dotenv()
@@ -29,9 +32,9 @@ class KeywordExtractor:
     def __init__(self):
         self.matcher = QuickUMLS(quickumls_fp=os.getenv("QUICKUMLS_PATH"))
 
-    def extract_keywords(self, text: str) -> List[str]:
+    def extract_keywords(self, text: str) -> str:
         if pd.isna(text):
-            return []
+            return ""
         matches = self.matcher.match(
             text.strip(),
             best_match=True,

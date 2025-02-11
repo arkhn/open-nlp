@@ -1,15 +1,15 @@
 resources:
- cloud: aws
- instance_type: m6i.8xlarge
+  cloud: aws
+  instance_type: m6i.8xlarge
 
 workdir: .
 
 file_mounts:
-  /fingpt-merge:  # The directory path on the remote VM where the bucket will be mounted
+  /fingpt-merge: # The directory path on the remote VM where the bucket will be mounted
     name: fingpt-merge
-    store: s3  # Specifies that the storage is an S3 bucket
-    mode: MOUNT  # Options: MOUNT (default) or COPY
-    persistent: true  # Whether the bucket persists after task completion; defaults to true
+    store: s3 # Specifies that the storage is an S3 bucket
+    mode: MOUNT # Options: MOUNT (default) or COPY
+    persistent: true # Whether the bucket persists after task completion; defaults to true
 
 setup: |
   git clone -b v0.0.9 https://github.com/OptimalScale/LMFlow.git

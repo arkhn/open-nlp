@@ -1,7 +1,8 @@
-import wandb
 import argparse
 import json
-from typing import Dict, Any
+from typing import Any, Dict
+
+import wandb
 
 
 def log_results_to_run(run_id: str, results: Dict[str, Any]) -> None:
@@ -17,9 +18,7 @@ def log_results_to_run(run_id: str, results: Dict[str, Any]) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="Log results to a specific W&B run")
-    parser.add_argument(
-        "--run_id", type=str, required=True, help="W&B run ID"
-    )
+    parser.add_argument("--run_id", type=str, required=True, help="W&B run ID")
     parser.add_argument(
         "--results",
         type=str,

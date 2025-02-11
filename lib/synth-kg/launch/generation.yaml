@@ -3,9 +3,9 @@ resources:
   accelerators: H100
 
 file_mounts:
-  /lora:  # The directory path on the remote VM where the bucket will be mounted
+  /lora: # The directory path on the remote VM where the bucket will be mounted
     source: s3://synth-kg-lora
-    mode: MOUNT  # Options: MOUNT (default) or COPY
+    mode: MOUNT # Options: MOUNT (default) or COPY
 
 workdir: .
 

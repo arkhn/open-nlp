@@ -2,11 +2,9 @@ import hydra
 import numpy as np
 import pandas as pd
 import peft
-import wandb
 from datasets import Dataset
-from omegaconf import DictConfig, ListConfig
-from style_transfer.rb_gen.utils.utils import CustomWandbCallback
-from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedTokenizerBase
+from omegaconf import ListConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import DPOTrainer
 
 

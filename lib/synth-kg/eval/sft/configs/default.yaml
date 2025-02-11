@@ -8,7 +8,7 @@ sft_config:
   group_by_length: true
   max_seq_length: 512
   lr_scheduler_type: "cosine_with_min_lr"
-  lr_scheduler_kwargs: {"min_lr": 1e-6}
+  lr_scheduler_kwargs: { "min_lr": 1e-6 }
   num_train_epochs: 10
   save_safetensors: false
   save_strategy: "epoch"

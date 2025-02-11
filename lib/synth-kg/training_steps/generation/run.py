@@ -1,9 +1,9 @@
+import argparse
 import os
 import random
 
 import pandas as pd
 from vllm import LLM, SamplingParams
-import argparse
 
 
 def parse_arguments():
@@ -38,7 +38,7 @@ def generate_responses(model, prompts, num_sequences):
             top_p=top_p,
             top_k=top_k,
             max_tokens=2048,
-            seed=random.randint(0, 2 ** 32 - 1),
+            seed=random.randint(0, 2**32 - 1),
             stop=["\n\n"],
             n=1,
             best_of=2,

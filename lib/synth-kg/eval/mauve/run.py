@@ -1,7 +1,8 @@
-import os
-import pandas as pd
-import mauve
 import json
+import os
+
+import mauve
+import pandas as pd
 
 # Path to the gold standard file
 private_path = (

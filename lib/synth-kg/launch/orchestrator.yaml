@@ -7,4 +7,3 @@ setup: |
   pip install transformers peft trl hydra-core wandb sentence-transformers openai datasets
   sudo apt update
   sudo apt install -y tmux awscli
-  

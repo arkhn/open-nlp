@@ -1,13 +1,14 @@
-import datasets
-from pathlib import Path
 import argparse
+from pathlib import Path
+
+import datasets
 
 DATASETS = [
     # source, destination
-    (('pauri32/fiqa-2018', None), 'fiqa-2018'),
-    (('zeroshot/twitter-financial-news-sentiment', None), 'twitter-financial-news-sentiment'),
-    (('oliverwang15/news_with_gpt_instructions', None), 'news_with_gpt_instructions'),
-    (('financial_phrasebank', 'sentences_50agree'), 'financial_phrasebank-sentences_50agree'),
+    (("pauri32/fiqa-2018", None), "fiqa-2018"),
+    (("zeroshot/twitter-financial-news-sentiment", None), "twitter-financial-news-sentiment"),
+    (("oliverwang15/news_with_gpt_instructions", None), "news_with_gpt_instructions"),
+    (("financial_phrasebank", "sentences_50agree"), "financial_phrasebank-sentences_50agree"),
 ]
 
 
@@ -25,8 +26,13 @@ def download(no_cache: bool = False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--no_cache", default=False, required=False, type=str,
-                        help="Redownloads all datasets if set to True")
+    parser.add_argument(
+        "--no_cache",
+        default=False,
+        required=False,
+        type=str,
+        help="Redownloads all datasets if set to True",
+    )
 
     args = parser.parse_args()
     download(no_cache=args.no_cache)
