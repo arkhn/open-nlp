@@ -29,7 +29,7 @@ WB_RUN_ID := 1234567890
 
 # Supervised Fine-Tuning
 sft:
-		sky launch -c sft -y --env-file .env --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/sft.yaml
+		sky launch -c sft -y --retry-until-up --env-file .env --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/sft.yaml
 		sky down -y sft
 
 # Generate synthetic data using a specific model
@@ -40,6 +40,7 @@ generation:
 			--env ADAPTERS_PATHS=$(ADAPTERS_PATHS) \
 			--env OUTPUT_PATH=$(OUTPUT_PATH) \
 			--env-file $(ENV_FILE) \
+			 --retry-until-up \
 			launch/generation.yaml
 
 		# Prepare local output directory
@@ -78,7 +79,7 @@ score:
 
 # Alignment Step
 alignment:
-		sky launch -c dpo -y --env-file $(ENV_FILE) --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/dpo.yaml
+		sky launch -c dpo -y --retry-until-up --env-file $(ENV_FILE) --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/dpo.yaml
 		sky down -y dpo
 
 # Health domain evaluation
@@ -90,6 +91,7 @@ health-evaluation:
 			--env DATASET=$(EVAL_SFT_PATH) \
 			--env OUTPUT_PATH=$(HEALTH_EVAL_OUTPUT_PATH) \
 			--env SEED_DATASET=$(DATASET_PATH) \
+			 --retry-until-up \
 		launch/health-evaluation.yaml
 
 		## Download evaluation results
@@ -110,6 +112,7 @@ finance-evaluation:
 			--env HYDRA_CONFIG=$(HYDRA_CONFIG) \
 			--env FINANCE_EVAL_OUTPUT_PATH=$(FINANCE_EVAL_OUTPUT_PATH) \
 			--env OUTPUT_PATH=$(FINANCE_EVAL_OUTPUT_PATH) \
+			 --retry-until-up \
 			launch/finance-evaluation.yaml
 
 		# Cleanup and run evaluation script
