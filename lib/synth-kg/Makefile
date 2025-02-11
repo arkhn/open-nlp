@@ -60,8 +60,12 @@ merge-fingpt:
 finance-preprocessing:
 		python datasets/preprocessing/finance/run.py
 
+health-preprocessing-server:
+		sky launch -c health-preprocessing -y launch/health-preprocessing.yaml
+
 health-preprocessing:
 		python datasets/preprocessing/health/run.py
+		sky down -y health-preprocessing
 
 # Scoring Step
 score:
