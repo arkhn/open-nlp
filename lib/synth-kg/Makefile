@@ -115,5 +115,9 @@ finance-evaluation:
 		# Cleanup and run evaluation script
 		sky down -y finance-evaluation
 
+mauve-evaluation:
+	sky launch -c mauve -y --retry-until-up launch/mauve.yaml
+	sky down -y mauve
+
 log-results:
 	python eval/log_results.py --run-id $(WB_RUN_ID) --results $(RESULTS)
