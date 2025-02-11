@@ -1,4 +1,5 @@
 import os
+import random
 
 import pandas as pd
 from vllm import LLM, SamplingParams
@@ -23,11 +24,29 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def generate_responses(model, prompts, sampling_params, num_sequences):
-    response = model.generate(prompts, sampling_params=sampling_params)
+def generate_responses(model, prompts, num_sequences):
     all_responses = []
-    for sequence in range(num_sequences - 1):
-        all_responses.append([output.outputs[sequence].text for output in response])
+
+    for _ in range(num_sequences):
+        # Randomly select parameters within a desired range
+        temperature = random.uniform(0.7, 0.9)
+        top_p = random.uniform(0.8, 0.95)
+        top_k = random.choice([40, 50, 60])
+
+        sampling_params = SamplingParams(
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            max_tokens=2048,
+            seed=random.randint(0, 2 ** 32 - 1),
+            stop=["\n\n"],
+            n=1,
+            best_of=2,
+        )
+        modified_prompt = prompts  # or apply a function that randomly perturbs the prompt
+        response = model.generate(modified_prompt, sampling_params=sampling_params)
+        all_responses.append([output.outputs[0].text for output in response])
+
     return all_responses
 
 
@@ -41,16 +60,8 @@ def main():
 
     # Initialize the LLM with your chosen model
     llm = LLM(model=args.model)
-
-    sampling_params = SamplingParams(
-        temperature=0.7,
-        max_tokens=2048,
-        stop=["\n"],
-        n=args.num_sequences,
-    )
-
     # Generate multiple responses per prompt
-    responses = generate_responses(llm, prompts, sampling_params, num_sequences=args.num_sequences)
+    responses = generate_responses(llm, prompts, num_sequences=args.num_sequences)
 
     # Create output dataframe with multiple response columns
     output_data = {"instruction": prompts}
