@@ -12,7 +12,7 @@ from tqdm import tqdm
 SAMPLE_SIZE = 1500
 RANDOM_SEED = 42
 SEED_SIZE = 500
-MODEL_NAME = "meta-llama/llama-3.3-70b-instruct"
+MODEL_NAME = "xz97/AlpaCare-llama2-13b"
 TEMPERATURE = 0.7
 MAX_TOKENS = 2048
 OUTPUT_PATH = f"datasets/health/model={MODEL_NAME.replace('/', '-')}_t={TEMPERATURE}_size={SAMPLE_SIZE}-knowledge"
@@ -21,8 +21,7 @@ PROMPT_PATH = "datasets/preprocessing/health/prompt.txt"
 load_dotenv()
 
 client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key="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",
+    base_url="http://209.20.159.241:8000/v1/",
 )
 
 
@@ -114,13 +113,16 @@ def generate_public_seed(
     df = pd.read_parquet(input_path)
     outputs = []
     for prompt in tqdm(df["instruction"], desc="Generating responses"):
-        response = client.chat.completions.create(
+        response = client.completions.create(
             model=MODEL_NAME,
-            messages=[{"role": "user", "content": prompt}],
+            prompt=prompt,
             temperature=TEMPERATURE,
             max_tokens=MAX_TOKENS,
+            n=1,
+            best_of=2,
         )
-        outputs.append(response.choices[0].message.content)
+        outputs.append(response.choices[0].text)
+        print(outputs[-1])
 
     pd.DataFrame({"instruction": df["instruction"], "response": outputs}).to_parquet(output_path)
 
