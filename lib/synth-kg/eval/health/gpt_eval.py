@@ -1,22 +1,18 @@
-import copy
-import os
-
-# import sys
-import re
-
-# sys.path.append("..")  # Add the parent directory to sys.path
-import json
-import random
-from tqdm import tqdm
 import argparse
 import asyncio
-import openai
-from openai import AsyncOpenAI
-
-import time
+import copy
+import json
 import logging
+import os
+import random
+import re
+import time
+
+import openai
 import pandas as pd
 from dotenv import load_dotenv
+from openai import AsyncOpenAI
+from tqdm import tqdm
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -28,7 +24,7 @@ random.seed(42)
 
 def load_or_convert_to_dataframe(dataset_path):
     if "jsonl" in dataset_path:
-        dataset = [json.loads(l) for l in open(dataset_path, "r")]
+        dataset = [json.loads(line) for line in open(dataset_path, "r")]
         # import pdb;pdb.set_trace()
     elif "json" in dataset_path:
         with open(dataset_path, "r") as file:
@@ -118,7 +114,7 @@ def eval_encode_prompt(prompt, instruction, model_output, reference_output, args
 
 
 def eval_make_prompt(template, val_dict):
-
+    # flake8: noqa: W605
     text_to_format = re.findall("{([^ \s]+?)}", template)
     prompt = copy.deepcopy(template)
     for to_format in text_to_format:
@@ -237,7 +233,7 @@ if __name__ == "__main__":
     total = len(reference_output)
     progress_bar = tqdm(total=total)
 
-    wait_base = 10
+    wait_base: float = 10
     retry_cnt = 0
     batch_size = args.request_batch_size
 
@@ -250,7 +246,7 @@ if __name__ == "__main__":
     else:
         raise ValueError("Unsupported engine.")
 
-    results = []
+    results: list[dict] = []
     target_length = args.max_tokens
 
     if not os.path.exists(args.batch_dir):
@@ -282,7 +278,6 @@ if __name__ == "__main__":
     output_path = os.path.join(args.batch_dir, args.output_file_name)
     outputs = []
     if os.path.isfile(output_path):
-
         with open(output_path, "r") as fin:
             for line in fin:
                 prev_output = json.loads(line)
@@ -315,7 +310,7 @@ if __name__ == "__main__":
                 message_list.append(message)
                 model2name_list.append(model2name)
                 j += 1
-            batch_results = []
+            batch_results: list[dict] = []
             while len(batch_results) == 0:
                 try:
                     batch_predictions = asyncio.run(
@@ -341,7 +336,6 @@ if __name__ == "__main__":
                         batch_results.append(data)
 
                     # predictions += batch_results
-                    wait_base = 10
 
                     retry_cnt = 0
                     break

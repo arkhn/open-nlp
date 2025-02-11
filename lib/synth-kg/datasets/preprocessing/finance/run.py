@@ -1,16 +1,16 @@
+import os
 import random
 from typing import List
-import os
 
 import nltk
 import pandas as pd
 from datasets import load_dataset
 from dotenv import load_dotenv
+from groq import Groq
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-from groq import Groq
-from tqdm import tqdm
 from openai import OpenAI
+from tqdm import tqdm
 
 SAMPLE_SIZE = 1500
 RANDOM_SEED = 42
@@ -69,7 +69,8 @@ class DataProcessor:
         samples = random.sample(list(dataset["train"]), self.sample_size)
         for sample in samples:
             prompt = (
-                f"Replace all person names in this text with unique fictional names, maintaining consistency. "
+                f"Replace all person names in this text with unique fictional names, "
+                f"maintaining consistency. "
                 f"Return the modified text and only this. Text: {sample['input']} Answer:"
             )
             response = client.chat.completions.create(

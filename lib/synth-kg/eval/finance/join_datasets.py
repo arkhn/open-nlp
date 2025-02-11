@@ -1,6 +1,7 @@
 import argparse
-import pandas as pd
 import os
+
+import pandas as pd
 
 
 def join_datasets(
@@ -21,13 +22,13 @@ def join_datasets(
     df1 = pd.read_parquet(evaluation)
     df2 = pd.read_parquet(private_seed_path)[["instruction", "output"]]
 
-
     # Perform inner join
     joined_df = df1.merge(df2, on=join_col, how="inner")
     joined_df = joined_df[["response", "output"]]
     joined_df.rename(columns={"response": "instruction"}, inplace=True)
     joined_df.rename(columns={"output": "response"}, inplace=True)
     return joined_df
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Join two parquet files on a specified column")

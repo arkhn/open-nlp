@@ -1,9 +1,9 @@
+import argparse
 import os
 
 import pandas as pd
-from vllm import LLM, SamplingParams
-import argparse
 from generate import generate_response
+from vllm import LLM, SamplingParams
 
 
 def parse_arguments():

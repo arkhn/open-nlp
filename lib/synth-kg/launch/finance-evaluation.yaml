@@ -5,9 +5,9 @@ resources:
 file_mounts:
   /lora: # The directory path on the remote VM where the bucket will be mounted
     name: synth-kg-lora
-    store: s3  # Specifies that the storage is an S3 bucket
-    mode: MOUNT  # Options: MOUNT (default) or COPY
-    persistent: true  # Whether the bucket persists after task completion; defaults to true
+    store: s3 # Specifies that the storage is an S3 bucket
+    mode: MOUNT # Options: MOUNT (default) or COPY
+    persistent: true # Whether the bucket persists after task completion; defaults to true
 
 workdir: .
 
@@ -25,4 +25,3 @@ run: |
   cp $FINANCE_EVAL_OUTPUT_PATH/evaluation_sft.parquet ./evaluation_sft.parquet
   python eval/sft/train.py --config-name=$HYDRA_CONFIG dataset=./evaluation_sft.parquet
   ./eval/finance/evaluate.sh ./sft/merged
-  

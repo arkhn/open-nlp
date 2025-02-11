@@ -10,7 +10,7 @@ file_mounts:
 workdir: .
 
 setup: |
-  pip install transformers peft trl hydra-core wandb
+  pip install transformers peft trl hydra-core wandb opacus
 
 run: |
   python training_steps/sft/train.py --config-name=$HYDRA_CONFIG

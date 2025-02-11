@@ -1,8 +1,8 @@
+import argparse
 import os
 
 import pandas as pd
 from vllm import LLM, SamplingParams
-import argparse
 
 
 def parse_arguments():
@@ -22,7 +22,9 @@ def generate_response(model, prompts, sampling_params):
 def main():
     args = parse_arguments()
 
-    df = pd.read_json("datasets/health/eval/reference_outputs/claude-2/iCliniq_output.jsonl", lines=True)
+    df = pd.read_json(
+        "datasets/health/eval/reference_outputs/claude-2/iCliniq_output.jsonl", lines=True
+    )
     # Extract the specific column
     prompts = df["prompt"]
 
