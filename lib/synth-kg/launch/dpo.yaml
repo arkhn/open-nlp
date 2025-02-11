@@ -1,13 +1,12 @@
 resources:
-  cloud: lambda
-  accelerators: H100
+  cloud: aws
+  accelerators: A100:8
+  region: us-east-2
 
 file_mounts:
   /lora:  # The directory path on the remote VM where the bucket will be mounted
-    name: synth-kg-lora
-    store: s3  # Specifies that the storage is an S3 bucket
+    source: s3://synth-kg-lora
     mode: MOUNT  # Options: MOUNT (default) or COPY
-    persistent: true  # Whether the bucket persists after task completion; defaults to true
 
 workdir: .
 
