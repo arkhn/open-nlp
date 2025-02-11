@@ -14,19 +14,23 @@ def parse_arguments():
     parser.add_argument(
         "--dataset", type=str, required=True, help="Path to input dataset parquet file"
     )
+    parser.add_argument(
+        "--seed-dataset", type=str, required=True, help="Path to seed dataset parquet file"
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_arguments()
     df = pd.read_parquet(args.dataset)
+    seed_df = pd.read_parquet(args.seed_dataset)
     # Extract the specific column
-    prompts = df["response"].tolist()
+    prompts = df["response"].tolist() + seed_df["response"].tolist()
     instructions = [
         (
             f"Human: If you are a doctor, please answer the medical questions based "
             f"on the patient's description.\n\n"
-            f"Patient: {prompt[:1900]}\n"
+            f"Patient: {prompt[:1500]}\n"
             f"\n\nAssistant:"
         )
         for prompt in prompts
@@ -35,7 +39,7 @@ def main():
         (
             f"If you are a doctor, please answer the medical questions "
             f"based on the patient's description.\n "
-            f"Patient: {prompt[:1900]}\n"
+            f"Patient: {prompt[:1500]}\n"
             f"ChatDoctor:"
         )
         for prompt in prompts
@@ -47,7 +51,7 @@ def main():
     sampling_params = SamplingParams(
         temperature=0.7,
         max_tokens=2048,
-        truncate_prompt_tokens=512,
+        truncate_prompt_tokens=1024,
     )
 
     # Generate response per prompt

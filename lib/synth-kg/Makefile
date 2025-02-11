@@ -89,6 +89,7 @@ health-evaluation:
 			--env HYDRA_CONFIG=$(HYDRA_CONFIG) \
 			--env DATASET=$(EVAL_SFT_PATH) \
 			--env OUTPUT_PATH=$(HEALTH_EVAL_OUTPUT_PATH) \
+			--env SEED_DATASET=$(DATASET_PATH) \
 		launch/health-evaluation.yaml
 
 		## Download evaluation results
@@ -98,7 +99,7 @@ health-evaluation:
 
 		## Cleanup and run evaluation script
 		sky down -y health-evaluation
-		./eval/health/evaluation.sh $(MODEL_ID) $(HEALTH_EVAL_OUTPUT_PATH)/evaluation.parquet
+		bash ./eval/health/evaluation.sh $(MODEL_ID) $(HEALTH_EVAL_OUTPUT_PATH)/evaluation.parquet
 
 # Finance domain evaluation
 finance-evaluation:
