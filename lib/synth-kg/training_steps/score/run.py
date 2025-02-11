@@ -49,6 +49,15 @@ def main():
     public_dataset.to_parquet(
         f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_scored.parquet"
     )
+    # Calculate and print score statistics
+    score_columns = [f"similarity_score_{i}" for i in range(1, args.n + 1)]
+    all_scores = public_dataset[score_columns].values.flatten()
+    print(f"Score Statistics:")
+    print(f"Mean: {all_scores.mean():.4f}")
+    print(f"Max: {all_scores.max():.4f}")
+    print(f"Min: {all_scores.min():.4f}")
+    print(f"Median: {pd.Series(all_scores).median():.4f}")
+
     # Get the best and worst scores for each row
     score_columns = [f"similarity_score_{i}" for i in range(1, args.n + 1)]
     best_response_idx = (
