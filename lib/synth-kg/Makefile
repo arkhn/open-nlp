@@ -32,6 +32,10 @@ sft:
 		sky launch -c sft -y -r --env-file .env --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/sft.yaml
 		sky down -y sft
 
+dp-sft:
+		sky launch -c dp-sft -y -r --env-file .env --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/dp-sft.yaml
+		sky down -y dp-sft
+
 # Generate synthetic data using a specific model
 generation:
 		# Launch cluster for data generation
