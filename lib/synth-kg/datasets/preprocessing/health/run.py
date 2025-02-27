@@ -16,12 +16,12 @@ MODEL_NAME = "xz97/AlpaCare-llama2-13b"
 TEMPERATURE = 0.7
 MAX_TOKENS = 2048
 OUTPUT_PATH = (
-    f"datasets/health/model={MODEL_NAME.replace('/', '-')}_t"
-    f"={TEMPERATURE}_size={SAMPLE_SIZE}-knowledge"
+    f"datasets/health/model={MODEL_NAME.replace('/', '-')}_t" f"={TEMPERATURE}_size={SAMPLE_SIZE}"
 )
 PROMPT_PATH = "datasets/preprocessing/health/prompt.txt"
 
 load_dotenv()
+tqdm.pandas()
 
 client = OpenAI(
     base_url="http://209.20.159.241:8000/v1/",
@@ -84,8 +84,10 @@ class DataProcessor:
                 "the patient's description."
             )
         )
-        df["instruction_keywords"] = df["instruction"].apply(self.extractor.extract_keywords)
-        df["response_keywords"] = df["response"].apply(self.extractor.extract_keywords)
+        df["instruction_keywords"] = df["instruction"].progress_apply(
+            self.extractor.extract_keywords
+        )
+        df["response_keywords"] = df["response"].progress_apply(self.extractor.extract_keywords)
         seed_df = self.process_dataset(df[: self.seed_size].copy())
         gen_df = self.process_dataset(df[self.seed_size :].copy())
 
