@@ -128,3 +128,12 @@ mauve-evaluation:
 
 log-results:
 	python eval/log_results.py --run-id $(WB_RUN_ID) --results $(RESULTS)
+
+jz-download-resources:
+	sbatch launch/jz/download_resources.slurm
+
+jz-generation:
+	sbatch launch/jz/generation.slurm \
+			--DATASET_PATH $(DATASET_PATH)/private.parquet \
+			--ADAPTERS_PATHS $(ADAPTERS_PATHS) \
+			--OUTPUT_PATH $(OUTPUT_PATH)
