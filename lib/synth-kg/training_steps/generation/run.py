@@ -21,6 +21,12 @@ def parse_arguments():
         default=5,
         help="Number of different sequences to generate per prompt",
     )
+    parser.add_argument(
+        "--gpus",
+        type=int,
+        default=1,
+        help="Number of GPUs to use for inference",
+    )
     return parser.parse_args()
 
 
@@ -59,7 +65,10 @@ def main():
     prompts = df["instruction"]
 
     # Initialize the LLM with your chosen model
-    llm = LLM(model=args.model)
+    llm = LLM(
+        model=args.model,
+        tensor_parallel_size=args.gpus,
+    )
     # Generate multiple responses per prompt
     responses = generate_responses(llm, prompts, num_sequences=args.num_sequences)
 
