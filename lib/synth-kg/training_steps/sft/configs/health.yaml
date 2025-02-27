@@ -1,5 +1,5 @@
 defaults:
   - default.yaml
 
-dataset: datasets/health/model=xz97-AlpaCare-llama2-13b_t=0.7_size=1500-knowledge/public_seed.parquet
+dataset: datasets/health/model=xz97-AlpaCare-llama2-13b_t=0.7_size=1500/public_seed.parquet
 tags: [sft, health]
