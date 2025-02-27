@@ -3,17 +3,17 @@ defaults:
 
 training_arguments:
   _target_: dp_transformers.TrainingArguments
-  num_train_epochs: 4
   per_device_train_batch_size: 4
-  gradient_accumulation_steps: 8
+  gradient_accumulation_steps: 2
   logging_steps: 10
   save_safetensors: false
-  learning_rate: 5e-4
   remove_unused_columns: false
-  save_strategy: "epoch"
+  save_strategy: "no"
   report_to: "wandb"
   gradient_checkpointing: true
   output_dir: "/lora/dp-sft"
+  num_train_epochs: 100
+  max_steps: 2500
 
 peft_config:
   _target_: peft.LoraConfig
@@ -26,5 +26,5 @@ private_arguments:
   target_epsilon: 8
   per_sample_max_grad_norm: 1
 
-dataset: datasets/health/model=xz97-AlpaCare-llama2-13b_t=0.7_size=1500-knowledge/private_seed.parquet
+dataset: datasets/health/dp_size=60000/private_seed.parquet
 tags: [dp-sft, health]
