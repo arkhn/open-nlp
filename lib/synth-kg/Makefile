@@ -16,36 +16,61 @@ SIZE := 1500
 STEP := sft
 WB_RUN_ID := 1234567890
 
-.PHONY: sft \
-        generation \
-        merge-fingpt \
-        finance-preprocessing \
-        health-preprocessing \
-        score \
-        alignment \
-        health-evaluation \
-        finance-evaluation \
-        log-results
+.PHONY: \
+        jz-download-resources \
+        jz-generation \
+        log-results \
+        sky-alignment \
+        sky-dp-sft \
+        sky-finance-evaluation \
+        sky-finance-preprocessing \
+        sky-generation \
+        sky-health-evaluation \
+        sky-health-preprocessing \
+        sky-merge-fingpt \
+        sky-mauve-evaluation \
+        sky-score \
+        sky-sft
 
-# Supervised Fine-Tuning
-sft:
-		sky launch -c sft -y -r --env-file .env --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/sft.yaml
-		sky down -y sft
+jz-download-resources:
+		sbatch launch/jz/download_resources.slurm
 
-dp-sft:
-		sky launch -c dp-sft -y -r --env-file .env --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/dp-sft.yaml
+jz-generation:
+		sbatch launch/jz/generation.slurm \
+			--DATASET_PATH $(DATASET_PATH)/private.parquet \
+			--ADAPTERS_PATHS $(ADAPTERS_PATHS) \
+			--OUTPUT_PATH $(OUTPUT_PATH)
+
+sky-alignment:
+		sky launch -c dpo -y -r --env-file $(ENV_FILE) --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/sky/dpo.yaml
+		sky down -y dpo
+
+sky-dp-sft:
+		sky launch -c dp-sft -y -r --env-file .env --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/sky/dp-sft.yaml
 		sky down -y dp-sft
 
-# Generate synthetic data using a specific model
-generation:
+sky-finance-evaluation:
+		python eval/finance/join_datasets.py --evaluation $(EVAL_SFT_PATH) --private_seed $(PRIVATE_PATH) --output_path $(FINANCE_EVAL_OUTPUT_PATH)
+		cd eval/finance/data && python download.py
+		sky launch -c finance-evaluation -y -r \
+			--env-file $(ENV_FILE) \
+			--env HYDRA_CONFIG=$(HYDRA_CONFIG) \
+			--env FINANCE_EVAL_OUTPUT_PATH=$(FINANCE_EVAL_OUTPUT_PATH) \
+			--env OUTPUT_PATH=$(FINANCE_EVAL_OUTPUT_PATH) \
+			--retry-until-up \
+			launch/sky/finance-evaluation.yaml
+
+		# Cleanup and run evaluation script
+		sky down -y finance-evaluation
+
+sky-generation:
 		# Launch cluster for data generation
 		sky launch -c generation -y -r \
 			--env DATASET=$(DATASET_PATH)/private.parquet \
 			--env ADAPTERS_PATHS=$(ADAPTERS_PATHS) \
 			--env OUTPUT_PATH=$(OUTPUT_PATH) \
 			--env-file $(ENV_FILE) \
-			 --retry-until-up \
-			launch/generation.yaml
+			launch/sky/generation.yaml
 
 		# Prepare local output directory
 		mkdir -p $(OUTPUT_PATH)
@@ -56,38 +81,7 @@ generation:
 		# Cleanup cluster
 		sky down -y generation
 
-# Merge FinGPT data
-merge-fingpt:
-		sky launch -c merge-fingpt -r -y launch/merge-fingpt.yaml
-		sky down -y merge-fingpt
-
-# Data preprocessing tasks
-finance-preprocessing:
-		python datasets/preprocessing/finance/run.py
-
-health-preprocessing-server:
-		sky launch -c health-preprocessing -r -y launch/health-preprocessing.yaml
-
-health-preprocessing:
-		python datasets/preprocessing/health/run.py
-		sky down -y health-preprocessing
-
-# Scoring Step
-score:
-		python training_steps/score/run.py \
-			--evaluator_path $(EVALUATOR_PATH) \
-			--public_dataset $(OUTPUT_PATH)/public_generated.parquet \
-			--private_dataset $(PRIVATE_PATH)/private.parquet \
-			--output_path $(OUTPUT_PATH) \
-			--n $(N)
-
-# Alignment Step
-alignment:
-		sky launch -c dpo -y -r --env-file $(ENV_FILE) --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/dpo.yaml
-		sky down -y dpo
-
-# Health domain evaluation
-health-evaluation:
+sky-health-evaluation:
 		## Launch evaluation cluster
 		sky launch -c health-evaluation -y -r \
 			--env-file $(ENV_FILE) \
@@ -95,8 +89,7 @@ health-evaluation:
 			--env DATASET=$(EVAL_SFT_PATH) \
 			--env OUTPUT_PATH=$(HEALTH_EVAL_OUTPUT_PATH) \
 			--env SEED_DATASET=$(DATASET_PATH) \
-			 -r -i 5 \
-		launch/health-evaluation.yaml
+			-r launch/sky/health-evaluation.yaml
 
 		## Download evaluation results
 		mkdir -p $(HEALTH_EVAL_OUTPUT_PATH)
@@ -107,33 +100,24 @@ health-evaluation:
 		sky down -y health-evaluation
 		bash ./eval/health/evaluation.sh $(MODEL_ID) $(HEALTH_EVAL_OUTPUT_PATH)/evaluation.parquet
 
-# Finance domain evaluation
-finance-evaluation:
-		python eval/finance/join_datasets.py --evaluation $(EVAL_SFT_PATH) --private_seed $(PRIVATE_PATH) --output_path $(FINANCE_EVAL_OUTPUT_PATH)
-		cd eval/finance/data && python download.py
-		sky launch -c finance-evaluation -y -r \
-			--env-file $(ENV_FILE) \
-			--env HYDRA_CONFIG=$(HYDRA_CONFIG) \
-			--env FINANCE_EVAL_OUTPUT_PATH=$(FINANCE_EVAL_OUTPUT_PATH) \
-			--env OUTPUT_PATH=$(FINANCE_EVAL_OUTPUT_PATH) \
-			 --retry-until-up \
-			launch/finance-evaluation.yaml
+sky-health-preprocessing-server:
+		sky launch -c health-preprocessing -r -y launch/sky/health-preprocessing.yaml
 
-		# Cleanup and run evaluation script
-		sky down -y finance-evaluation
+sky-health-preprocessing:
+		python datasets/preprocessing/health/run.py
+		sky down -y health-preprocessing
 
-mauve-evaluation:
-	sky launch -c mauve -y -r launch/mauve.yaml
-	sky down -y mauve
+sky-merge-fingpt:
+		sky launch -c merge-fingpt -r -y launch/sky/merge-fingpt.yaml
+		sky down -y merge-fingpt
+
+sky-mauve-evaluation:
+		sky launch -c mauve -y -r launch/sky/mauve.yaml
+		sky down -y mauve
+
+sky-sft:
+		sky launch -c sft -y -r --env-file .env --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/sky/sft.yaml
+		sky down -y sft
 
 log-results:
-	python eval/log_results.py --run-id $(WB_RUN_ID) --results $(RESULTS)
-
-jz-download-resources:
-	sbatch launch/jz/download_resources.slurm
-
-jz-generation:
-	sbatch launch/jz/generation.slurm \
-			--DATASET_PATH $(DATASET_PATH)/private.parquet \
-			--ADAPTERS_PATHS $(ADAPTERS_PATHS) \
-			--OUTPUT_PATH $(OUTPUT_PATH)
+		python eval/log_results.py --run-id $(WB_RUN_ID) --results $(RESULTS)
