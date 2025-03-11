@@ -3,6 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=10
 #SBATCH --output=log/slurm-%j.out
+#SBATCH --time=00:10:00
 #SBATCH --error=log/slurm-%j.err
 #SBATCH --partition=prepost
 #SBATCH --account=oha@v100
