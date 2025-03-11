@@ -13,7 +13,7 @@ sft_config:
   save_safetensors: false
   save_strategy: "epoch"
   report_to: "wandb"
-  output_dir: "/lora/sft"
+  output_dir: "lora/sft"
 
 model_config:
   _target_: trl.ModelConfig
