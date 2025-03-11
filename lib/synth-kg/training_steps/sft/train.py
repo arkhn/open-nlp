@@ -29,7 +29,7 @@ def main(cfg: DictConfig):
     wandb.init(project="synth-kg", tags=cfg.tags)
     model_config = hydra.utils.instantiate(cfg.model_config)
     sft_config = hydra.utils.instantiate(cfg.sft_config)
-    cfg.sft_config.output_dir = f"/lora/sft/{wandb.run.id}"
+    cfg.sft_config.output_dir = f"lora/sft/{wandb.run.id}"
     torch_dtype = (
         model_config.torch_dtype
         if model_config.torch_dtype in ["auto", None]
