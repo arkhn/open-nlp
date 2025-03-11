@@ -8,6 +8,7 @@ wandb/
 # IDE stuff
 .idea/
 .vscode/
+.DS_Store
 
 ### GitHub's .gitignore Python template ###
 # Byte-compiled / optimized / DLL files
