@@ -163,3 +163,6 @@ sky down -y sft
 
 log-results:
 python eval/log_results.py --run-id $(WB_RUN_ID) --results $(RESULTS)
+
+upload-datasets:
+aws s3 sync ~/Code/open-nlp/lib/synth-kg/datasets s3://synth-kg-datasets
