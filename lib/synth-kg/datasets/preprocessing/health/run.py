@@ -4,15 +4,15 @@ from typing import List
 
 import pandas as pd
 from datasets import load_dataset
-from dotenv import load_dotenv
-from openai import OpenAI
 from quickumls import QuickUMLS
 from tqdm import tqdm
+from vllm import LLM, SamplingParams
 
 SAMPLE_SIZE = 1500
 RANDOM_SEED = 42
 SEED_SIZE = 500
 MODEL_NAME = "xz97/AlpaCare-llama2-13b"
+GPUS = 8
 TEMPERATURE = 0.7
 MAX_TOKENS = 2048
 OUTPUT_PATH = (
@@ -20,12 +20,7 @@ OUTPUT_PATH = (
 )
 PROMPT_PATH = "datasets/preprocessing/health/prompt.txt"
 
-load_dotenv()
 tqdm.pandas()
-
-client = OpenAI(
-    base_url="http://209.20.159.241:8000/v1/",
-)
 
 
 class KeywordExtractor:
@@ -117,17 +112,20 @@ def generate_public_seed(
 ):
     df = pd.read_parquet(input_path)
     outputs = []
+    sampling_params = SamplingParams(
+        temperature=TEMPERATURE,
+        max_tokens=MAX_TOKENS,
+    )
+    llm = LLM(
+        model=MODEL_NAME,
+        tensor_parallel_size=GPUS,
+    )
     for prompt in tqdm(df["instruction"], desc="Generating responses"):
-        response = client.completions.create(
-            model=MODEL_NAME,
-            prompt=prompt,
-            temperature=TEMPERATURE,
-            max_tokens=MAX_TOKENS,
-            n=1,
-            best_of=2,
+        response = llm.generate(
+            prompt,
+            sampling_params=sampling_params,
         )
-        outputs.append(response.choices[0].text)
-        print(outputs[-1])
+        outputs.append(output.outputs[0].text for output in response)
 
     pd.DataFrame({"instruction": df["instruction"], "response": outputs}).to_parquet(output_path)
 
