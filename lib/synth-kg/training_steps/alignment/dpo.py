@@ -62,7 +62,7 @@ def main(cfg):
         train_dataset=dataset,
     )
     dpo_trainer.train()
-    dpo_path = f"/lora/dpo-{cfg.iteration}/{wandb.run.id}"
+    dpo_path = f"lora/dpo-{cfg.iteration}/{wandb.run.id}"
     dpo_trainer.save_model(dpo_path)
 
 
