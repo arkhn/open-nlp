@@ -19,6 +19,7 @@ WB_RUN_ID := 1234567890
 .PHONY: \
         jz-download-resources \
         jz-generation \
+        jz-finance-preprocessing \
         log-results \
         sky-alignment \
         sky-dp-sft \
@@ -40,6 +41,27 @@ jz-generation:
 			--DATASET_PATH $(DATASET_PATH)/private.parquet \
 			--ADAPTERS_PATHS $(ADAPTERS_PATHS) \
 			--OUTPUT_PATH $(OUTPUT_PATH)
+
+jz-health-preprocessing:
+		sbatch launch/jz/health-preprocessing.slurm
+
+
+jz-score:
+		sbatch launch/jz/score.slurm \
+			--EVALUATOR_PATH $(EVALUATOR_PATH) \
+			--PUBLIC_DATASET $(OUTPUT_PATH)/public_generated.parquet \
+			--PRIVATE_DATASET $(PRIVATE_PATH)/private.parquet \
+			--OUTPUT_PATH $(OUTPUT_PATH) \
+			--N $(N)
+
+jz-dp-sft:
+		sbatch launch/jz/dp-sft.slurm --HYDRA_CONFIG $(HYDRA_CONFIG)
+
+jz-dpo:
+		sbatch launch/jz/dpo.slurm --HYDRA_CONFIG $(HYDRA_CONFIG)
+
+jz-sft:
+		sbatch launch/jz/sft.slurm --HYDRA_CONFIG $(HYDRA_CONFIG)
 
 sky-alignment:
 		sky launch -c dpo -y -r --env-file $(ENV_FILE) --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/sky/dpo.yaml
@@ -114,6 +136,14 @@ sky-merge-fingpt:
 sky-mauve-evaluation:
 		sky launch -c mauve -y -r launch/sky/mauve.yaml
 		sky down -y mauve
+
+sky-score:
+		python training_steps/score/run.py \
+			--evaluator_path $(EVALUATOR_PATH) \
+			--public_dataset $(OUTPUT_PATH)/public_generated.parquet \
+			--private_dataset $(PRIVATE_PATH)/private.parquet \
+			--output_path $(OUTPUT_PATH) \
+			--n $(N)
 
 sky-sft:
 		sky launch -c sft -y -r --env-file .env --env HYDRA_CONFIG=$(HYDRA_CONFIG) launch/sky/sft.yaml
