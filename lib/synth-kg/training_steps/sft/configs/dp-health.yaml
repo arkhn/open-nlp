@@ -3,15 +3,16 @@ defaults:
 
 training_arguments:
   _target_: dp_transformers.TrainingArguments
-  per_device_train_batch_size: 4
-  gradient_accumulation_steps: 2
+  per_device_train_batch_size: 2
+  gradient_accumulation_steps: 4
+  learning_rate: 3e-4
   logging_steps: 10
   save_safetensors: false
   remove_unused_columns: false
   save_strategy: "no"
   report_to: "wandb"
   gradient_checkpointing: true
-  output_dir: "/lora/dp-sft"
+  output_dir: "lora/dp-sft"
   num_train_epochs: 100
   max_steps: 2500
 

@@ -1,6 +1,6 @@
 defaults:
   - default.yaml
 
-peft_adapters_paths: [/lora/dp-sft/7u77xwfr]
-dataset: datasets/health/model=7u77xwfr_size=1500_step=dp-sft/model=FremyCompany-BioLORD-2023_dpo.parquet
-tags: [dpo-1, health, alpacare, dp-sft]
+peft_adapters_paths: [lora/dp-sft/m5fblwde]
+dataset: datasets/health/model=m5fblwde_size=60000_step=dp-sft/model=FremyCompany-BioLORD-2023_dpo.parquet
+tags: [dpo-1, health, dp-sft]
