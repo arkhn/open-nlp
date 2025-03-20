@@ -3,7 +3,7 @@ import argparse
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.util import cos_sim
-import wandb  # Add this import
+import wandb
 
 
 def load_datasets(private_dataset_path: str, public_dataset_path: str):
@@ -130,7 +130,6 @@ def main():
     eval_dataset.head(20000).to_parquet(eval_parquet_path)
 
     # Log the evaluation parquet file to wandb
-    wandb.save(eval_parquet_path)
 
     final_dataset = final_dataset[final_dataset["chosen"].apply(lambda x: len(x.split()) >= 20)]
     final_dataset = final_dataset.sort_values(by="chosen_score", ascending=False)
