@@ -26,8 +26,16 @@ def compute_similarities(model, texts1, texts2):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--wandb_run_id", type=str, help="Optional wandb run ID to resume a run")
+
     # Initialize wandb
-    wandb.init(project="your_project_name", entity="your_entity_name")  # Replace with your project and entity names
+    wandb.init(
+        project="your_project_name",
+        entity="your_entity_name",
+        id=args.wandb_run_id,
+        resume="allow" if args.wandb_run_id else None
+    )
     parser.add_argument("--evaluator_path", type=str, required=True)
     parser.add_argument("--private_dataset", type=str, required=True)
     parser.add_argument("--public_dataset", type=str, required=True)
@@ -50,11 +58,17 @@ def main():
     scored_parquet_path = f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_scored.parquet"
     public_dataset.to_parquet(scored_parquet_path)
 
-    # Log the scored parquet file to wandb
-    wandb.save(scored_parquet_path)
+    # Log the scored parquet file as a wandb Table
+    scored_table = wandb.Table(dataframe=public_dataset)
+    wandb.log({"scored_table": scored_table})
     # Calculate and print score statistics
     score_columns = [f"similarity_score_{i}" for i in range(1, args.n + 1)]
     all_scores = public_dataset[score_columns].values.flatten()
+    mean_score = all_scores.mean()
+    max_score = all_scores.max()
+    min_score = all_scores.min()
+    median_score = pd.Series(all_scores).median()
+
     # Log score statistics to wandb
     wandb.log({
         "mean_score": mean_score,
