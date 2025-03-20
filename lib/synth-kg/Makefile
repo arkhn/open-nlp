@@ -25,7 +25,7 @@ jz-health-preprocessing:
 
 jz-health-evaluation:
 	sbatch launch/jz/health-evaluation.slurm \
-	--DOWNSTREAM_DS_PATH datasets/health/model=$(MODEL_ID)_size=$(SIZE)_step=$(STEP) \
+	--DOWNSTREAM_DS_PATH datasets/health/model=$(MODEL_ID)_size=$(SIZE)_step=$(STEP)/model=$(EVALUATOR_PATH)_eval.parquet \
 	--OUTPUT_PATH datasets/health/eval/model_outputs/model=$(MODEL_ID)_size=$(SIZE)_step=$(STEP)
 
 jz-score:
