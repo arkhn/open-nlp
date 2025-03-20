@@ -7,7 +7,7 @@ from sentence_transformers.util import cos_sim
 
 def load_datasets(private_dataset_path: str, public_dataset_path: str):
     private_dataset = pd.read_parquet(private_dataset_path)
-    public_dataset = pd.read_parquet(public_dataset_path)
+    public_dataset = pd.read_parquet(f"{public_dataset_path}/public_generated.parquet")
     return private_dataset, public_dataset
 
 
@@ -34,7 +34,6 @@ def main():
         "--n", type=int, required=True, help="Number of text columns in public dataset"
     )
     args = parser.parse_args()
-
     model = SentenceTransformer(args.evaluator_path)
     private_dataset, public_dataset = load_datasets(args.private_dataset, args.public_dataset)
 
@@ -80,20 +79,21 @@ def main():
         lambda row: row[f"response_{worst_response_idx[row.name]}"], axis=1
     )
 
-    final_dataset = final_dataset[final_dataset["chosen"].apply(lambda x: len(x.split()) >= 20)]
-    final_dataset = final_dataset.sort_values(by="chosen_score", ascending=False)
-    final_dataset = final_dataset.head(1000)
-    final_dataset.to_parquet(
-        f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_dpo.parquet"
-    )
-
     # Create evaluation dataset with only instruction and response
+
+    final_dataset = final_dataset.copy()
     eval_dataset = pd.DataFrame()
     eval_dataset["instruction"] = final_dataset["prompt"]
     eval_dataset["response"] = final_dataset["chosen"]
 
     eval_dataset.to_parquet(
         f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_eval.parquet"
+    )
+
+    final_dataset = final_dataset[final_dataset["chosen"].apply(lambda x: len(x.split()) >= 20)]
+    final_dataset = final_dataset.sort_values(by="chosen_score", ascending=False)
+    final_dataset.copy().head(1000).to_parquet(
+        f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_dpo.parquet"
     )
 
 
