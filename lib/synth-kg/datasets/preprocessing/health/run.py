@@ -6,6 +6,7 @@ import pandas as pd
 from datasets import load_dataset
 from quickumls import QuickUMLS
 from tqdm import tqdm
+from transformers import AutoModelForCausalLM
 from vllm import LLM, SamplingParams
 
 SAMPLE_SIZE = 1500
@@ -116,8 +117,10 @@ def generate_public_seed(
         temperature=TEMPERATURE,
         max_tokens=MAX_TOKENS,
     )
+    hf_model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
+    hf_model.save_pretrained("model/alpacare")
     llm = LLM(
-        model=MODEL_NAME,
+        model="model/alpacare",
         tensor_parallel_size=GPUS,
     )
     for prompt in tqdm(df["instruction"], desc="Generating responses"):
