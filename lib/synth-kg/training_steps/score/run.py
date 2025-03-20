@@ -29,6 +29,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--wandb_run_id", type=str, help="Optional wandb run ID to resume a run")
 
+    parser.add_argument("--evaluator_path", type=str, required=True)
+    parser.add_argument("--private_dataset", type=str, required=True)
+    parser.add_argument("--public_dataset", type=str, required=True)
+    parser.add_argument("--output_path", type=str, required=True)
+    parser.add_argument(
+        "--n", type=int, required=True, help="Number of text columns in public dataset"
+    )
+    args = parser.parse_args()
+
     # Initialize wandb
     wandb.init(
         project="your_project_name",
