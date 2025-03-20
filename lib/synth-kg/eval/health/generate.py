@@ -11,6 +11,7 @@ def parse_arguments():
         "--output_path", type=str, required=True, help="Path to save the output parquet file"
     )
     parser.add_argument("--model", type=str, required=True, help="Name or path of the model to use")
+    parser.add_argument("--tp", type=int, default=1, help="Number of GPUs to use for inference")
     return parser.parse_args()
 
 
@@ -29,7 +30,7 @@ def main():
     prompts = df["prompt"]
 
     # Initialize the LLM with your chosen model
-    llm = LLM(model=args.model)
+    llm = LLM(model=args.model, tensor_parallel_size=args.tp)
 
     sampling_params = SamplingParams(
         temperature=0.7,

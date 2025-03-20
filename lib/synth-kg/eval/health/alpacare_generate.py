@@ -3,6 +3,7 @@ import os
 
 import pandas as pd
 from generate import generate_response
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from vllm import LLM, SamplingParams
 
 
@@ -14,18 +15,15 @@ def parse_arguments():
     parser.add_argument(
         "--dataset", type=str, required=True, help="Path to input dataset parquet file"
     )
-    parser.add_argument(
-        "--seed-dataset", type=str, required=True, help="Path to seed dataset parquet file"
-    )
+    parser.add_argument("--tp", type=int, required=True, help="Number of GPUs")
     return parser.parse_args()
 
 
 def main():
     args = parse_arguments()
     df = pd.read_parquet(args.dataset)
-    seed_df = pd.read_parquet(args.seed_dataset)
     # Extract the specific column
-    prompts = df["response"].tolist() + seed_df["response"].tolist()
+    prompts = df["response"].tolist()
     instructions = [
         (
             f"Human: If you are a doctor, please answer the medical questions based "
@@ -46,7 +44,14 @@ def main():
     ]
 
     # Initialize the LLM with your chosen model
-    llm = LLM(model="xz97/AlpaCare-llama2-13b")
+    hf_model = AutoModelForCausalLM.from_pretrained("xz97/AlpaCare-llama2-13b")
+    hf_tokenizer = AutoTokenizer.from_pretrained("xz97/AlpaCare-llama2-13b")
+    hf_model.save_pretrained("model/alpacare")
+    hf_tokenizer.save_pretrained("model/alpacare")
+    llm = LLM(
+        model="./model/alpacare",
+        tensor_parallel_size=args.tp,
+    )
 
     sampling_params = SamplingParams(
         temperature=0.7,
