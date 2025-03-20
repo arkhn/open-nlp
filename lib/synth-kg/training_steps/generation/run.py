@@ -22,10 +22,16 @@ def parse_arguments():
         help="Number of different sequences to generate per prompt",
     )
     parser.add_argument(
-        "--gpus",
+        "--tp",
         type=int,
         default=1,
         help="Number of GPUs to use for inference",
+    )
+    parser.add_argument(
+        "--pp",
+        type=int,
+        default=1,
+        help="Number of node to use for inference",
     )
     return parser.parse_args()
 
@@ -47,7 +53,6 @@ def generate_responses(model, prompts, num_sequences):
             seed=random.randint(0, 2**32 - 1),
             stop=["\n\n"],
             n=1,
-            best_of=2,
         )
         modified_prompt = prompts  # or apply a function that randomly perturbs the prompt
         response = model.generate(modified_prompt, sampling_params=sampling_params)
@@ -67,7 +72,8 @@ def main():
     # Initialize the LLM with your chosen model
     llm = LLM(
         model=args.model,
-        tensor_parallel_size=args.gpus,
+        tensor_parallel_size=args.tp,
+        pipeline_parallel_size=args.pp,
     )
     # Generate multiple responses per prompt
     responses = generate_responses(llm, prompts, num_sequences=args.num_sequences)
