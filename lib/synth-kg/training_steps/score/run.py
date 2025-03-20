@@ -3,6 +3,7 @@ import argparse
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.util import cos_sim
+import wandb  # Add this import
 
 
 def load_datasets(private_dataset_path: str, public_dataset_path: str):
@@ -25,7 +26,8 @@ def compute_similarities(model, texts1, texts2):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    # Initialize wandb
+    wandb.init(project="your_project_name", entity="your_entity_name")  # Replace with your project and entity names
     parser.add_argument("--evaluator_path", type=str, required=True)
     parser.add_argument("--private_dataset", type=str, required=True)
     parser.add_argument("--public_dataset", type=str, required=True)
@@ -45,13 +47,21 @@ def main():
         )
         public_dataset[f"similarity_score_{i}"] = scores
 
-    public_dataset.to_parquet(
-        f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_scored.parquet"
-    )
+    scored_parquet_path = f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_scored.parquet"
+    public_dataset.to_parquet(scored_parquet_path)
+
+    # Log the scored parquet file to wandb
+    wandb.save(scored_parquet_path)
     # Calculate and print score statistics
     score_columns = [f"similarity_score_{i}" for i in range(1, args.n + 1)]
     all_scores = public_dataset[score_columns].values.flatten()
-    print("Score Statistics:")
+    # Log score statistics to wandb
+    wandb.log({
+        "mean_score": mean_score,
+        "max_score": max_score,
+        "min_score": min_score,
+        "median_score": median_score
+    })
     print(f"Mean: {all_scores.mean():.4f}")
     print(f"Max: {all_scores.max():.4f}")
     print(f"Min: {all_scores.min():.4f}")
@@ -86,15 +96,19 @@ def main():
     eval_dataset["instruction"] = final_dataset["prompt"]
     eval_dataset["response"] = final_dataset["chosen"]
 
-    eval_dataset.to_parquet(
-        f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_eval.parquet"
-    )
+    eval_parquet_path = f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_eval.parquet"
+    eval_dataset.to_parquet(eval_parquet_path)
+
+    # Log the evaluation parquet file to wandb
+    wandb.save(eval_parquet_path)
 
     final_dataset = final_dataset[final_dataset["chosen"].apply(lambda x: len(x.split()) >= 20)]
     final_dataset = final_dataset.sort_values(by="chosen_score", ascending=False)
-    final_dataset.copy().head(1000).to_parquet(
-        f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_dpo.parquet"
-    )
+    dpo_parquet_path = f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_dpo.parquet"
+    final_dataset.copy().head(1000).to_parquet(dpo_parquet_path)
+
+    # Log the DPO parquet file to wandb
+    wandb.save(dpo_parquet_path)
 
 
 if __name__ == "__main__":
