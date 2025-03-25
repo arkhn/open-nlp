@@ -3,7 +3,7 @@ import peft
 import torch
 import wandb
 from datasets import Dataset
-from omegaconf import ListConfig
+from omegaconf import ListConfig, OmegaConf
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import DPOTrainer
@@ -24,6 +24,13 @@ def main(cfg):
     dpo_config = hydra.utils.instantiate(cfg.dpo_config)
     peft_config = hydra.utils.instantiate(cfg.peft_config)
     dpo_config.group_by_length = False
+
+    wandb.config.update(
+        OmegaConf.to_container(
+            cfg,
+        ),
+        allow_val_change=True,
+    )
 
     torch_dtype = (
         model_config.torch_dtype

@@ -19,7 +19,7 @@ for model in "${refer_model_name[@]}"; do
         --engine "gpt-3.5-turbo" \
         --reference_first \
         --task_name "${task_name}" \
-        --batch_dir $batch_dir/gpt_results/ \
+        --batch_dir "$batch_dir"/gpt_results/ \
         --max_test_number "$max_test_number"
 
     python eval/health/gpt_eval.py \
@@ -29,13 +29,14 @@ for model in "${refer_model_name[@]}"; do
         --refer_model_name "${model}" \
         --engine "gpt-3.5-turbo" \
         --task_name "${task_name}" \
-        --batch_dir $batch_dir/gpt_results/ \
+        --batch_dir "$batch_dir"/gpt_results/ \
         --max_test_number "$max_test_number"
 
     python eval/health/evaluation.py \
         --compared_model "$1" \
-        --data_path $batch_dir/gpt_results/ \
+        --data_path "$batch_dir"/gpt_results/ \
         --engine "gpt-3.5-turbo" \
         --refer_model "${model}" \
-        --max_test_number "$max_test_number"
+        --max_test_number "$max_test_number" \
+        --wdb_id "$1"
 done

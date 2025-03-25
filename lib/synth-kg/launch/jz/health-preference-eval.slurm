@@ -1,15 +1,38 @@
 #!/bin/bash
-#SBATCH --job-name=dl_resources
+#SBATCH --job-name=preference-eval
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=10
 #SBATCH --output=log/slurm-%j.out
 #SBATCH --time=01:00:00
 #SBATCH --error=log/slurm-%j.err
-#SBATCH --partition=prepost
+#SBATCH --partition=compil
 #SBATCH --account=lch@h100
 
 module purge
 module load miniforge/24.9.0
 conda activate synth-kg
 
-bash ./eval/health/evaluation.sh "$(MODEL_ID)" "datasets/health/eval/model_outputs/model=$(MODEL_ID)_size=$(SIZE)_step=$(STEP)/evaluation.parquet"
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+  case $1 in
+  --MODEL_ID)
+    MODEL_ID="$2"
+    shift
+    ;;
+  --SIZE)
+    SIZE="$2"
+    shift
+    ;;
+  --STEP)
+    STEP="$2"
+    shift
+    ;;
+  *)
+    echo "Unknown parameter passed: $1"
+    exit 1
+    ;;
+  esac
+  shift
+done
+
+bash ./eval/health/evaluation.sh "$MODEL_ID" datasets/health/eval/model_outputs/model="$MODEL_ID"_size="$SIZE"_step="$STEP"/evaluation.parquet

@@ -9,6 +9,8 @@ N := 4
 PRIVATE_PATH := to/private/path
 SIZE := 1500
 STEP := sft
+WDB_ID := 12345
+JOB_ID := 0
 
 .PHONY: \
 	jz-download-resources \

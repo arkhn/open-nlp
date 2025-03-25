@@ -4,6 +4,7 @@ import os
 import re
 
 import numpy as np
+import wandb
 
 
 def parse_args():
@@ -11,6 +12,7 @@ def parse_args():
         description="Finetune a transformers model on a summarization task"
     )
 
+    parser.add_argument("--wdb_id", type=str, help="Optional wandb run ID to resume a run")
     parser.add_argument(
         "--task",
         type=str,
@@ -162,4 +164,9 @@ if __name__ == "__main__":
     eval_score = chat_gpt_eval_model_win(
         args.data_path, args.compared_model, args.refer_model, args.engine, args
     )
-    print(f"{args.compared_model} vs. {args.refer_model} = {eval_score}")
+    run = wandb.init(
+        project="synth-kg",
+        id=args.wdb_id,
+        resume="allow",
+    )
+    run.log({f"preference/{args.refer_model}": eval_score})

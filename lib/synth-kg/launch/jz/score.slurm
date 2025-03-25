@@ -38,6 +38,10 @@ while [[ "$#" -gt 0 ]]; do
     OUTPUT_PATH="$2"
     shift
     ;;
+  --WDB_ID)
+    WDB_ID="$2"
+    shift
+    ;;
   *)
     echo "Unknown parameter passed: $1"
     exit 1
@@ -60,4 +64,5 @@ python training_steps/score/run.py \
   --public_dataset "$OUTPUT_PATH" \
   --private_dataset "$PRIVATE_DATASET" \
   --output_path "$OUTPUT_PATH" \
-  --n "$N"
+  --n "$N" \
+  --wdb_id "$WDB_ID"
