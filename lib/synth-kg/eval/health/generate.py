@@ -34,6 +34,7 @@ def main():
 
     sampling_params = SamplingParams(
         temperature=0.7,
+        max_tokens=2048,
     )
 
     # Generate response per prompt

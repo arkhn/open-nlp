@@ -1,8 +1,10 @@
 import argparse
+
 import pandas as pd
+import wandb
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.util import cos_sim
-import wandb
+
 
 def load_datasets(private_dataset_path: str, public_dataset_path: str):
     private_dataset = pd.read_parquet(private_dataset_path)
@@ -24,15 +26,14 @@ def compute_similarities(model, texts1, texts2):
 
 
 def initialize_wandb(args):
-    wandb.init(
-        project="your_project_name",
-        entity="your_entity_name",
-        id=args.wandb_run_id,
-        resume="allow" if args.wandb_run_id else None,
+    return wandb.init(
+        project="synth-kg",
+        id=args.wdb_id,
+        resume="allow",
     )
 
 
-def calculate_statistics(public_dataset, n):
+def calculate_statistics(public_dataset, n, run):
     score_columns = [f"similarity_score_{i}" for i in range(1, n + 1)]
     all_scores = public_dataset[score_columns].values.flatten()
     mean_score = all_scores.mean()
@@ -40,7 +41,7 @@ def calculate_statistics(public_dataset, n):
     min_score = all_scores.min()
     median_score = pd.Series(all_scores).median()
 
-    wandb.log(
+    run.log(
         {
             "mean_score": mean_score,
             "max_score": max_score,
@@ -101,7 +102,7 @@ def save_datasets(final_dataset, args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--wandb_run_id", type=str, help="Optional wandb run ID to resume a run")
+    parser.add_argument("--wdb_id", type=str, help="Optional wandb run ID to resume a run")
     parser.add_argument("--evaluator_path", type=str, required=True)
     parser.add_argument("--private_dataset", type=str, required=True)
     parser.add_argument("--public_dataset", type=str, required=True)
@@ -111,7 +112,7 @@ def main():
     )
     args = parser.parse_args()
 
-    initialize_wandb(args)
+    run = initialize_wandb(args)
 
     model = SentenceTransformer(args.evaluator_path)
     private_dataset, public_dataset = load_datasets(args.private_dataset, args.public_dataset)
@@ -129,10 +130,13 @@ def main():
     )
     public_dataset.to_parquet(scored_parquet_path)
 
-    scored_table = wandb.Table(dataframe=public_dataset)
+    scored_table = wandb.Table(dataframe=public_dataset.head(3000))
     wandb.log({"scored_table": scored_table})
+    artifact = wandb.Artifact(name="scored_table", type="dataset")
+    artifact.add(scored_table, "scored_table")
+    wandb.log_artifact(artifact)
 
-    calculate_statistics(public_dataset, args.n)
+    calculate_statistics(public_dataset, args.n, run)
 
     best_response_idx, worst_response_idx = get_best_worst_indices(public_dataset, args.n)
 

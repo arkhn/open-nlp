@@ -1,10 +1,11 @@
 import logging
 
 import hydra
+import pandas as pd
 import torch
 import wandb
 from datasets import Dataset
-from omegaconf import DictConfig, ListConfig
+from omegaconf import DictConfig, ListConfig, OmegaConf
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import SFTTrainer, get_peft_config
 
@@ -28,8 +29,15 @@ def main(cfg: DictConfig):
     """
     wandb.init(project="synth-kg", tags=cfg.tags)
     model_config = hydra.utils.instantiate(cfg.model_config)
+
     sft_config = hydra.utils.instantiate(cfg.sft_config)
-    cfg.sft_config.output_dir = f"./lora/sft/{wandb.run.id}"
+    cfg.sft_config.output_dir = f"./lora/eval/{wandb.run.id}"
+    wandb.config.update(
+        OmegaConf.to_container(
+            cfg,
+        ),
+        allow_val_change=True,
+    )
     torch_dtype = (
         model_config.torch_dtype
         if model_config.torch_dtype in ["auto", None]
@@ -45,7 +53,7 @@ def main(cfg: DictConfig):
         else model_config.lora_target_modules
     )
     model = AutoModelForCausalLM.from_pretrained(model_config.model_name_or_path, **model_kwargs)
-    dataset = Dataset.from_parquet(cfg.dataset)
+    dataset = Dataset.from_pandas(pd.read_parquet(cfg.dataset).head(1000))
     dataset = dataset.map(lambda x: {"text": x["instruction"] + x["response"]})
     trainer = SFTTrainer(
         model=model,
