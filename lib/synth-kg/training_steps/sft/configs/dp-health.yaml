@@ -5,7 +5,6 @@ training_arguments:
   _target_: dp_transformers.TrainingArguments
   per_device_train_batch_size: 2
   gradient_accumulation_steps: 4
-  learning_rate: 3e-4
   logging_steps: 10
   save_safetensors: false
   remove_unused_columns: false
@@ -28,4 +27,5 @@ private_arguments:
   per_sample_max_grad_norm: 1
 
 dataset: datasets/health/dp_size=60000/private_seed.parquet
+dataset_size: 500
 tags: [dp-sft, health]

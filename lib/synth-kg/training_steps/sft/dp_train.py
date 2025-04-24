@@ -2,6 +2,8 @@ import logging
 
 import dp_transformers
 import hydra
+import omegaconf
+import pandas as pd
 import torch
 import wandb
 from datasets import Dataset
@@ -31,7 +33,12 @@ def main(cfg: DictConfig):
 
     model_config = hydra.utils.instantiate(cfg.model_config)
     cfg.training_arguments.output_dir = f"lora/dp-sft/{wandb.run.id}"
-
+    wandb.config.update(
+        omegaconf.OmegaConf.to_container(
+            cfg,
+        ),
+        allow_val_change=True,
+    )
     torch_dtype = (
         model_config.torch_dtype
         if model_config.torch_dtype in ["auto", None]
@@ -49,7 +56,7 @@ def main(cfg: DictConfig):
         else peft_config.target_modules
     )
     model = get_peft_model(model=model, peft_config=peft_config)
-    dataset = Dataset.from_parquet(cfg.dataset)
+    dataset = Dataset.from_pandas(pd.read_parquet(cfg.dataset).head(cfg.dataset_size))
     dataset = dataset.map(lambda x: {"text": x["instruction"] + x["response"]})
 
     training_args = hydra.utils.instantiate(cfg.training_arguments)
@@ -63,12 +70,12 @@ def main(cfg: DictConfig):
             padding="max_length",
             truncation=True,
             max_length=512,
+            add_special_tokens=True,
         ),
         batched=True,
         num_proc=8,
         desc="tokenizing dataset",
     )
-    print("dataset len:", len(tokenized_dataset))
     tokenized_dataset = tokenized_dataset.select_columns(["input_ids", "attention_mask"])
     data_collator = dp_transformers.DataCollatorForPrivateCausalLanguageModeling(tokenizer)
     trainer = dp_transformers.dp_utils.OpacusDPTrainer(
