@@ -4,6 +4,7 @@ import pandas as pd
 import wandb
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.util import cos_sim
+from transformers import AutoTokenizer
 
 
 def load_datasets(private_dataset_path: str, public_dataset_path: str):
@@ -19,10 +20,54 @@ def preprocess_text(text):
 
 
 def compute_similarities(model, texts1, texts2):
+    # Standard global approach
     embeddings1 = model.encode(texts1, convert_to_tensor=True)
     embeddings2 = model.encode(texts2, convert_to_tensor=True)
-    scores = cos_sim(embeddings1, embeddings2).diagonal().tolist()
-    return scores
+    global_scores = cos_sim(embeddings1, embeddings2).diagonal().tolist()
+
+    # Initialize tokenizer using the same model
+    tokenizer = AutoTokenizer.from_pretrained(model._first_module().auto_model.config._name_or_path)
+
+    # Sliding window approach for longer texts
+    window_size = 128
+    window_scores = []
+
+    for i, (text1, text2) in enumerate(zip(texts1, texts2)):
+        # Always apply sliding window regardless of text length
+        if isinstance(text2, str):
+            # Tokenize the text
+            tokens = tokenizer.encode(text2, add_special_tokens=False)
+
+            # Create chunks with sliding window
+            chunks = []
+            for j in range(0, max(1, len(tokens) - window_size + 1), window_size // 2):
+                end_idx = min(j + window_size, len(tokens))
+                chunk_tokens = tokens[j:end_idx]
+                chunk_text = tokenizer.decode(chunk_tokens)
+                chunks.append(chunk_text)
+
+            if chunks:
+                # Get embeddings for each chunk
+                chunk_embeddings = model.encode(chunks, convert_to_tensor=True)
+                text1_embedding = embeddings1[i].unsqueeze(0)
+
+                # Calculate similarity for each chunk
+                chunk_scores = cos_sim(text1_embedding, chunk_embeddings).squeeze(0).tolist()
+
+                # Combine mean + min for better sensitivity to bad chunks
+                min_score = min(chunk_scores)
+                window_scores.append(min_score)
+            else:
+                window_scores.append(global_scores[i])
+        else:
+            window_scores.append(global_scores[i])
+
+    # Combine both approaches
+    final_scores = [
+        (global_score + window_score) / 2
+        for global_score, window_score in zip(global_scores, window_scores)
+    ]
+    return final_scores
 
 
 def initialize_wandb(args):
@@ -78,6 +123,10 @@ def create_final_dataset(public_dataset, best_response_idx, worst_response_idx):
     final_dataset["chosen_score"] = public_dataset.apply(
         lambda row: row[f"similarity_score_{best_response_idx[row.name]}"], axis=1
     )
+
+    final_dataset["rejected_score"] = public_dataset.apply(
+        lambda row: row[f"similarity_score_{worst_response_idx[row.name]}"], axis=1
+    )
     final_dataset["rejected"] = public_dataset.apply(
         lambda row: row[f"response_{worst_response_idx[row.name]}"], axis=1
     )
@@ -93,9 +142,12 @@ def save_datasets(final_dataset, args):
     eval_parquet_path = (
         f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_eval.parquet"
     )
-    eval_dataset.head(20000).to_parquet(eval_parquet_path)
+    eval_dataset.to_parquet(eval_parquet_path)
 
-    final_dataset = final_dataset[final_dataset["chosen"].apply(lambda x: len(x.split()) >= 20)]
+    final_dataset = final_dataset[final_dataset["chosen"].str.len() > 100]
+    final_dataset = final_dataset[final_dataset["rejected"].str.len() > 100]
+    final_dataset["std"] = final_dataset["chosen_score"] - final_dataset["rejected_score"]
+
     final_dataset = final_dataset.sort_values(by="chosen_score", ascending=False)
     dpo_parquet_path = (
         f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_dpo.parquet"
