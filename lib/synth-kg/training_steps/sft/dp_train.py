@@ -2,12 +2,11 @@ import logging
 
 import dp_transformers
 import hydra
-import omegaconf
 import pandas as pd
 import torch
 import wandb
 from datasets import Dataset
-from omegaconf import DictConfig, ListConfig
+from omegaconf import DictConfig, ListConfig, OmegaConf
 from peft import get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -29,16 +28,23 @@ def main(cfg: DictConfig):
         This function uses the classic Trainer from Hugging Face for supervised fine-tuning.
         It also integrates with Weights & Biases (wandb) for experiment tracking.
     """
-    wandb.init(project="synth-kg", tags=cfg.tags)
+    run_id = wandb.util.generate_id()
+    wandb_config = OmegaConf.to_container(
+        cfg,
+        resolve=True,
+        throw_on_missing=True,
+    )
+    wandb.init(
+        project="synth-kg",
+        tags=cfg.tags,
+        config=wandb_config,
+        job_type="training",
+        group=f"{run_id}",
+        id=run_id,
+    )
 
     model_config = hydra.utils.instantiate(cfg.model_config)
     cfg.training_arguments.output_dir = f"lora/dp-sft/{wandb.run.id}"
-    wandb.config.update(
-        omegaconf.OmegaConf.to_container(
-            cfg,
-        ),
-        allow_val_change=True,
-    )
     torch_dtype = (
         model_config.torch_dtype
         if model_config.torch_dtype in ["auto", None]
