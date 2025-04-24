@@ -51,7 +51,9 @@ def generate_responses(model, prompts, num_sequences):
             top_k=top_k,
             max_tokens=2048,
             seed=random.randint(0, 2**32 - 1),
-            stop=["\n\n"],
+            stop=["</s>"],
+            presence_penalty=1.0,
+            frequency_penalty=1.2,
             n=1,
         )
         modified_prompt = prompts  # or apply a function that randomly perturbs the prompt
