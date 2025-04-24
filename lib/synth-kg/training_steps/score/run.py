@@ -28,8 +28,11 @@ def compute_similarities(model, texts1, texts2):
 def initialize_wandb(args):
     return wandb.init(
         project="synth-kg",
-        id=args.wdb_id,
-        resume="allow",
+        name=f"eval-{args.wdb_id}",
+        group=args.wdb_id,  # Pour le relier visuellement au run d'entraînement
+        job_type="evaluation",
+        config={},  # vide = pas d’écrasement
+        reinit=True,
     )
 
 
