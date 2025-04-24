@@ -166,7 +166,11 @@ if __name__ == "__main__":
     )
     run = wandb.init(
         project="synth-kg",
-        id=args.wdb_id,
-        resume="allow",
+        name=f"eval-{args.wdb_id}",
+        group=args.wdb_id,  # Pour le relier visuellement au run d'entraînement
+        job_type="evaluation",
+        config={},  # vide = pas d’écrasement
+        reinit=True,
     )
+    print({f"preference/{args.refer_model}": eval_score})
     run.log({f"preference/{args.refer_model}": eval_score})
