@@ -327,11 +327,7 @@ if __name__ == "__main__":
                     for j, message in enumerate(message_list):
                         data = {
                             "prompt": message[1]["content"],
-                            "response": (
-                                batch_predictions[j].choices[0].message.content
-                                if batch_predictions[j]
-                                else "a"
-                            ),
+                            "response": batch_predictions[j].choices[0].message.content,
                         }
                         batch_results.append(data)
 
