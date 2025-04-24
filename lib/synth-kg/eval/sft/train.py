@@ -53,12 +53,26 @@ def main(cfg: DictConfig):
         else model_config.lora_target_modules
     )
     model = AutoModelForCausalLM.from_pretrained(model_config.model_name_or_path, **model_kwargs)
+    tokenizer = AutoTokenizer.from_pretrained(model_config.model_name_or_path)
+
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    def format_and_tokenize(example):
+        return tokenizer(
+            example["instruction"] + example["response"],
+            padding="max_length",
+            truncation=True,
+            max_length=cfg.sft_config.max_seq_length,
+        )
+
     dataset = Dataset.from_pandas(pd.read_parquet(cfg.dataset).head(1000))
-    dataset = dataset.map(lambda x: {"text": x["instruction"] + x["response"]})
+    dataset = dataset.map(format_and_tokenize, batched=False)
     trainer = SFTTrainer(
         model=model,
         args=sft_config,
         train_dataset=dataset,
+        tokenizer=tokenizer,
         peft_config=get_peft_config(model_config),
     )
     trainer.train()

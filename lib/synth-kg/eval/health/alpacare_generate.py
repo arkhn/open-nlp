@@ -28,20 +28,12 @@ def main():
         (
             f"Human: If you are a doctor, please answer the medical questions based "
             f"on the patient's description.\n\n"
-            f"Patient: {prompt[:1500]}\n"
-            f"\n\nAssistant:"
+            f"{prompt[:1500]}\n"
+            f"Assistant:"
         )
         for prompt in prompts
     ]
-    prompts = [
-        (
-            f"If you are a doctor, please answer the medical questions "
-            f"based on the patient's description.\n "
-            f"Patient: {prompt[:1500]}\n"
-            f"ChatDoctor:"
-        )
-        for prompt in prompts
-    ]
+    prompts = [(f"Patient: {prompt[:1500]}\n" f"ChatDoctor:") for prompt in prompts]
 
     # Initialize the LLM with your chosen model
     hf_model = AutoModelForCausalLM.from_pretrained("xz97/AlpaCare-llama2-13b")
@@ -57,8 +49,8 @@ def main():
         temperature=0.7,
         max_tokens=2048,
         truncate_prompt_tokens=1024,
+        stop=["Human:", "Patient:", "User:", "ChatDoctor", "Assistant", "Answer", "</s>"],
     )
-
     # Generate response per prompt
     responses = generate_response(llm, prompts, sampling_params)
 

@@ -34,7 +34,8 @@ def main():
 
     sampling_params = SamplingParams(
         temperature=0.7,
-        max_tokens=2048,
+        max_tokens=512,
+        stop=["Human:", "Patient:", "User:", "ChatDoctor", "Assistant", "Answer", "</s>"],
     )
 
     # Generate response per prompt
