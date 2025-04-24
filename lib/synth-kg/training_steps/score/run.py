@@ -74,9 +74,12 @@ def initialize_wandb(args):
     return wandb.init(
         project="synth-kg",
         name=f"eval-{args.wdb_id}",
-        group=args.wdb_id,  # Pour le relier visuellement au run d'entraînement
+        group=args.wdb_id,
         job_type="evaluation",
-        config={},  # vide = pas d’écrasement
+        config={
+            "size/dpo": args.dpo_size,
+            "size/score": args.score_size,
+        },
         reinit=True,
     )
 
@@ -91,10 +94,10 @@ def calculate_statistics(public_dataset, n, run):
 
     run.log(
         {
-            "mean_score": mean_score,
-            "max_score": max_score,
-            "min_score": min_score,
-            "median_score": median_score,
+            "score/mean": mean_score,
+            "score/max": max_score,
+            "score/min": min_score,
+            "score/median": median_score,
         }
     )
     print(f"Mean: {mean_score:.4f}")
@@ -152,7 +155,7 @@ def save_datasets(final_dataset, args):
     dpo_parquet_path = (
         f"{args.output_path}/model={args.evaluator_path.replace('/','-')}_dpo.parquet"
     )
-    final_dataset.copy().head(1000).to_parquet(dpo_parquet_path)
+    final_dataset.copy().head(args.dpo_size).to_parquet(dpo_parquet_path)
 
 
 def main():
@@ -162,6 +165,8 @@ def main():
     parser.add_argument("--private_dataset", type=str, required=True)
     parser.add_argument("--public_dataset", type=str, required=True)
     parser.add_argument("--output_path", type=str, required=True)
+    parser.add_argument("--dpo_size", type=int, required=False, default=1000)
+    parser.add_argument("--score_size", type=int, required=False, default=3000)
     parser.add_argument(
         "--n", type=int, required=True, help="Number of text columns in public dataset"
     )
@@ -185,7 +190,7 @@ def main():
     )
     public_dataset.to_parquet(scored_parquet_path)
 
-    scored_table = wandb.Table(dataframe=public_dataset.head(3000))
+    scored_table = wandb.Table(dataframe=public_dataset.head(args.score_size))
     wandb.log({"scored_table": scored_table})
     artifact = wandb.Artifact(name="scored_table", type="dataset")
     artifact.add(scored_table, "scored_table")

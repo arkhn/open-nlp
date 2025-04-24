@@ -18,19 +18,24 @@ def main(cfg):
         cfg: The configuration for the training.
     """
 
-    print(cfg)
-    wandb.init(project="synth-kg", tags=cfg.tags)
+    run_id = wandb.util.generate_id()
+    wandb_config = OmegaConf.to_container(
+        cfg,
+        resolve=True,
+        throw_on_missing=True,
+    )
+    wandb.init(
+        project="synth-kg",
+        tags=cfg.tags,
+        config=wandb_config,
+        job_type="training",
+        group=f"{run_id}",
+        id=run_id,
+    )
     model_config = hydra.utils.instantiate(cfg.model_config)
     dpo_config = hydra.utils.instantiate(cfg.dpo_config)
     peft_config = hydra.utils.instantiate(cfg.peft_config)
     dpo_config.group_by_length = False
-
-    wandb.config.update(
-        OmegaConf.to_container(
-            cfg,
-        ),
-        allow_val_change=True,
-    )
 
     torch_dtype = (
         model_config.torch_dtype
