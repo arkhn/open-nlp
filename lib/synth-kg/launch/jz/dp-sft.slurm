@@ -10,6 +10,8 @@
 #SBATCH --account=oha@a100
 #SBATCH -C a100
 #SBATCH --qos=qos_gpu_a100-dev
+#SBATCH --mail-type=END
+#SBATCH --mail-user=simon.meoni@inria.fr
 
 # Initialize variables with default values
 HYDRA_CONFIG="default.yaml"
@@ -17,8 +19,14 @@ HYDRA_CONFIG="default.yaml"
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
   case $1 in
-    --HYDRA_CONFIG) HYDRA_CONFIG="$2"; shift ;;
-    *) echo "Unknown parameter passed: $1"; exit 1 ;;
+  --HYDRA_CONFIG)
+    HYDRA_CONFIG="$2"
+    shift
+    ;;
+  *)
+    echo "Unknown parameter passed: $1"
+    exit 1
+    ;;
   esac
   shift
 done

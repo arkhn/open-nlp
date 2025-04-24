@@ -7,7 +7,7 @@
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=40
 #SBATCH --output=log/slurm-%j.out
-#SBATCH --time=03:00:00
+#SBATCH --time=05:00:00
 #SBATCH --error=log/slurm-%j.err
 #SBATCH --qos=qos_gpu_h100-t3
 #SBATCH --mail-type=END

@@ -7,6 +7,8 @@
 #SBATCH --error=log/slurm-%j.err
 #SBATCH --partition=compil
 #SBATCH --account=lch@h100
+#SBATCH --mail-type=END
+#SBATCH --mail-user=simon.meoni@inria.fr
 
 module purge
 module load miniforge/24.9.0

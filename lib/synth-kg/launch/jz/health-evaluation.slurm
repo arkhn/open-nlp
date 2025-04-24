@@ -47,6 +47,6 @@ conda activate synth-kg
 
 module load cuda
 
-# python eval/health/alpacare_generate.py --output_path "$OUTPUT_PATH" --dataset "$DOWNSTREAM_DS_PATH" --tp "$SLURM_GPUS_ON_NODE"
+python eval/health/alpacare_generate.py --output_path "$OUTPUT_PATH" --dataset "$DOWNSTREAM_DS_PATH" --tp "$SLURM_GPUS_ON_NODE"
 python eval/sft/train.py --config-name="$HYDRA_CONFIG" dataset=./evaluation_alpacare_sft.parquet
 python eval/health/generate.py --model ./sft/merged/ --output_path "$OUTPUT_PATH" --tp "$SLURM_GPUS_ON_NODE"
