@@ -1,5 +1,0 @@
-defaults:
-  - default.yaml
-
-dataset: datasets/finance/model=llama-3.3-70b-versatile_t=0.7_size=15/public_seed.parquet
-tags: [test, finance]

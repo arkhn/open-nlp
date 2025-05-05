@@ -1,6 +1,0 @@
-defaults:
-  - default.yaml
-
-peft_adapters_paths: [/lora/sft/w9rn7vkp]
-dataset: datasets/finance/model=w9rn7vkp_size=15_step=sft/model=sentence-transformers-all-mpnet-base-v2_dpo.parquet
-tags: [test, finance]
