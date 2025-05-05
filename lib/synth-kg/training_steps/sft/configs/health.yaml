@@ -3,7 +3,9 @@ defaults:
 
 sft_config:
   num_train_epochs: 100
-  max_steps: 2500
+  #TODO test
+  max_steps: 2
 
 dataset: datasets/health/model=xz97-AlpaCare-llama2-13b_t=0.7_size=60000/public_seed.parquet
 tags: [sft, health]
+adapters_paths: ???

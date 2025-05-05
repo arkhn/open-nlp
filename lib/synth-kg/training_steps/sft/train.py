@@ -4,7 +4,7 @@ import hydra
 import torch
 import wandb
 from datasets import Dataset
-from omegaconf import DictConfig, ListConfig
+from omegaconf import DictConfig, ListConfig, OmegaConf
 from transformers import AutoModelForCausalLM
 from trl import SFTTrainer, get_peft_config
 
@@ -26,7 +26,18 @@ def main(cfg: DictConfig):
         This function uses the SFTTrainer from the TRL library for supervised fine-tuning.
         It also integrates with Weights & Biases (wandb) for experiment tracking.
     """
-    wandb.init(project="synth-kg", tags=cfg.tags)
+    wandb_config = OmegaConf.to_container(
+        cfg,
+        resolve=True,
+        throw_on_missing=True,
+    )
+    wandb.init(
+        project="synth-kg",
+        tags=cfg.tags,
+        config=wandb_config,
+        job_type="training",
+        group=cfg.group_id,
+    )
     model_config = hydra.utils.instantiate(cfg.model_config)
     sft_config = hydra.utils.instantiate(cfg.sft_config)
     cfg.sft_config.output_dir = f"lora/sft/{wandb.run.id}"
