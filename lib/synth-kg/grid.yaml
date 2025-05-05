@@ -1,0 +1,29 @@
+# @package _global_
+defaults:
+  - _self_
+
+size: 60000
+step: dp-sft
+model_id: ovs3z1ey
+sts_model: FremyCompany/BioLORD-2023
+domain: health
+private_path: datasets/health/dp_size=60000/private.parquet
+
+sorting: "e"
+train_steps: "sft dpo-1"
+
+scripts:
+  dpo: launch/jz/dpo.slurm
+  sft: launch/jz/sft.slurm
+  kto: launch/jz/kto.slurm
+  generation: launch/jz/generation.slurm
+  score: launch/jz/score.slurm
+  filter: launch/jz/filter.slurm
+  eval_gen: launch/jz/health-evaluation.slurm
+  eval_preference: launch/jz/health-preference-eval.slurm
+
+hydra:
+  sweeper:
+    params:
+      sorting: e
+      train_steps: sft, sft dpo-1
