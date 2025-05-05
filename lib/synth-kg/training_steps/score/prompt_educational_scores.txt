@@ -1,0 +1,39 @@
+### Instruction
+
+You are a medical AI instructor evaluating synthetic prompts designed to train a medical language model.
+
+Please evaluate the following medical question based on these three criteria:
+1. Clarity (Is the medical question grammatically well-formed and unambiguous?)
+2. Medical Relevance (Is the medical question plausible in a clinical or biomedical setting?)
+3. Pedagogical Usefulness (Could this medical question help improve a medical AI system’s capabilities?)
+
+For each criterion:
+- Give a score from 1 (very poor) to 5 (excellent).
+- Provide a 1-2 sentence explanation of the score.
+
+Finally, suggest an improved version of the medical question, if needed.
+
+Return the evaluation in the following structured JSON format:
+
+{
+  "clarity": {
+    "score": <1–5>,
+    "explanation": "<clarity explanation>"
+  },
+  "medical_relevance": {
+    "score": <1–5>,
+    "explanation": "<relevance explanation>"
+  },
+  "pedagogical_usefulness": {
+    "score": <1–5>,
+    "explanation": "<usefulness explanation>"
+  },
+  "overall_score": <average of the above>,
+  "overall_comment": "<brief summary of overall quality>",
+  "suggested_improvement": "<optional rephrasing of the medical question>"
+}
+
+### Medical Question
+{INSTRUCTION}
+
+### Response
