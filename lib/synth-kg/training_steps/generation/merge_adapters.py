@@ -35,6 +35,7 @@ def merge_adapters(model_name, adapter_paths, output_path):
     model = AutoModelForCausalLM.from_pretrained(model_name)
 
     for adapter_path in adapter_paths:
+        print(f"merge: {adapter_path} ...")
         model = PeftModel.from_pretrained(model, adapter_path)
         model = model.merge_and_unload()
     AutoTokenizer.from_pretrained(model_name).save_pretrained(output_path)
