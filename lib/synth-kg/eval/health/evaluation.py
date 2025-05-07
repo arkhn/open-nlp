@@ -13,6 +13,8 @@ def parse_args():
     )
 
     parser.add_argument("--wdb_id", type=str, help="Optional wandb run ID to resume a run")
+    parser.add_argument("--group_id", type=str, help="Optional group ID to gather a run")
+    parser.add_argument("--suffix_run_name", type=str, help="Optional group ID to gather a run")
     parser.add_argument(
         "--task",
         type=str,
@@ -166,11 +168,12 @@ if __name__ == "__main__":
     )
     run = wandb.init(
         project="synth-kg",
-        name=f"eval-{args.wdb_id}",
-        group=args.wdb_id,  # Pour le relier visuellement au run d'entraînement
+        name=f"eval_{args.wdb_id}_{args.suffix_run_name}",
+        group=args.group_id,
         job_type="evaluation",
         config={},  # vide = pas d’écrasement
         reinit=True,
     )
+
     print({f"preference/{args.refer_model}": eval_score})
     run.log({f"preference/{args.refer_model}": eval_score})

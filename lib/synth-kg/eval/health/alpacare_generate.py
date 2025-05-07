@@ -1,5 +1,7 @@
 import argparse
 import os
+import shutil
+import uuid
 
 import pandas as pd
 from generate import generate_response
@@ -36,10 +38,12 @@ def main():
     prompts = [(f"Patient: {prompt[:1500]}\n" f"ChatDoctor:") for prompt in prompts]
 
     # Initialize the LLM with your chosen model
+
     hf_model = AutoModelForCausalLM.from_pretrained("xz97/AlpaCare-llama2-13b")
     hf_tokenizer = AutoTokenizer.from_pretrained("xz97/AlpaCare-llama2-13b")
-    hf_model.save_pretrained("model/alpacare")
-    hf_tokenizer.save_pretrained("model/alpacare")
+    alpacare_path = f"model/alpacare-{str(uuid.uuid4())[:7]}"
+    hf_model.save_pretrained(alpacare_path)
+    hf_tokenizer.save_pretrained(alpacare_path)
     llm = LLM(
         model="./model/alpacare",
         tensor_parallel_size=args.tp,
@@ -63,6 +67,7 @@ def main():
     output_file = os.path.join(args.output_path, "evaluation_alpacare_sft.parquet")
     df_output.to_parquet(output_file)
     df_output.to_parquet("./evaluation_alpacare_sft.parquet")
+    shutil.rmtree(alpacare_path)
 
 
 if __name__ == "__main__":
