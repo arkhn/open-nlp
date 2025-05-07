@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=sft
+#SBATCH --job-name=kto
 #SBATCH --nodes=1
 #SBATCH --partition=gpu_p6
 #SBATCH --account=lch@h100
@@ -40,4 +40,4 @@ module load arch/h100
 module load miniforge/24.9.0
 conda activate synth-kg
 eval set -- "$HYDRA_ARGS"
-python training_steps/sft/train.py --config-name="$HYDRA_CONFIG" "$@"
+python training_steps/kto/run.py --config-name="$HYDRA_CONFIG" "$@"

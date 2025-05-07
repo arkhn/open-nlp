@@ -7,7 +7,7 @@
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=40
 #SBATCH --output=log/slurm-%j.out
-#SBATCH --time=05:00:00
+#SBATCH --time=10:00:00
 #SBATCH --error=log/slurm-%j.err
 #SBATCH --qos=qos_gpu_h100-t3
 #SBATCH --mail-type=END
@@ -53,12 +53,15 @@ conda activate synth-kg
 
 module load cuda # Adjust to the appropriate CUDA version
 # Run your processing script
+MERGE_ID=$(printf "%06d" $((RANDOM % 1000000)))
+MERGE_OUTPUT_PATH=./lora/merge-${MERGE_ID}
 CUDA_VISIBLE_DEVICES=0 python training_steps/generation/merge_adapters.py \
   --model "$MODEL" \
-  --adapters "$ADAPTERS_PATHS"
+  --adapters "$ADAPTERS_PATHS" \
+  --output_path "$MERGE_OUTPUT_PATH"
 
 python training_steps/generation/run.py --dataset "$DATASET_PATH" \
-  --model "./lora/merged" \
+  --model "$MERGE_OUTPUT_PATH" \
   --output_path "$OUTPUT_PATH" \
   --tp "$SLURM_GPUS_ON_NODE" \
   --pp "$SLURM_NNODES"

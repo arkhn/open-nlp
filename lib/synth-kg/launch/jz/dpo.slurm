@@ -23,6 +23,10 @@ while [[ "$#" -gt 0 ]]; do
     HYDRA_CONFIG="$2"
     shift
     ;;
+  --HYDRA_ARGS)
+    HYDRA_ARGS="$2"
+    shift
+    ;;
   *)
     echo "Unknown parameter passed: $1"
     exit 1
@@ -35,6 +39,5 @@ module purge
 module load arch/h100
 module load miniforge/24.9.0
 conda activate synth-kg
-echo "**HYDRA CONFIG**"
-cat "training_steps/alignment/configs/$HYDRA_CONFIG.yaml"
-python training_steps/alignment/dpo.py --config-name="$HYDRA_CONFIG"
+eval set -- "$HYDRA_ARGS"
+python training_steps/alignment/dpo.py --config-name="$HYDRA_CONFIG" "$@"

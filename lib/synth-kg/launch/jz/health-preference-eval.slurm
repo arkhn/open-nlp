@@ -21,12 +21,20 @@ while [[ "$#" -gt 0 ]]; do
     MODEL_ID="$2"
     shift
     ;;
+  --GROUP_ID)
+    GROUP_ID="$2"
+    shift
+    ;;
   --SIZE)
     SIZE="$2"
     shift
     ;;
   --STEP)
     STEP="$2"
+    shift
+    ;;
+  --SUFFIX_RUN_NAME)
+    SUFFIX_RUN_NAME="$2"
     shift
     ;;
   *)
@@ -37,4 +45,4 @@ while [[ "$#" -gt 0 ]]; do
   shift
 done
 
-bash ./eval/health/evaluation.sh "$MODEL_ID" datasets/health/eval/model_outputs/model="$MODEL_ID"_size="$SIZE"_step="$STEP"/evaluation.parquet
+bash ./eval/health/evaluation.sh "$MODEL_ID" datasets/health/eval/model_outputs/model="$MODEL_ID"_size="$SIZE"_step="$STEP"/evaluation.parquet "$GROUP_ID" "$SUFFIX_RUN_NAME"

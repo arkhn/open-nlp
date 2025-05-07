@@ -33,6 +33,10 @@ while [[ "$#" -gt 0 ]]; do
     DOWNSTREAM_DS_PATH="$2"
     shift
     ;;
+  --GROUP_ID)
+    GROUP_ID="$2"
+    shift
+    ;;
   *)
     echo "Unknown parameter passed: $1"
     exit 1
@@ -47,6 +51,8 @@ conda activate synth-kg
 
 module load cuda
 
+MERGE_ID=$(printf "%06d" $((RANDOM % 1000000)))
+MERGE_OUTPUT_PATH=./lora/merge-${MERGE_ID}
 python eval/health/alpacare_generate.py --output_path "$OUTPUT_PATH" --dataset "$DOWNSTREAM_DS_PATH" --tp "$SLURM_GPUS_ON_NODE"
-python eval/sft/train.py --config-name="$HYDRA_CONFIG" dataset=./evaluation_alpacare_sft.parquet
-python eval/health/generate.py --model ./sft/merged/ --output_path "$OUTPUT_PATH" --tp "$SLURM_GPUS_ON_NODE"
+python eval/sft/train.py --config-name="$HYDRA_CONFIG" dataset=./evaluation_alpacare_sft.parquet merge_output_path="$MERGE_OUTPUT_PATH" group_id="$GROUP_ID"
+python eval/health/generate.py --model "$MERGE_OUTPUT_PATH" --output_path "$OUTPUT_PATH" --tp "$SLURM_GPUS_ON_NODE"
