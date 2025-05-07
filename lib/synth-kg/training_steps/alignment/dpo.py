@@ -18,7 +18,6 @@ def main(cfg):
         cfg: The configuration for the training.
     """
 
-    run_id = wandb.util.generate_id()
     wandb_config = OmegaConf.to_container(
         cfg,
         resolve=True,
@@ -29,8 +28,7 @@ def main(cfg):
         tags=cfg.tags,
         config=wandb_config,
         job_type="training",
-        group=f"{run_id}",
-        id=run_id,
+        group=f"{cfg.group_id}",
     )
     model_config = hydra.utils.instantiate(cfg.model_config)
     dpo_config = hydra.utils.instantiate(cfg.dpo_config)
@@ -53,7 +51,7 @@ def main(cfg):
     )
 
     model = AutoModelForCausalLM.from_pretrained(model_config.model_name_or_path, **model_kwargs)
-    merge_adapters(model, cfg.peft_adapters_paths)
+    merge_adapters(model, cfg.adapters_paths)
     model = peft.get_peft_model(
         model,
         peft_config,
@@ -65,7 +63,10 @@ def main(cfg):
     tokenizer = AutoTokenizer.from_pretrained(model_config.model_name_or_path)
     dpo_config.padding_value = tokenizer.eos_token_id
 
-    dataset = Dataset.from_parquet(cfg.dataset)
+    dataset = Dataset.from_parquet(cfg.dataset).to_pandas().head(cfg.dataset_size)
+    dataset["prompt"] = dataset["instruction"]
+    dataset = Dataset.from_pandas(dataset)
+    dataset.select_columns(["prompt", "chosen", "rejected"])
 
     dpo_trainer = DPOTrainer(
         args=dpo_config,
