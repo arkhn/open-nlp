@@ -464,12 +464,11 @@ def main() -> None:
     score_dataset(args.n, args.sts_model, private_dataset, public_dataset, args.tp)
 
     # Log to wandb
-    # TODO Test
-    # scored_table = wandb.Table(dataframe=public_dataset.head(1000))
-    # wandb.log({"scored_table": scored_table})
-    # artifact = wandb.Artifact(name="scored_table", type="dataset")
-    # artifact.add(scored_table, "scored_table")
-    # wandb.log_artifact(artifact)
+    scored_table = wandb.Table(dataframe=public_dataset.head(1000))
+    wandb.log({"scored_table": scored_table})
+    artifact = wandb.Artifact(name="scored_table", type="dataset")
+    artifact.add(scored_table, "scored_table")
+    wandb.log_artifact(artifact)
 
     calculate_statistics(public_dataset, args.n, run)
 
