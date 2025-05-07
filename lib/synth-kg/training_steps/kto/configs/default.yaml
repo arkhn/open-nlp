@@ -1,0 +1,40 @@
+kto_config:
+  _target_: trl.KTOConfig
+  beta: 0.1
+  bf16: true
+  eval_strategy: "no"
+  gradient_checkpointing: true
+  group_by_length: true
+  learning_rate: 5e-6
+  logging_steps: 10
+  weight_decay: 1e-7
+  max_length: 512
+  num_train_epochs: 10
+  output_dir: "models/kto/"
+  per_device_train_batch_size: 8
+  gradient_accumulation_steps: 1
+  truncation_mode: keep_start
+  remove_unused_columns: false
+  save_only_model: true
+  save_safetensors: false
+  save_strategy: "no"
+  seed: 0
+  warmup_ratio: 0
+
+peft_config:
+  _target_: peft.LoraConfig
+  r: 32
+  lora_alpha: 64
+  target_modules: ["q_proj", "k_proj", "v_proj", "o_proj"]
+
+model_config:
+  _target_: trl.ModelConfig
+  torch_dtype: "bfloat16"
+  model_name_or_path: meta-llama/llama-2-7b-hf
+
+dataset: datasets/${domain}/model=${dataset_name}/${sts_model}_scored_${train_mode}_${sorting}.parquet
+dataset_size: 2000
+tags: ???
+iteration: 1
+adapters_paths: ???
+group_id: ???

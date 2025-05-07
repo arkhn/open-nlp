@@ -1,0 +1,7 @@
+defaults:
+  - default.yaml
+
+adapters_paths: [lora/dp-sft/s0bb6946]
+dataset: datasets/health/model=mrn20vqj_size=60000_step=dp-sft/model=FremyCompany-BioLORD-2023_dpo.parquet
+tags: [kto-1, health, dp-sft]
+iteration: 1
