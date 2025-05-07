@@ -38,5 +38,7 @@ for model in "${refer_model_name[@]}"; do
         --engine "gpt-3.5-turbo" \
         --refer_model "${model}" \
         --max_test_number "$max_test_number" \
-        --wdb_id "$1"
+        --wdb_id "$1" \
+        --group_id "$3" \
+        --suffix_run_name "$4"
 done
