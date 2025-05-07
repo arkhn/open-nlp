@@ -27,7 +27,18 @@ def main(cfg: DictConfig):
         This function uses the SFTTrainer from the TRL library for supervised fine-tuning.
         It also integrates with Weights & Biases (wandb) for experiment tracking.
     """
-    wandb.init(project="synth-kg", tags=cfg.tags)
+    wandb_config = OmegaConf.to_container(
+        cfg,
+        resolve=True,
+        throw_on_missing=True,
+    )
+    wandb.init(
+        project="synth-kg",
+        tags=cfg.tags,
+        config=wandb_config,
+        job_type="training",
+        group=f"{cfg.group_id}",
+    )
     model_config = hydra.utils.instantiate(cfg.model_config)
 
     sft_config = hydra.utils.instantiate(cfg.sft_config)
@@ -78,9 +89,9 @@ def main(cfg: DictConfig):
     trainer.train()
     trainer.save_model(cfg.sft_config.output_dir)
     model = trainer.model.merge_and_unload()
-    model.save_pretrained("./sft/merged")
+    model.save_pretrained(cfg.merge_output_path)
     tokenizer = AutoTokenizer.from_pretrained(model_config.model_name_or_path)
-    tokenizer.save_pretrained("./sft/merged")
+    tokenizer.save_pretrained(cfg.merge_output_path)
 
 
 if __name__ == "__main__":
