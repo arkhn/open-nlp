@@ -9,9 +9,7 @@ sft_config:
   max_seq_length: 512
   lr_scheduler_type: "cosine_with_min_lr"
   lr_scheduler_kwargs: { "min_lr": 1e-6 }
-  # TODO test
-  max_steps: 2
-  # num_train_epochs: 1
+  num_train_epochs: 10
   save_safetensors: false
   save_strategy: "epoch"
   report_to: "wandb"
@@ -30,3 +28,4 @@ dataset: ???
 tags: ???
 group_id: ???
 adapters_paths: ???
+dataset_size: 1000
