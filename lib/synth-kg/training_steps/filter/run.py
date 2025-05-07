@@ -114,7 +114,7 @@ def create_kto_dataset(sorted_df, output_prefix, sort_key):
     worst_examples["label"] = False
 
     # Concatenate best and worst
-    kto_df = pd.concat([best_examples, worst_examples])
+    kto_df = pd.concat([best_examples, worst_examples]).sample(frac=1).reset_index(drop=True)
 
     # Keep only needed columns
     kto_df = kto_df[["instruction", "response", "label"]]
