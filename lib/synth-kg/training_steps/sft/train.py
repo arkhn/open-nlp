@@ -1,11 +1,12 @@
 import logging
 
 import hydra
+import pandas as pd
 import torch
 import wandb
 from datasets import Dataset
 from omegaconf import DictConfig, ListConfig, OmegaConf
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import SFTTrainer, get_peft_config
 
 logger = logging.getLogger(__name__)
@@ -56,12 +57,25 @@ def main(cfg: DictConfig):
         else model_config.lora_target_modules
     )
     model = AutoModelForCausalLM.from_pretrained(model_config.model_name_or_path, **model_kwargs)
-    dataset = Dataset.from_parquet(cfg.dataset)
-    dataset = dataset.map(lambda x: {"text": x["instruction"] + x["response"]})
+    tokenizer = AutoTokenizer.from_pretrained(model_config.model_name_or_path)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    def format_and_tokenize(example):
+        return tokenizer(
+            example["instruction"] + example["response"],
+            padding="max_length",
+            truncation=True,
+            max_length=cfg.sft_config.max_seq_length,
+        )
+
+    dataset = Dataset.from_pandas(pd.read_parquet(cfg.dataset).head(cfg.dataset_size))
+    dataset = dataset.map(format_and_tokenize, batched=False)
     trainer = SFTTrainer(
         model=model,
         args=sft_config,
         train_dataset=dataset,
+        tokenizer=tokenizer,
         peft_config=get_peft_config(model_config),
     )
     trainer.train()
