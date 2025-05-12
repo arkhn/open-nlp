@@ -47,7 +47,7 @@ def main(cfg):
     )
 
     model = AutoModelForCausalLM.from_pretrained(model_config.model_name_or_path, **model_kwargs)
-    print("Merge Adapters: {cfg.adapters_paths}")
+    print(f"Merge Adapters: {cfg.adapters_paths}")
     merge_adapters(model, cfg.adapters_paths)
     model = peft.get_peft_model(
         model,
@@ -64,9 +64,10 @@ def main(cfg):
     dataset = Dataset.from_parquet(cfg.dataset)
 
     dataset = dataset.to_pandas()
-    best_examples = dataset.head(cfg.dataset_size / 2).copy()
-    worst_examples = dataset.tail(cfg.dataset_size / 2).copy()
+    best_examples = dataset.head(int(cfg.dataset_size / 2)).copy()
+    worst_examples = dataset.tail(int(cfg.dataset_size / 2)).copy()
     dataset = pd.concat([best_examples, worst_examples])
+    dataset = dataset.reset_index(drop=True)
     dataset = Dataset.from_pandas(dataset)
 
     # Train model

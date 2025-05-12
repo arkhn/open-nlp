@@ -6,6 +6,7 @@ import torch
 import wandb
 from datasets import Dataset
 from omegaconf import DictConfig, ListConfig, OmegaConf
+from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import SFTTrainer, get_peft_config
 
@@ -77,7 +78,8 @@ def main(cfg: DictConfig):
             max_length=cfg.sft_config.max_seq_length,
         )
 
-    dataset = Dataset.from_pandas(pd.read_parquet(cfg.dataset).head(1000))
+    dataset = Dataset.from_pandas(pd.read_parquet(cfg.dataset).head(cfg.dataset_size))
+    dataset = dataset.map(lambda x: {"text": x["instruction"] + x["response"]})
     dataset = dataset.map(format_and_tokenize, batched=False)
     trainer = SFTTrainer(
         model=model,

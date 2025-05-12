@@ -27,15 +27,25 @@ def main():
         "datasets/health/eval/reference_outputs/claude-2/iCliniq_output.jsonl", lines=True
     )
     # Extract the specific column
-    prompts = df["prompt"]
-
+    prompts = df["prompt"].apply(
+        lambda x: x.split(
+            "Human: If you are a doctor, please answer the medical questions based on the patient's description."
+        )[1]
+        .split("Assistant")[0]
+        .strip()
+    )
+    prompts = prompts.apply(
+        lambda x: (
+            f"Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n ###Instruction:\n {x}\n\n ###Response:\n"
+        )
+    )
     # Initialize the LLM with your chosen model
     llm = LLM(model=args.model, tensor_parallel_size=args.tp)
 
     sampling_params = SamplingParams(
         temperature=0.7,
         max_tokens=512,
-        stop=["Human:", "Patient:", "User:", "ChatDoctor", "Assistant", "Answer", "</s>"],
+        stop=["Human:", "Patient:", "User:", "ChatDoctor", "Assistant", "Answer", "</s>", "#"],
     )
 
     # Generate response per prompt

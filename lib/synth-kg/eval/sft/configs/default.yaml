@@ -8,9 +8,8 @@ sft_config:
   group_by_length: true
   max_seq_length: 1024
   num_train_epochs: 10
-  max_steps: 5000
   save_safetensors: false
-  save_strategy: "epoch"
+  save_strategy: "no"
   report_to: "wandb"
   output_dir: "./lora/eval"
 
@@ -25,3 +24,6 @@ model_config:
 
 dataset: ???
 tags: ???
+group_id: ???
+merge_output_path: ???
+dataset_size: 2000

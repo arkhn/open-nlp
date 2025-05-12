@@ -24,18 +24,19 @@ def parse_arguments():
 def main():
     args = parse_arguments()
     df = pd.read_parquet(args.dataset)
+    df = df.drop_duplicates(subset="example_id")
     # Extract the specific column
-    prompts = df["response"].tolist()
+    prompts = df["response"]
     instructions = [
         (
-            f"Human: If you are a doctor, please answer the medical questions based "
-            f"on the patient's description.\n\n"
-            f"{prompt[:1500]}\n"
-            f"Assistant:"
-        )
+            "Below is an instruction that describes a task,",
+            "Write a response that appropriately complete the request.\n\n",
+            f"###Instruction:\n{prompt}\n\n",
+            f"###Response:\n",
+        )[0]
         for prompt in prompts
     ]
-    prompts = [(f"Patient: {prompt[:1500]}\n" f"ChatDoctor:") for prompt in prompts]
+    prompts = [f"Patient: {prompt}\n" f"ChatDoctor:" for prompt in prompts]
 
     # Initialize the LLM with your chosen model
 

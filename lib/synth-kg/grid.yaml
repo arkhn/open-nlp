@@ -9,8 +9,8 @@ sts_model: FremyCompany/BioLORD-2023
 domain: health
 private_path: datasets/health/dp_size=60000/private.parquet
 
-sorting: "e"
-train_steps: "sft dpo-1"
+sorting: "mes"
+train_steps: "sft"
 
 scripts:
   dpo: launch/jz/dpo.slurm
@@ -25,5 +25,5 @@ scripts:
 hydra:
   sweeper:
     params:
-      sorting: e
-      train_steps: sft, sft dpo-1
+      sorting: mes
+      train_steps: kto-1
