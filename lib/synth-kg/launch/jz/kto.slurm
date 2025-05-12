@@ -7,13 +7,13 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=40
 #SBATCH --output=log/slurm-%j.out
-#SBATCH --time=01:00:00
+#SBATCH --time=04:00:00
 #SBATCH --error=log/slurm-%j.err
-#SBATCH --qos=qos_gpu_h100-dev
+#SBATCH --qos=qos_gpu_h100-t3
 #SBATCH --mail-type=END
 #SBATCH --mail-user=simon.meoni@inria.fr
-
 # Initialize variables with default values
+
 HYDRA_CONFIG="default.yaml"
 
 # Parse arguments

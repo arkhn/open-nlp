@@ -63,13 +63,14 @@ def main(cfg: DictConfig):
 
     def format_and_tokenize(example):
         return tokenizer(
-            example["instruction"] + example["response"],
+            example["text"],
             padding="max_length",
             truncation=True,
             max_length=cfg.sft_config.max_seq_length,
         )
 
     dataset = Dataset.from_pandas(pd.read_parquet(cfg.dataset).head(cfg.dataset_size))
+    dataset = dataset.map(lambda x: {"text": x["instruction"] + x["response"]})
     dataset = dataset.map(format_and_tokenize, batched=False)
     trainer = SFTTrainer(
         model=model,
