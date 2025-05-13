@@ -6,7 +6,6 @@ import torch
 import wandb
 from datasets import Dataset
 from omegaconf import DictConfig, ListConfig, OmegaConf
-from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import SFTTrainer, get_peft_config
 

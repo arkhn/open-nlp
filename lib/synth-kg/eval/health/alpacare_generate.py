@@ -12,7 +12,10 @@ from vllm import LLM, SamplingParams
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--output_path", type=str, required=True, help="Path to save the output parquet file"
+        "--output_path",
+        type=str,
+        required=True,
+        help="Path to save the output parquet file",
     )
     parser.add_argument(
         "--dataset", type=str, required=True, help="Path to input dataset parquet file"
@@ -32,7 +35,7 @@ def main():
             "Below is an instruction that describes a task,",
             "Write a response that appropriately complete the request.\n\n",
             f"###Instruction:\n{prompt}\n\n",
-            f"###Response:\n",
+            "###Response:\n",
         )[0]
         for prompt in prompts
     ]
@@ -54,7 +57,15 @@ def main():
         temperature=0.7,
         max_tokens=2048,
         truncate_prompt_tokens=1024,
-        stop=["Human:", "Patient:", "User:", "ChatDoctor", "Assistant", "Answer", "</s>"],
+        stop=[
+            "Human:",
+            "Patient:",
+            "User:",
+            "ChatDoctor",
+            "Assistant",
+            "Answer",
+            "</s>",
+        ],
     )
     # Generate response per prompt
     responses = generate_response(llm, prompts, sampling_params)
