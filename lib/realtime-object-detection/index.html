@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Vision Assistant</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #3f51b5;
+            --secondary-color: #7986cb;
+            --accent-color: #ff4081;
+            --light-bg: #f5f7ff;
+            --dark-text: #333;
+            --light-text: #fff;
+            --success: #4caf50;
+            --danger: #f44336;
+            --border-radius: 12px;
+            --box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--dark-text);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        }
+        
+        header {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .app-title {
+            font-size: 2.2rem;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+        
+        .app-description {
+            color: #666;
+            font-size: 1rem;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .video-section {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--box-shadow);
+            background-color: #000;
+        }
+        
+        #videoFeed {
+            width: 100%;
+            height: 100%;
+            display: block;
+            aspect-ratio: 4/3;
+            object-fit: cover;
+        }
+        
+        .camera-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--danger);
+            border-radius: 50%;
+        }
+        
+        .status-dot.active {
+            background-color: var(--success);
+        }
+
+        .controls-section {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            box-shadow: var(--box-shadow);
+            width: 100%;
+            transition: var(--transition);
+        }
+        
+        .card-title {
+            font-size: 1.1rem;
+            color: var(--primary-color);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        input[type="text"], select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+        
+        input[type="text"]:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 2px rgba(121, 134, 203, 0.2);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .response-textarea {
+            background-color: #f8f9fa;
+        }
+        
+        .controls-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        
+        select {
+            flex: 1;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-width: 120px;
+        }
+        
+        .btn-primary {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .settings-info {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 8px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .video-container {
+                max-height: 300px;
+            }
+            
+            .controls-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+        
+        /* Loading animation */
+        .loading {
+            position: relative;
+        }
+        
+        .loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 50%;
+            right: 10px;
+            margin-top: -10px;
+            border: 3px solid rgba(0,0,0,0.2);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: loadingAnimation 0.8s linear infinite;
+        }
+        
+        @keyframes loadingAnimation {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        /* Pulse animation for active status */
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+        
+        .status-dot.active {
+            animation: pulse 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="app-title">AI Vision Assistant</h1>
+            <p class="app-description">Real-time object detection and analysis using your camera</p>
+        </header>
+
+        <div class="main-content">
+            <section class="video-section">
+                <div class="video-container">
+                    <video id="videoFeed" autoplay playsinline></video>
+                    <div class="camera-status">
+                        <span class="status-dot" id="cameraStatus"></span>
+                        <span id="statusText">Connecting...</span>
+                    </div>
+                </div>
+                <canvas id="canvas" class="hidden"></canvas>
+            </section>
+
+            <section class="controls-section">
+                <div class="card">
+                    <h2 class="card-title">
+                        <i class="fas fa-cog"></i> Configuration
+                    </h2>
+                    <div class="form-group">
+                        <label for="baseURL">API Endpoint</label>
+                        <input id="baseURL" type="text" value="http://localhost:8080" placeholder="Enter API URL">
+                    </div>
+                    <div class="form-group">
+                        <label for="instructionText">Ask AI Vision</label>
+                        <textarea id="instructionText" placeholder="Example: What objects do you see? Describe the scene...">What do you see?</textarea>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title">
+                        <i class="fas fa-robot"></i> AI Response
+                    </h2>
+                    <div class="form-group">
+                        <textarea id="responseText" class="response-textarea" placeholder="AI response will appear here..." readonly></textarea>
+                    </div>
+                    
+                    <div class="controls-bar">
+                        <select id="intervalSelect" title="Select how frequently the AI will analyze the camera feed">
+                            <option value="100">Very fast (100ms)</option>
+                            <option value="250">Fast (250ms)</option>
+                            <option value="500" selected>Normal (500ms)</option>
+                            <option value="1000">Slow (1s)</option>
+                            <option value="2000">Very slow (2s)</option>
+                        </select>
+                        <button id="startButton" class="btn btn-primary">
+                            <i class="fas fa-play"></i> Start
+                        </button>
+                    </div>
+                    <p class="settings-info">Select the analysis interval and click Start to begin AI vision processing</p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('videoFeed');
+        const canvas = document.getElementById('canvas');
+        const baseURL = document.getElementById('baseURL');
+        const instructionText = document.getElementById('instructionText');
+        const responseText = document.getElementById('responseText');
+        const intervalSelect = document.getElementById('intervalSelect');
+        const startButton = document.getElementById('startButton');
+        const cameraStatus = document.getElementById('cameraStatus');
+        const statusText = document.getElementById('statusText');
+
+        let stream;
+        let intervalId;
+        let isProcessing = false;
+
+        // Returns response text (string)
+        async function sendChatCompletionRequest(instruction, imageBase64URL) {
+            responseText.classList.add('loading');
+            try {
+                const response = await fetch(`${baseURL.value}/v1/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        max_tokens: 100,
+                        messages: [
+                            { role: 'user', content: [
+                                { type: 'text', text: instruction },
+                                { type: 'image_url', image_url: {
+                                    url: imageBase64URL,
+                                } }
+                            ] },
+                        ]
+                    })
+                });
+                
+                responseText.classList.remove('loading');
+                
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    return `Server error: ${response.status} - ${errorData}`;
+                }
+                const data = await response.json();
+                return data.choices[0].message.content;
+            } catch (error) {
+                responseText.classList.remove('loading');
+                return `Error: ${error.message}`;
+            }
+        }
+
+        // Ask for camera permission on load
+        async function initCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                video.srcObject = stream;
+                cameraStatus.classList.add('active');
+                statusText.textContent = "Camera Ready";
+                responseText.value = "Camera access granted. Ready to start.";
+            } catch (err) {
+                console.error("Camera access error:", err);
+                cameraStatus.classList.remove('active');
+                statusText.textContent = "Camera Error";
+                responseText.value = `Camera access error: ${err.message}. Please ensure camera permissions are granted and you're using HTTPS or localhost.`;
+            }
+        }
+
+        function captureImage() {
+            if (!stream || !video.videoWidth) {
+                console.warn("Video stream is not ready for capture.");
+                return null;
+            }
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', 0.8);
+        }
+
+        async function sendData() {
+            if (!isProcessing) return;
+
+            const instruction = instructionText.value;
+            const imageBase64URL = captureImage();
+
+            if (!imageBase64URL) {
+                responseText.value = "Failed to capture image. Video stream may not be active.";
+                return;
+            }
+
+            const payload = {
+                instruction: instruction,
+                imageBase64URL: imageBase64URL
+            };
+
+            try {
+                const response = await sendChatCompletionRequest(payload.instruction, payload.imageBase64URL);
+                responseText.value = response;
+            } catch (error) {
+                console.error('Error sending data:', error);
+                responseText.value = `Error: ${error.message}`;
+            }
+        }
+
+        function handleStart() {
+            if (!stream) {
+                responseText.value = "Camera unavailable. Cannot start.";
+                alert("Camera not available. Please grant permission first.");
+                return;
+            }
+            isProcessing = true;
+            startButton.innerHTML = '<i class="fas fa-stop"></i> Stop';
+            startButton.classList.remove('btn-primary');
+            startButton.classList.add('btn-danger');
+
+            instructionText.disabled = true;
+            intervalSelect.disabled = true;
+
+            responseText.value = "Processing started...";
+            statusText.textContent = "Processing";
+
+            const intervalMs = parseInt(intervalSelect.value, 10);
+            
+            // Initial immediate call
+            sendData(); 
+            
+            // Then set interval
+            intervalId = setInterval(sendData, intervalMs);
+        }
+
+        function handleStop() {
+            isProcessing = false;
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+            startButton.innerHTML = '<i class="fas fa-play"></i> Start';
+            startButton.classList.remove('btn-danger');
+            startButton.classList.add('btn-primary');
+
+            instructionText.disabled = false;
+            intervalSelect.disabled = false;
+            statusText.textContent = "Camera Ready";
+            
+            if (responseText.value === "Processing started...") {
+                responseText.value = "Processing stopped.";
+            }
+        }
+
+        startButton.addEventListener('click', () => {
+            if (isProcessing) {
+                handleStop();
+            } else {
+                handleStart();
+            }
+        });
+
+        // Initialize camera when the page loads
+        window.addEventListener('DOMContentLoaded', initCamera);
+
+        // Stop stream when page is closed/navigated away
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+        });
+    </script>
+</body>
+</html>
