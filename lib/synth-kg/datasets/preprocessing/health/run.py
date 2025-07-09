@@ -6,19 +6,10 @@ import pandas as pd
 from datasets import load_dataset
 from quickumls import QuickUMLS
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM
-from vllm import LLM, SamplingParams
 
-SAMPLE_SIZE = 1500
+OUTPUT_PATH = "datasets/health/qa_clinical_alpacare_raw_umls_v4"
 RANDOM_SEED = 42
-SEED_SIZE = 500
-MODEL_NAME = "xz97/AlpaCare-llama2-13b"
-GPUS = 8
-TEMPERATURE = 0.7
-MAX_TOKENS = 2048
-OUTPUT_PATH = (
-    f"datasets/health/model={MODEL_NAME.replace('/', '-')}_t" f"={TEMPERATURE}_size={SAMPLE_SIZE}"
-)
+SEED_SIZE = 30000
 PROMPT_PATH = "datasets/preprocessing/health/prompt.txt"
 
 tqdm.pandas()
@@ -36,24 +27,27 @@ class KeywordExtractor:
             best_match=True,
             ignore_syntax=False,
         )
-        return ", ".join([match[0]["term"] for match in matches])
+
+        # Allowed TUI codes
+        filtered_terms = []
+        for match_group in matches:
+            for match in match_group:
+                filtered_terms.append(match["ngram"])
+        return ", ".join(set(filtered_terms))
 
 
 class DataProcessor:
     def __init__(
         self,
-        sample_size: int = SAMPLE_SIZE,
         random_seed: int = RANDOM_SEED,
         seed_size: int = SEED_SIZE,
     ):
-        self.sample_size = sample_size
         self.seed_size = seed_size
         random.seed(random_seed)
         self.extractor = KeywordExtractor()
 
     def load_and_sample_dataset(self) -> List[dict]:
-        dataset = load_dataset("lavita/ChatDoctor-HealthCareMagic-100k")
-        return random.sample(list(dataset["train"]), self.sample_size)
+        return load_dataset("lavita/ChatDoctor-HealthCareMagic-100k")
 
     @staticmethod
     def reformat_data_sample(sample: dict) -> dict:
@@ -71,9 +65,9 @@ class DataProcessor:
         gen_output_path: str = f"{OUTPUT_PATH}/private.parquet",
     ):
         sampled_data = [
-            self.reformat_data_sample(sample) for sample in self.load_and_sample_dataset()
+            self.reformat_data_sample(sample) for sample in self.load_and_sample_dataset()["train"]
         ]
-        df = pd.DataFrame(sampled_data)
+        df = pd.DataFrame(sampled_data)[:70000]
         df["instruction"] = df["instruction"].apply(
             lambda x: x.removeprefix(
                 "If you are a doctor, please answer the medical questions based on "
@@ -94,10 +88,12 @@ class DataProcessor:
 
     @staticmethod
     def process_dataset(df: pd.DataFrame) -> pd.DataFrame:
-        prompt = open(PROMPT_PATH).read()
+        with open(PROMPT_PATH, "r") as f:
+            prompt = f.read()
         df["new_instruction"] = df.apply(
-            lambda row: prompt.replace("{keywords}", str(row["instruction_keywords"])).replace(
-                "{knowledge_base}", str(row["response_keywords"])
+            lambda row: prompt.replace(
+                "{keywords}",
+                str(row["instruction_keywords"]) + ", " + str(row["response_keywords"]),
             ),
             axis=1,
         )
@@ -107,33 +103,6 @@ class DataProcessor:
         return df[["instruction", "response", "output"]]
 
 
-def generate_public_seed(
-    input_path: str = f"{OUTPUT_PATH}/private_seed.parquet",
-    output_path: str = f"{OUTPUT_PATH}/public_seed.parquet",
-):
-    df = pd.read_parquet(input_path)
-    outputs = []
-    sampling_params = SamplingParams(
-        temperature=TEMPERATURE,
-        max_tokens=MAX_TOKENS,
-    )
-    hf_model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
-    hf_model.save_pretrained("model/alpacare")
-    llm = LLM(
-        model="model/alpacare",
-        tensor_parallel_size=GPUS,
-    )
-    for prompt in tqdm(df["instruction"], desc="Generating responses"):
-        response = llm.generate(
-            prompt,
-            sampling_params=sampling_params,
-        )
-        outputs.append(output.outputs[0].text for output in response)
-
-    pd.DataFrame({"instruction": df["instruction"], "response": outputs}).to_parquet(output_path)
-
-
 if __name__ == "__main__":
     processor = DataProcessor()
     processor.process_data()
-    generate_public_seed()
