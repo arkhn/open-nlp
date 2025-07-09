@@ -11,11 +11,9 @@
 #SBATCH -C a100
 #SBATCH --qos=qos_gpu_a100-t3
 
-export HF_HUB_OFFLINE=1
-
 module purge
 module load miniforge/24.9.0
-conda activate synth-kg
+conda activate preprocessing
 module load cuda
 
 # Run your processing script

@@ -31,7 +31,6 @@ def load_or_convert_to_dataframe(dataset_path):
             dataset = json.load(file)
     elif "parquet" in dataset_path:
         dataset = pd.read_parquet(dataset_path)
-        # TODO: move to stop token
         dataset["response"] = dataset["response"].apply(lambda x: x.split("#")[0])
         dataset = dataset.to_dict("records")
     else:
