@@ -6,9 +6,4 @@ Return the question and only the question.
 ### Keywords
 {keywords}
 
-### Knowledge Base (for context or assistance)
-
-Use the following additional medical knowledge or context as a reference to guide the crafting of the question. Ensure the output aligns with the authenticity of patient-physician interactions, leveraging this knowledge where relevant.
-{knowledge_base}
-
 ### Output
