@@ -61,52 +61,65 @@ class Pipeline:
 
     def __init__(self, cfg: DictConfig):
         self.cfg = cfg
+        self.bootstrap = cfg.bootstrap
         self.train_steps = cfg.train_steps.split(" ")
-        self.adapters = [f"lora/{cfg.step}/{cfg.model_id}"]
-        self.group_id = cfg.model_id
-        self.run_id = str(uuid.uuid4())[:7]
+        self.adapters = []
+        self.current_step = ""
+        self.group_id = ""
+        self.run_id = ""
         self.job_mgr = JobManager()
         self.sts_model_path = self.cfg.sts_model.replace("/", "-")
 
     def base_model_path(self) -> str:
         return (
             f"datasets/{self.cfg.domain}/"
-            f"model={self.cfg.model_id}_size={self.cfg.size}_step={self.cfg.step}"
+            f"model={self.run_id}_size={self.cfg.size}_step={self.cfg.step}"
         )
 
-    def output_model_path(self) -> str:
+    def output_model_path(self, step) -> str:
         return (
-            f"datasets/{self.cfg.domain}/"
-            f"model={self.run_id}_size={self.cfg.size}_step={self.train_steps[-1]}"
+            f"datasets/{self.cfg.domain}/" f"model={self.run_id}_size={self.cfg.size}_step={step}"
         )
 
-    def dataset_path(self, method: str) -> str:
+    def dataset_path(self) -> str:
         return (
             f"{self.base_model_path()}/"
-            f"model={self.sts_model_path}_scored_{method}_{self.cfg.sorting}.parquet"
+            f"model={self.sts_model_path}_scored_{self.cfg.sorting}.parquet"
         )
 
-    def run_train_steps(self):
-        for idx, method in enumerate(self.train_steps):
-            script = self.cfg.scripts[method.split("-")[0]]
-            dataset = self.dataset_path(method.split("-")[0])
-            hydra_args = format_hydra_args(dataset, self.group_id, self.adapters)
-            run_id = self.run_id if idx == 0 else str(uuid.uuid4())[:7]
+    def run_bootstrap(self):
+        self.group_id = str(uuid.uuid4())[:7]
+        self.model_id = self.group_id
+        self.run_id = self.group_id
+        script = self.cfg.scripts[self.bootstrap]
+        dataset = self.cfg.private_path
+        escape_dataset = dataset.replace("=", "\\=")
+        hydra_args = f"\"'dataset={escape_dataset}'\""
+        cmd = f"--export=ALL,WANDB_RUN_ID={self.group_id} {script} " f"--HYDRA_ARGS {hydra_args}"
+        self.job_mgr.submit(cmd)
+        self.adapters = [f"lora/{self.bootstrap}/{self.group_id}"]
+        self.current_step = self.bootstrap
 
+    def run_train_steps(self):
+        dataset = self.dataset_path()
+        for _, step in enumerate(self.train_steps):
+            script = self.cfg.scripts[step.split("-")[0]]
+            self.run_id = str(uuid.uuid4())[:7]
+            hydra_args = format_hydra_args(dataset, self.group_id, self.adapters)
             cmd = (
-                f"--export=ALL,WANDB_RUN_ID={run_id} {script} "
+                f"--export=ALL,WANDB_RUN_ID={self.run_id} {script} "
                 f"--HYDRA_CONFIG {self.cfg.domain} --HYDRA_ARGS {hydra_args}"
             )
             self.job_mgr.submit(cmd)
-            self.adapters.append(f"lora/{method}/{run_id}")
-            self.run_id = run_id  # use latest run ID for downstream
+            self.adapters.append(f"lora/{step}/{self.run_id}")
+            self.current_step = step
 
     def run_generation(self):
         cmd = (
             f"{self.cfg.scripts.generation} "
             f"--DATASET_PATH {self.cfg.private_path} "
             f"--ADAPTERS_PATHS {','.join(self.adapters)} "
-            f"--OUTPUT_PATH {self.output_model_path()}"
+            f"--OUTPUT_PATH {self.output_model_path(self.current_step)}"
         )
         self.job_mgr.submit(cmd)
 
@@ -115,21 +128,26 @@ class Pipeline:
             f"{self.cfg.scripts.score} "
             f"--STS_MODEL {self.cfg.sts_model} "
             f"--PRIVATE_DATASET {self.cfg.private_path} "
-            f"--OUTPUT_PATH {self.output_model_path()} "
+            f"--OUTPUT_PATH {self.output_model_path(self.current_step)} "
             f"--N 4 --WDB_ID {self.run_id} --GROUP_ID {self.group_id}"
         )
         self.job_mgr.submit(cmd)
 
     def run_filter(self):
-        path = f"{self.output_model_path()}/model={self.sts_model_path}_scored.parquet"
+        path = (
+            f"{self.output_model_path(self.current_step)}/model={self.sts_model_path}"
+            "_scored.parquet"
+        )
         self.job_mgr.submit(f"{self.cfg.scripts.filter} --INPUT_FILE {path}")
 
     def run_eval(self):
-        step = self.train_steps[-1]
-        path = f"{self.output_model_path()}/model={self.sts_model_path}_scored_eval.parquet"
+        path = (
+            f"{self.output_model_path(self.current_step)}/model={self.sts_model_path}",
+            "_scored_eval.parquet",
+        )
         out_path = (
             f"datasets/health/eval/model_outputs/"
-            f"model={self.run_id}_size={self.cfg.size}_step={step}"
+            f"model={self.run_id}_size={self.cfg.size}_step={self.current_step}"
         )
         eval_gen_cmd = (
             f"{self.cfg.scripts.eval_gen} --DOWNSTREAM_DS_PATH {path} "
@@ -138,9 +156,10 @@ class Pipeline:
         self.job_mgr.submit(eval_gen_cmd)
 
         eval_pref_cmd = (
-            f"{self.cfg.scripts.eval_preference} --MODEL_ID {self.run_id} --STEP {step} "
+            f"{self.cfg.scripts.eval_preference} "
+            f"--MODEL_ID {self.run_id} --STEP {self.current_step} "
             f"--SIZE {self.cfg.size} "
-            f"--SUFFIX_RUN_NAME {'-'.join(self.train_steps)}-{self.cfg.sorting} "
+            f"--SUFFIX_RUN_NAME {self.current_step}-{self.cfg.sorting} "
             f"--GROUP_ID {self.group_id}"
         )
         self.job_mgr.submit(eval_pref_cmd)
@@ -149,6 +168,12 @@ class Pipeline:
 @hydra.main(config_path=".", config_name="grid.yaml", version_base="1.3")
 def main(cfg: DictConfig):
     pipeline = Pipeline(cfg)
+    if cfg.bootstrap:
+        pipeline.run_bootstrap()
+        pipeline.run_generation()
+        pipeline.run_score()
+        pipeline.run_filter()
+        pipeline.run_eval()
     pipeline.run_train_steps()
     pipeline.run_generation()
     pipeline.run_score()

@@ -28,7 +28,6 @@ def main(cfg: DictConfig):
         This function uses the classic Trainer from Hugging Face for supervised fine-tuning.
         It also integrates with Weights & Biases (wandb) for experiment tracking.
     """
-    run_id = wandb.util.generate_id()
     wandb_config = OmegaConf.to_container(
         cfg,
         resolve=True,
@@ -39,8 +38,6 @@ def main(cfg: DictConfig):
         tags=cfg.tags,
         config=wandb_config,
         job_type="training",
-        group=f"{run_id}",
-        id=run_id,
     )
 
     model_config = hydra.utils.instantiate(cfg.model_config)
