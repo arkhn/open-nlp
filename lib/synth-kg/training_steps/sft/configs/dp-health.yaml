@@ -1,6 +1,3 @@
-defaults:
-  - default.yaml
-
 training_arguments:
   _target_: dp_transformers.TrainingArguments
   per_device_train_batch_size: 2
@@ -21,11 +18,16 @@ peft_config:
   lora_alpha: 64
   target_modules: ["q_proj", "k_proj", "v_proj", "o_proj"]
 
+model_config:
+  _target_: trl.ModelConfig
+  torch_dtype: "bfloat16"
+  model_name_or_path: meta-llama/llama-2-7b-hf
+
 private_arguments:
   _target_: dp_transformers.PrivacyArguments
   target_epsilon: 8
   per_sample_max_grad_norm: 1
 
-dataset: datasets/health/dp_size=60000/private_seed.parquet
+dataset: datasets/health/qa_clinical_alpacare_raw_umls_v3/private_seed.parquet
 dataset_size: 500
 tags: [dp-sft, health]
