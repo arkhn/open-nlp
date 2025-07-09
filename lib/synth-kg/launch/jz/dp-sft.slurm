@@ -14,13 +14,18 @@
 #SBATCH --mail-user=simon.meoni@inria.fr
 
 # Initialize variables with default values
-HYDRA_CONFIG="default.yaml"
+HYDRA_CONFIG="dp-health.yaml"
+export HF_HUB_OFFLINE=1
 
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
   case $1 in
   --HYDRA_CONFIG)
     HYDRA_CONFIG="$2"
+    shift
+    ;;
+  --HYDRA_ARGS)
+    HYDRA_ARGS="$2"
     shift
     ;;
   *)
@@ -34,4 +39,5 @@ done
 module purge
 module load miniforge/24.9.0
 conda activate dp-synth-kg
-python training_steps/sft/dp_train.py --config-name="$HYDRA_CONFIG"
+eval set -- "$HYDRA_ARGS"
+python training_steps/sft/dp_train.py --config-name="$HYDRA_CONFIG" "$@"
