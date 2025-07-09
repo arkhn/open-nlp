@@ -33,7 +33,44 @@ def parse_arguments():
         default=1,
         help="Number of node to use for inference",
     )
+    parser.add_argument(
+        "--few_shot",
+        action="store_true",
+        help="Enable few-shot mode with examples from dataset",
+    )
     return parser.parse_args()
+
+
+def create_few_shot_examples(dataset_df):
+    """Sample 50 examples from dataset and create 10 different combinations"""
+    # Step 1: Sample 50 examples from dataset
+    sampled_examples = dataset_df.sample(n=150, random_state=42)
+
+    # Step 2: Create 10 different combinations (3 examples each)
+    combinations = []
+    examples_list = sampled_examples.to_dict("records")
+
+    for _ in range(100):
+        combo = random.sample(examples_list, 3)
+        combinations.append(combo)
+
+    return combinations
+
+
+def add_few_shot_to_prompt(original_prompt, few_shot_examples):
+    """Add few-shot examples to prompt using self-instruct format"""
+    few_shot_text = "Here are some examples:\n\n"
+
+    # Add each example
+    for example in few_shot_examples:
+        few_shot_text += f"Instruction: {example['instruction']}\n"
+        few_shot_text += f"Output: {example['response']}\n\n"
+
+    # Add current instruction
+    few_shot_text += f"Instruction: {original_prompt}\n"
+    few_shot_text += "Output:"
+
+    return few_shot_text
 
 
 def generate_responses(model, prompts, num_sequences):
@@ -56,8 +93,8 @@ def generate_responses(model, prompts, num_sequences):
             frequency_penalty=1.2,
             n=1,
         )
-        modified_prompt = prompts  # or apply a function that randomly perturbs the prompt
-        response = model.generate(modified_prompt, sampling_params=sampling_params)
+
+        response = model.generate(prompts, sampling_params=sampling_params)
         all_responses.append([output.outputs[0].text for output in response])
 
     return all_responses
@@ -66,26 +103,37 @@ def generate_responses(model, prompts, num_sequences):
 def main():
     args = parse_arguments()
 
-    # we use a contextual path only because we deploy the script via skypilot
+    # Load dataset
     df = pd.read_parquet(args.dataset)
-    # Extract the specific column
     prompts = df["instruction"]
 
-    # Initialize the LLM with your chosen model
+    # Handle few-shot injection if enabled
+    if args.few_shot:
+        few_shot_combinations = create_few_shot_examples(df)
+        enhanced_prompts = []
+        for prompt in prompts:
+            # Pick random combination for this prompt
+            combo = random.choice(few_shot_combinations)
+            enhanced_prompt = add_few_shot_to_prompt(prompt, combo)
+            enhanced_prompts.append(enhanced_prompt)
+        prompts = enhanced_prompts
+
+    # Initialize the LLM
     llm = LLM(
         model=args.model,
         tensor_parallel_size=args.tp,
         pipeline_parallel_size=args.pp,
     )
-    # Generate multiple responses per prompt
+
+    # Generate responses
     responses = generate_responses(llm, prompts, num_sequences=args.num_sequences)
 
-    # Create output dataframe with multiple response columns
+    # Create output dataframe
     output_data = {"instruction": prompts}
     for i in range(args.num_sequences - 1):
         output_data[f"response_{i+1}"] = responses[i]
 
-    # Create output dataframe and save
+    # Save results
     df_output = pd.DataFrame(output_data)
     os.makedirs(f"{args.output_path}", exist_ok=True)
     output_file = os.path.join(args.output_path, "public_generated.parquet")
