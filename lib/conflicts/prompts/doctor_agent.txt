@@ -1,0 +1,22 @@
+You are a clinical expert analyzing two medical documents to determine what type of conflict should be introduced between them.
+
+Available conflict types:
+{conflict_types}
+
+Document 1:
+{document1}
+
+Document 2:
+{document2}
+
+Analyze these documents and choose the most appropriate conflict type to introduce. Consider:
+1. The clinical content and findings in both documents
+2. What type of conflict would be realistic and educational
+3. Which conflict type best matches the available clinical information
+
+Respond with JSON format:
+{{
+    "conflict_type": "chosen_conflict_type_key",
+    "reasoning": "explanation of why this conflict type was chosen",
+    "modification_instructions": "specific instructions for the Editor Agent on how to create the conflict"
+}}
