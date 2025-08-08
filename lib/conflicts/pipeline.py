@@ -1,6 +1,14 @@
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
+from base import (
+    PipelineLogger,
+    DatabaseManager,
+    DocumentPair,
+    ConflictResult,
+)
+from config import MAX_RETRY_ATTEMPTS, LOG_LEVEL, LOG_FILE
+from data_loader import ClinicalDataLoader
 from agents.doctor_agent import DoctorAgent
 from agents.editor_agent import EditorAgent
 from agents.moderator_agent import ModeratorAgent
@@ -34,17 +42,8 @@ class ClinicalConflictPipeline:
         self.editor_agent = EditorAgent()
         self.moderator_agent = ModeratorAgent(min_validation_score=min_validation_score)
 
-        # Initialize data loader
-        try:
-            self.data_loader = ClinicalDataLoader()
-        except FileNotFoundError:
-            self.logger.warning("Clinical data not found, attempting to create sample data")
-            create_sample_data_if_missing()
-            self.data_loader = ClinicalDataLoader()
+        self.data_loader = ClinicalDataLoader()
 
-        self.logger.info("Clinical Conflict Pipeline initialized successfully")
-
-        # Log data statistics
         stats = self.data_loader.get_data_statistics()
         self.logger.info(
             f"Loaded dataset with {stats['total_documents']} documents \
@@ -78,124 +77,114 @@ class ClinicalConflictPipeline:
             "error": None,
         }
 
-        try:
-            # Step 1: Doctor Agent Analysis
-            self.logger.info("Step 1: Doctor Agent analyzing documents...")
-            doctor_start_time = time.time()
+        # Step 1: Doctor Agent Analysis
+        self.logger.info("Step 1: Doctor Agent analyzing documents...")
+        doctor_start_time = time.time()
 
-            conflict_result = self.doctor_agent.process(document_pair)
+        conflict_result = self.doctor_agent.process(document_pair)
 
-            doctor_processing_time = time.time() - doctor_start_time
+        doctor_processing_time = time.time() - doctor_start_time
+        self.db_manager.log_processing_step(
+            pair_id,
+            "Doctor",
+            {
+                "conflict_type": conflict_result.conflict_type,
+                "reasoning": conflict_result.reasoning,
+            },
+            doctor_processing_time,
+        )
+
+        result_data["conflict_type"] = conflict_result.conflict_type
+
+        # Step 2: Editor and Moderator Loop
+        validation_result = None
+        editor_result = None
+        attempt = 0
+
+        while attempt < self.max_retries:
+            attempt += 1
+            result_data["attempts"] = attempt
+
+            self.logger.info(
+                f"Step 2: Editor Agent modifying documents (attempt {attempt}/{self.max_retries})..."
+            )
+            editor_start_time = time.time()
+
+            editor_result = self.editor_agent.process(document_pair, conflict_result)
+
+            editor_processing_time = time.time() - editor_start_time
             self.db_manager.log_processing_step(
                 pair_id,
-                "Doctor",
-                {
-                    "conflict_type": conflict_result.conflict_type,
-                    "reasoning": conflict_result.reasoning,
-                },
-                doctor_processing_time,
+                "Editor",
+                {"attempt": attempt, "changes_made": editor_result.changes_made},
+                editor_processing_time,
             )
 
-            result_data["conflict_type"] = conflict_result.conflict_type
+            self.logger.info(
+                f"Step 3: Moderator Agent validating modifications (attempt {attempt}/{self.max_retries})..."
+            )
+            moderator_start_time = time.time()
 
-            # Step 2: Editor and Moderator Loop
-            validation_result = None
-            editor_result = None
-            attempt = 0
+            validation_result = self.moderator_agent.process(
+                document_pair, editor_result, conflict_result.conflict_type
+            )
 
-            while attempt < self.max_retries:
-                attempt += 1
-                result_data["attempts"] = attempt
+            moderator_processing_time = time.time() - moderator_start_time
+            self.db_manager.log_processing_step(
+                pair_id,
+                "Moderator",
+                {
+                    "attempt": attempt,
+                    "is_valid": validation_result.is_valid,
+                    "validation_score": validation_result.validation_score,
+                    "issues_found": validation_result.issues_found,
+                },
+                moderator_processing_time,
+            )
 
-                self.logger.info(
-                    f"Step 2: Editor Agent modifying documents \
-                        (attempt {attempt}/{self.max_retries})..."
-                )
-                editor_start_time = time.time()
+            result_data["final_validation_score"] = validation_result.validation_score
 
-                editor_result = self.editor_agent.process(document_pair, conflict_result)
-
-                editor_processing_time = time.time() - editor_start_time
-                self.db_manager.log_processing_step(
-                    pair_id,
-                    "Editor",
-                    {"attempt": attempt, "changes_made": editor_result.changes_made},
-                    editor_processing_time,
-                )
-
-                self.logger.info(
-                    f"Step 3: Moderator Agent validating modifications \
-                        (attempt {attempt}/{self.max_retries})..."
-                )
-                moderator_start_time = time.time()
-
-                validation_result = self.moderator_agent.process(
-                    document_pair, editor_result, conflict_result.conflict_type
-                )
-
-                moderator_processing_time = time.time() - moderator_start_time
-                self.db_manager.log_processing_step(
-                    pair_id,
-                    "Moderator",
-                    {
-                        "attempt": attempt,
-                        "is_valid": validation_result.is_valid,
-                        "validation_score": validation_result.validation_score,
-                        "issues_found": validation_result.issues_found,
-                    },
-                    moderator_processing_time,
-                )
-
-                result_data["final_validation_score"] = validation_result.validation_score
-
-                if validation_result.is_valid:
-                    self.logger.info(f"Validation successful on attempt {attempt}")
-                    break
-                else:
-                    self.logger.warning(
-                        f"Validation failed on attempt {attempt}: {validation_result.feedback}"
-                    )
-
-                    if attempt < self.max_retries:
-                        self.logger.info(f"Retrying... ({attempt + 1}/{self.max_retries})")
-                        # Brief pause before retry
-                        time.sleep(1)
-
-            # Step 4: Save to database if validation passed
-            if validation_result and validation_result.is_valid:
-                self.logger.info("Saving validated documents to database...")
-
-                doc_id = self.db_manager.save_validated_documents(
-                    document_pair, editor_result, conflict_result.conflict_type, validation_result
-                )
-
-                result_data["success"] = True
-                result_data["database_id"] = doc_id
-
-                self.logger.info(
-                    f"Document pair {pair_id} processed successfully (DB ID: {doc_id})"
-                )
+            if validation_result.is_valid:
+                self.logger.info(f"Validation successful on attempt {attempt}")
+                break
             else:
-                result_data["success"] = False
-                result_data["error"] = f"Validation failed after {self.max_retries} attempts"
-                self.logger.error(
-                    f"Document pair {pair_id} failed validation after {self.max_retries} attempts"
+                self.logger.warning(
+                    f"Validation failed on attempt {attempt}: {validation_result.feedback}"
                 )
 
-        except Exception as e:
-            result_data["success"] = False
-            result_data["error"] = str(e)
-            self.logger.error(f"Error processing document pair {pair_id}: {e}")
+                if attempt < self.max_retries:
+                    self.logger.info(f"Retrying... ({attempt + 1}/{self.max_retries})")
+                    # Brief pause before retry
+                    time.sleep(1)
 
-        finally:
-            result_data["processing_time"] = time.time() - start_time
+        # Step 4: Save to database if validation passed
+        if validation_result and validation_result.is_valid:
+            self.logger.info("Saving validated documents to database...")
+
+            doc_id = self.db_manager.save_validated_documents(
+                document_pair, editor_result, conflict_result.conflict_type, validation_result
+            )
+
+            result_data["success"] = True
+            result_data["database_id"] = doc_id
+
+            self.logger.info(
+                f"Document pair {pair_id} processed successfully (DB ID: {doc_id})"
+            )
+        else:
+            result_data["success"] = False
+            result_data["error"] = f"Validation failed after {self.max_retries} attempts"
+            self.logger.error(
+                f"Document pair {pair_id} failed validation after {self.max_retries} attempts"
+            )
+
+        result_data["processing_time"] = time.time() - start_time
 
         return result_data["success"], result_data
 
     def process_batch(
         self,
         batch_size: int = 5,
-        same_subject: bool = False,
         category_filter: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
@@ -214,18 +203,9 @@ class ClinicalConflictPipeline:
         batch_start_time = time.time()
 
         # Get document pairs
-        try:
-            document_pairs = self.data_loader.get_random_document_pairs(
-                count=batch_size, same_subject=same_subject, category_filter=category_filter
-            )
-        except Exception as e:
-            self.logger.error(f"Failed to load document pairs: {e}")
-            return {
-                "success": False,
-                "error": f"Data loading failed: {e}",
-                "processed": 0,
-                "failed": 0,
-            }
+        document_pairs = self.data_loader.get_random_document_pairs(
+            count=batch_size, category_filter=category_filter
+        )
 
         # Process each pair
         results = []
@@ -347,32 +327,22 @@ class ClinicalConflictPipeline:
             )
 
             # Process through Editor and Moderator only
-            try:
-                editor_result = self.editor_agent.process(doc_pair, forced_conflict)
-                validation_result = self.moderator_agent.process(
-                    doc_pair, editor_result, conflict_type
-                )
+            editor_result = self.editor_agent.process(doc_pair, forced_conflict)
+            validation_result = self.moderator_agent.process(
+                doc_pair, editor_result, conflict_type
+            )
 
-                test_result = {
-                    "pair_id": f"{doc_pair.doc1_id}_{doc_pair.doc2_id}",
-                    "conflict_type": conflict_type,
-                    "editor_success": True,
-                    "validation_success": validation_result.is_valid,
-                    "validation_score": validation_result.validation_score,
-                    "issues_found": validation_result.issues_found,
-                }
+            test_result = {
+                "pair_id": f"{doc_pair.doc1_id}_{doc_pair.doc2_id}",
+                "conflict_type": conflict_type,
+                "editor_success": True,
+                "validation_success": validation_result.is_valid,
+                "validation_score": validation_result.validation_score,
+                "issues_found": validation_result.issues_found,
+            }
 
-                if validation_result.is_valid:
-                    successful += 1
-
-            except Exception as e:
-                test_result = {
-                    "pair_id": f"{doc_pair.doc1_id}_{doc_pair.doc2_id}",
-                    "conflict_type": conflict_type,
-                    "editor_success": False,
-                    "validation_success": False,
-                    "error": str(e),
-                }
+            if validation_result.is_valid:
+                successful += 1
 
             test_results.append(test_result)
 
