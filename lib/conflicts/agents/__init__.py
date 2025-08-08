@@ -1,5 +1,5 @@
 from .doctor_agent import DoctorAgent
-from .editor_agent import EditorAgent 
+from .editor_agent import EditorAgent
 from .moderator_agent import ModeratorAgent
 
-__all__ = ['DoctorAgent', 'EditorAgent', 'ModeratorAgent']
+__all__ = ["DoctorAgent", "EditorAgent", "ModeratorAgent"]

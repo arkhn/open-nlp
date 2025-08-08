@@ -2,12 +2,11 @@ import json
 import logging
 import sqlite3
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Tuple
 from dataclasses import dataclass
-from datetime import datetime
+from typing import Any, Dict, Optional
 
 import openai
-from config import GROQ_API_KEY, GROQ_MODEL, GROQ_BASE_URL, DATABASE_PATH
+from config import DATABASE_PATH, GROQ_API_KEY, GROQ_BASE_URL, GROQ_MODEL
 
 
 @dataclass
@@ -71,7 +70,8 @@ class GroqAPIClient:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a helpful AI assistant specialized in clinical document analysis. Always respond in valid JSON format when requested.",
+                        "content": "You are a helpful AI assistant specialized in clinical \
+                            document analysis. Always respond in valid JSON format when requested.",
                     },
                     {"role": "user", "content": prompt},
                 ],
@@ -176,9 +176,10 @@ class DatabaseManager:
 
             cursor.execute(
                 """
-                INSERT INTO validated_documents 
-                (original_doc1_id, original_doc2_id, original_doc1_text, original_doc2_text,
-                 modified_doc1_text, modified_doc2_text, conflict_type, validation_score, changes_made)
+                INSERT INTO validated_documents
+                (original_doc1_id, original_doc2_id, original_doc1_text, original_doc2_text, \
+                    modified_doc1_text, modified_doc2_text, conflict_type, validation_score, \
+                        changes_made)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
@@ -208,7 +209,8 @@ class DatabaseManager:
 
             cursor.execute(
                 """
-                INSERT INTO processing_history (doc_pair_id, agent_name, result_data, processing_time)
+                INSERT INTO processing_history (doc_pair_id, agent_name, \
+                    result_data, processing_time)
                 VALUES (?, ?, ?, ?)
             """,
                 (doc_pair_id, agent_name, json.dumps(result_data), processing_time),

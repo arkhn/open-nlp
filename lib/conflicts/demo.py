@@ -50,7 +50,7 @@ def show_dataset_info():
         for category, count in categories[:5]:
             print(f"  • {category}: {count:,} documents")
 
-        print(f"\nText length statistics:")
+        print("\nText length statistics:")
         text_stats = stats["text_length_stats"]
         print(f"  • Average: {text_stats['mean']:.0f} characters")
         print(f"  • Range: {text_stats['min']:,} - {text_stats['max']:,} characters")

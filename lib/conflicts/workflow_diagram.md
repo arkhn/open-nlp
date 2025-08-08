@@ -3,6 +3,7 @@
 Based on the current code implementation in `pipeline.py` and agent classes.
 
 ## High-Level Flow
+
 ```
 Document Pair → Doctor Agent → Editor Agent → Moderator Agent → Database
                                      ↑              ↓
@@ -18,7 +19,7 @@ Document Pair → Doctor Agent → Editor Agent → Moderator Agent → Database
 
 ┌─────────────────┐
 │   Data Source   │
-│ MIMIC-III Data  │ 
+│ MIMIC-III Data  │
 │ (4,753 docs)    │
 └─────────┬───────┘
           │

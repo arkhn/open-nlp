@@ -1,19 +1,12 @@
 import time
-from typing import List, Optional, Dict, Any, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-from base import (
-    PipelineLogger,
-    DatabaseManager,
-    DocumentPair,
-    ConflictResult,
-    EditorResult,
-    ValidationResult,
-)
-from config import MAX_RETRY_ATTEMPTS, LOG_LEVEL, LOG_FILE
-from data_loader import ClinicalDataLoader, create_sample_data_if_missing
 from agents.doctor_agent import DoctorAgent
 from agents.editor_agent import EditorAgent
 from agents.moderator_agent import ModeratorAgent
+from base import ConflictResult, DatabaseManager, DocumentPair, PipelineLogger
+from config import LOG_FILE, LOG_LEVEL, MAX_RETRY_ATTEMPTS
+from data_loader import ClinicalDataLoader, create_sample_data_if_missing
 
 
 class ClinicalConflictPipeline:
@@ -54,7 +47,8 @@ class ClinicalConflictPipeline:
         # Log data statistics
         stats = self.data_loader.get_data_statistics()
         self.logger.info(
-            f"Loaded dataset with {stats['total_documents']} documents from {stats['unique_subjects']} subjects"
+            f"Loaded dataset with {stats['total_documents']} documents \
+                from {stats['unique_subjects']} subjects"
         )
 
     def process_document_pair(self, document_pair: DocumentPair) -> Tuple[bool, Dict[str, Any]]:
@@ -114,7 +108,8 @@ class ClinicalConflictPipeline:
                 result_data["attempts"] = attempt
 
                 self.logger.info(
-                    f"Step 2: Editor Agent modifying documents (attempt {attempt}/{self.max_retries})..."
+                    f"Step 2: Editor Agent modifying documents \
+                        (attempt {attempt}/{self.max_retries})..."
                 )
                 editor_start_time = time.time()
 
@@ -129,7 +124,8 @@ class ClinicalConflictPipeline:
                 )
 
                 self.logger.info(
-                    f"Step 3: Moderator Agent validating modifications (attempt {attempt}/{self.max_retries})..."
+                    f"Step 3: Moderator Agent validating modifications \
+                        (attempt {attempt}/{self.max_retries})..."
                 )
                 moderator_start_time = time.time()
 
@@ -250,7 +246,8 @@ class ClinicalConflictPipeline:
             # Log progress
             if i % 5 == 0 or i == len(document_pairs):
                 self.logger.info(
-                    f"Batch progress: {i}/{batch_size} processed, {successful} successful, {failed} failed"
+                    f"Batch progress: {i}/{batch_size} processed, \
+                        {successful} successful, {failed} failed"
                 )
 
         batch_time = time.time() - batch_start_time
@@ -268,10 +265,12 @@ class ClinicalConflictPipeline:
         }
 
         self.logger.info(
-            f"Batch processing completed: {successful}/{len(document_pairs)} successful ({batch_summary['success_rate']:.1f}%)"
+            f"Batch processing completed: {successful}/{len(document_pairs)} successful \
+                ({batch_summary['success_rate']:.1f}%)"
         )
         self.logger.info(
-            f"Total time: {batch_time:.2f}s, Average per pair: {batch_summary['average_processing_time']:.2f}s"
+            f"Total time: {batch_time:.2f}s, Average per pair: \
+                {batch_summary['average_processing_time']:.2f}s"
         )
 
         return batch_summary
@@ -326,7 +325,8 @@ class ClinicalConflictPipeline:
         if conflict_type not in available_types:
             return {
                 "success": False,
-                "error": f"Unknown conflict type '{conflict_type}'. Available: {list(available_types.keys())}",
+                "error": f"Unknown conflict type '{conflict_type}'. \
+                    Available: {list(available_types.keys())}",
             }
 
         # Get test document pairs
@@ -341,7 +341,9 @@ class ClinicalConflictPipeline:
             forced_conflict = ConflictResult(
                 conflict_type=conflict_type,
                 reasoning=f"Testing forced conflict type: {conflict_info['name']}",
-                modification_instructions=f"Create a {conflict_info['name']} conflict between these documents based on the description: {conflict_info['description']}",
+                modification_instructions=f"Create a {conflict_info['name']} conflict \
+                    between these documents based on the description: \
+                        {conflict_info['description']}",
             )
 
             # Process through Editor and Moderator only

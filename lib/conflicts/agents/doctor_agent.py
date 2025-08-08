@@ -1,9 +1,9 @@
 import time
-from typing import Dict, Any
+from typing import Any, Dict
 
-from base import BaseAgent, DocumentPair, ConflictResult
-from config import DOCTOR_AGENT_PROMPT_FILE, CONFLICT_TYPES
-from base import format_conflict_types_for_prompt
+from base import (BaseAgent, ConflictResult, DocumentPair,
+                  format_conflict_types_for_prompt)
+from config import CONFLICT_TYPES, DOCTOR_AGENT_PROMPT_FILE
 from prompt_loader import load_prompt
 
 
@@ -29,7 +29,8 @@ class DoctorAgent(BaseAgent):
         start_time = time.time()
 
         self.logger.info(
-            f"Doctor Agent analyzing document pair: {document_pair.doc1_id} & {document_pair.doc2_id}"
+            f"Doctor Agent analyzing document pair: \
+                {document_pair.doc1_id} & {document_pair.doc2_id}"
         )
 
         try:
@@ -64,7 +65,8 @@ class DoctorAgent(BaseAgent):
             # Validate conflict type exists
             if parsed_response["conflict_type"] not in CONFLICT_TYPES:
                 self.logger.warning(
-                    f"Unknown conflict type '{parsed_response['conflict_type']}', defaulting to 'opposition'"
+                    f"Unknown conflict type '{parsed_response['conflict_type']}', \
+                     defaulting to 'opposition'"
                 )
                 parsed_response["conflict_type"] = "opposition"
 

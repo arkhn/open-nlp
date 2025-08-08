@@ -1,8 +1,8 @@
 import time
-from typing import Dict, Any
+from typing import Any, Dict
 
 from base import BaseAgent, DocumentPair, EditorResult, ValidationResult
-from config import MODERATOR_AGENT_PROMPT_FILE, CONFLICT_TYPES
+from config import CONFLICT_TYPES, MODERATOR_AGENT_PROMPT_FILE
 from prompt_loader import load_prompt
 
 
@@ -98,7 +98,8 @@ class ModeratorAgent(BaseAgent):
             if validation_score < self.min_validation_score:
                 is_valid = False
                 self.logger.info(
-                    f"Validation score {validation_score} below threshold {self.min_validation_score}, marking as invalid"
+                    f"Validation score {validation_score} below threshold \
+                        {self.min_validation_score}, marking as invalid"
                 )
 
             result = ValidationResult(
@@ -114,9 +115,8 @@ class ModeratorAgent(BaseAgent):
             processing_time = time.time() - start_time
 
             self.logger.info(f"Moderator Agent completed validation in {processing_time:.2f}s")
-            self.logger.info(
-                f"Validation result: {'VALID' if result.is_valid else 'INVALID'} (Score: {result.validation_score}/100)"
-            )
+            status = "VALID" if result.is_valid else "INVALID"
+            self.logger.info(f"Validation result: {status} (Score: {result.validation_score}/100)")
 
             if not result.is_valid:
                 self.logger.info(f"Issues found: {result.issues_found}")
@@ -247,7 +247,7 @@ Reasoning: {validation_result.approval_reasoning}
 """
 
         if validation_result.issues_found:
-            summary += f"\nIssues Found:\n"
+            summary += "\nIssues Found:\n"
             for issue in validation_result.issues_found:
                 summary += f"  - {issue}\n"
 

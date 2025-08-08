@@ -1,12 +1,11 @@
 import logging
 import random
 from pathlib import Path
-from typing import List, Optional, Tuple, Dict, Any
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
-
 from base import DocumentPair
-from config import DATA_PATH, BATCH_SIZE
+from config import BATCH_SIZE, DATA_PATH
 
 
 class ClinicalDataLoader:
@@ -45,7 +44,7 @@ class ClinicalDataLoader:
 
             if initial_count != final_count:
                 self.logger.info(
-                    f"Filtered out {initial_count - final_count} documents shorter than 100 characters"
+                    f"Filtered out {initial_count - final_count} documents < 100 characters"
                 )
 
             self.loaded = True
@@ -292,7 +291,9 @@ Discharge Date: 01/20/2023
 CHIEF COMPLAINT: Chest pain and shortness of breath
 
 HISTORY OF PRESENT ILLNESS:
-The patient presented to the emergency department with a 2-day history of chest pain and shortness of breath. Pain was described as crushing, substernal, and radiating to the left arm. No known cardiac disease history.
+The patient presented to the emergency department with a 2-day history of \
+chest pain and shortness of breath. Pain was described as crushing, substernal, \
+and radiating to the left arm. No known cardiac disease history.
 
 PHYSICAL EXAMINATION:
 Vital signs: BP 140/90, HR 88, RR 18, O2 sat 95% on room air
@@ -318,7 +319,8 @@ Non-cardiac chest pain, likely musculoskeletal. Discharged home with pain medica
             "category": "Progress note",
             "text": """PROGRESS NOTE - Day 2
 
-Patient continues to complain of chest pain. Pain is now localized to the right side and is sharp in nature. Vital signs stable.
+Patient continues to complain of chest pain. Pain is now localized to the right side and \
+is sharp in nature. Vital signs stable.
 
 EXAMINATION:
 Cardiovascular: Irregular heart rhythm noted, possible atrial fibrillation
@@ -329,7 +331,7 @@ NEW ORDERS:
 - Repeat ECG
 - Chest CT with contrast
 
-ASSESSMENT: 
+ASSESSMENT:
 Chest pain, rule out pulmonary embolism
 Possible atrial fibrillation""",
         },

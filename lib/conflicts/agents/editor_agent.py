@@ -1,8 +1,8 @@
 import time
-from typing import Dict, Any
+from typing import Any, Dict
 
-from base import BaseAgent, DocumentPair, ConflictResult, EditorResult
-from config import EDITOR_AGENT_PROMPT_FILE, CONFLICT_TYPES
+from base import BaseAgent, ConflictResult, DocumentPair, EditorResult
+from config import CONFLICT_TYPES, EDITOR_AGENT_PROMPT_FILE
 from prompt_loader import load_prompt
 
 
@@ -31,7 +31,8 @@ class EditorAgent(BaseAgent):
         start_time = time.time()
 
         self.logger.info(
-            f"Editor Agent modifying documents to create '{conflict_instructions.conflict_type}' conflict"
+            f"Editor Agent modifying documents to create \
+                '{conflict_instructions.conflict_type}' conflict"
         )
 
         try:
@@ -73,7 +74,6 @@ class EditorAgent(BaseAgent):
                 parsed_response["modified_document1"].strip() == document_pair.doc1_text.strip()
                 and parsed_response["modified_document2"].strip() == document_pair.doc2_text.strip()
             ):
-
                 self.logger.warning(
                     "Editor Agent returned documents without modifications, retrying..."
                 )
@@ -131,11 +131,14 @@ class EditorAgent(BaseAgent):
             prompt_template.format(
                 conflict_type=conflict_type_info.name,
                 conflict_description=conflict_type_info.description,
-                modification_instructions=f"IMPORTANT: You MUST make clear, noticeable changes to create the conflict. {conflict_instructions.modification_instructions}",
+                modification_instructions=f"IMPORTANT: You MUST make clear, \
+                    noticeable changes to create the conflict. \
+                        {conflict_instructions.modification_instructions}",
                 document1=self._truncate_document(document_pair.doc1_text),
                 document2=self._truncate_document(document_pair.doc2_text),
             )
-            + "\n\nREMEMBER: The original documents must be MODIFIED to create clear conflicts. Simply returning the original text is not acceptable."
+            + "\n\nREMEMBER: The original documents must be MODIFIED to create clear conflicts. \
+                Simply returning the original text is not acceptable."
         )
 
         response = self.client.call_api(emphasized_prompt, temperature=0.6, max_tokens=6000)

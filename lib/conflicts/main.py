@@ -41,13 +41,13 @@ def main():
     )
 
     # Statistics command
-    stats_parser = subparsers.add_parser("stats", help="Show pipeline statistics")
+    subparsers.add_parser("stats", help="Show pipeline statistics")
 
     # List conflicts command
-    list_parser = subparsers.add_parser("list-conflicts", help="List available conflict types")
+    subparsers.add_parser("list-conflicts", help="List available conflict types")
 
     # Database command
-    db_parser = subparsers.add_parser("db-info", help="Show database information")
+    subparsers.add_parser("db-info", help="Show database information")
 
     args = parser.parse_args()
 
@@ -58,8 +58,9 @@ def main():
     try:
         # Commands that don't require API key
         if args.command == "db-info":
-            from base import DatabaseManager
             from pathlib import Path
+
+            from base import DatabaseManager
 
             db_manager = DatabaseManager()
             db_count = db_manager.get_validated_documents_count()
@@ -114,7 +115,7 @@ def main():
                 print(f"Error: {result['error']}")
                 return
 
-            print(f"\n=== CONFLICT TYPE TEST RESULTS ===")
+            print("\n=== CONFLICT TYPE TEST RESULTS ===")
             print(f"Conflict type tested: {result['conflict_type_tested']}")
             print(f"Document pairs tested: {result['total_pairs']}")
             print(f"Successful validations: {result['successful_validations']}")
@@ -132,18 +133,17 @@ def main():
             print(f"Validated documents in database: {stats['validated_documents']}")
             print(f"Dataset documents: {stats['dataset_statistics']['total_documents']}")
             print(f"Unique subjects: {stats['dataset_statistics']['unique_subjects']}")
-            print(
-                f"Available categories: {', '.join(stats['dataset_statistics']['sample_categories'])}"
-            )
+            print(f"Categories: {', '.join(stats['dataset_statistics']['sample_categories'])}")
 
-            print(f"\n=== AGENTS ===")
+            print("\n=== AGENTS ===")
             print(f"Doctor Agent: {stats['agents']['doctor']['name']}")
             print(f"Editor Agent: {stats['agents']['editor']['name']}")
             print(
-                f"Moderator Agent: {stats['agents']['moderator']['name']} (min score: {stats['agents']['moderator']['min_validation_score']})"
+                f"Moderator Agent: {stats['agents']['moderator']['name']} \
+                    (min score: {stats['agents']['moderator']['min_validation_score']})"
             )
 
-            print(f"\n=== CONFIGURATION ===")
+            print("\n=== CONFIGURATION ===")
             print(f"Max retries: {stats['configuration']['max_retries']}")
             print(f"Database: {stats['configuration']['database_path']}")
 

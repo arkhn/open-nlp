@@ -1,6 +1,5 @@
 import argparse
 import gzip
-import os
 import subprocess
 import tarfile
 from pathlib import Path
@@ -35,9 +34,10 @@ def download_corpus(username, password):
 
     try:
         print(
-            f"Running: wget -r -N -c -np --user {username} --password [HIDDEN] --directory-prefix data {url}"
+            f"Running: wget -r -N -c -np --user {username} --password [HIDDEN] \
+                --directory-prefix data {url}"
         )
-        result = subprocess.run(wget_cmd, check=True, capture_output=True, text=True)
+        subprocess.run(wget_cmd, check=True, capture_output=True, text=True)
         print("Download completed successfully!")
         return True
     except subprocess.CalledProcessError as e:

@@ -1,10 +1,12 @@
 # Prompt Templates
 
-This directory contains the prompt templates used by the three agents in the clinical conflict generation pipeline.
+This directory contains the prompt templates used by the three agents in the clinical conflict
+generation pipeline.
 
 ## Overview
 
-Instead of storing large text blocks as global variables in `config.py`, prompts are now stored as external `.txt` files. This provides several benefits:
+Instead of storing large text blocks as global variables in `config.py`, prompts are now stored as
+external `.txt` files. This provides several benefits:
 
 - **Maintainability**: Easy to edit and update prompts without touching Python code
 - **Version Control**: Better tracking of prompt changes in git
@@ -15,18 +17,23 @@ Instead of storing large text blocks as global variables in `config.py`, prompts
 ## Prompt Files
 
 ### `doctor_agent.txt`
+
 - **Purpose**: Analyzes clinical document pairs to determine optimal conflict types
 - **Variables**: `{conflict_types}`, `{document1}`, `{document2}`
 - **Output**: JSON with conflict_type, reasoning, and modification_instructions
 
 ### `editor_agent.txt`
+
 - **Purpose**: Modifies documents to introduce specified conflicts
-- **Variables**: `{conflict_type}`, `{conflict_description}`, `{modification_instructions}`, `{document1}`, `{document2}`
+- **Variables**: `{conflict_type}`, `{conflict_description}`, `{modification_instructions}`,
+  `{document1}`, `{document2}`
 - **Output**: JSON with modified_document1, modified_document2, and changes_made
 
 ### `moderator_agent.txt`
+
 - **Purpose**: Validates modifications for quality and realism
-- **Variables**: `{original_doc1}`, `{original_doc2}`, `{modified_doc1}`, `{modified_doc2}`, `{conflict_type}`, `{changes_made}`
+- **Variables**: `{original_doc1}`, `{original_doc2}`, `{modified_doc1}`, `{modified_doc2}`,
+  `{conflict_type}`, `{changes_made}`
 - **Output**: JSON with is_valid, validation_score, feedback, issues_found, and approval_reasoning
 
 ## Usage
@@ -107,6 +114,7 @@ python test_prompts.py
 ```
 
 This will verify:
+
 - All prompt files are readable
 - Formatting variables work correctly
 - Caching system functions properly
@@ -129,18 +137,21 @@ MODERATOR_AGENT_PROMPT_FILE = "moderator_agent"
 ## Best Practices
 
 ### Editing Prompts
+
 1. **Test changes**: Use `test_prompts.py` after modifications
 2. **Version control**: Commit prompt changes separately from code
 3. **Backup**: Keep backups of working prompts before major changes
 4. **Validation**: Ensure all placeholder variables are present
 
 ### Adding New Prompts
+
 1. Create `.txt` file in `prompts/` directory
 2. Add configuration constant in `config.py`
 3. Update agents to use the new prompt
 4. Add tests for the new prompt
 
 ### Prompt Engineering
+
 1. **Clear instructions**: Be specific about expected behavior
 2. **Examples**: Include concrete examples when helpful
 3. **Format specification**: Clearly define expected output format
@@ -169,4 +180,5 @@ from prompt_loader import load_prompt
 doctor_prompt = load_prompt("doctor_agent")
 ```
 
-This change provides better maintainability and cleaner code structure while maintaining full backward compatibility in functionality.
+This change provides better maintainability and cleaner code structure while maintaining full
+backward compatibility in functionality.

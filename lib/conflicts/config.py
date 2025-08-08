@@ -1,6 +1,6 @@
 import os
-from typing import Dict, List
 from dataclasses import dataclass
+from typing import List
 
 # Groq API Configuration
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
@@ -35,9 +35,12 @@ CONFLICT_TYPES = {
         name="Opposition Conflicts",
         description="Contradictory findings about the same clinical entity",
         examples=[
-            "Normal vs abnormal findings of same body structure: Left breast: Unremarkable <> Left breast demonstrates persistent circumscribed masses",
-            "Negative vs positive statements: No cardiopulmonary disease <> Bibasilar atelectasis",
-            "Lab/vital sign interpretation: Low blood sugar at admission <> Patient admitted with hyperglycemia",
+            "Normal vs abnormal findings of same body structure: Left breast: \
+                Unremarkable <> Left breast demonstrates persistent circumscribed masses",
+            "Negative vs positive statements: No cardiopulmonary disease \
+                <> Bibasilar atelectasis",
+            "Lab/vital sign interpretation: Low blood sugar at admission \
+                <> Patient admitted with hyperglycemia",
             "Opposite disorders: Hypernatremia <> Hyponatremia",
             "Sex information opposites: Female patient <> Testis: Unremarkable",
         ],
@@ -46,10 +49,14 @@ CONFLICT_TYPES = {
         name="Anatomical Conflicts",
         description="Contradictions regarding body structures and their presence/absence",
         examples=[
-            "Absent vs present structures: Cholelithiasis <> The gallbladder is absent",
-            "History of removal vs present structure: Bilat mastectomy (2010) <> Left breast: solid mass",
-            "Imaging vs clinical finding: Procedure: Chest XR <> Brain lesion",
-            "Laterality mismatch: Stable ductal carcinoma of left breast <> Right breast carcinoma",
+            "Absent vs present structures: Cholelithiasis \
+                <> The gallbladder is absent",
+            "History of removal vs present structure: \
+                Bilat mastectomy (2010) <> Left breast: solid mass",
+            "Imaging vs clinical finding: Procedure: \
+                Chest XR <> Brain lesion",
+            "Laterality mismatch: Stable ductal carcinoma of \
+                left breast <> Right breast carcinoma",
         ],
     ),
     "value": ConflictType(
@@ -64,23 +71,28 @@ CONFLICT_TYPES = {
         name="Contraindication Conflicts",
         description="Conflicts between allergies/contraindications and treatments",
         examples=[
-            "Allergy vs prescribed medication: Allergic to acetaminophen <> Home meds include Tylenol"
+            "Allergy vs prescribed medication: \
+                Allergic to acetaminophen <> Home meds include Tylenol"
         ],
     ),
     "comparison": ConflictType(
         name="Comparison Conflicts",
         description="Contradictory comparative statements or temporal changes",
         examples=[
-            "Increased/decreased vs measurements: Ultrasound shows 3 cm lesion, previously 4 cm, indicating increase"
+            "Increased/decreased vs measurements: Ultrasound shows \
+                3 cm lesion, previously 4 cm, indicating increase"
         ],
     ),
     "descriptive": ConflictType(
         name="Descriptive Conflicts",
         description="Contradictory descriptive statements about the same condition",
         examples=[
-            "Positive vs unlikely statements: Lungs: Pleural effusion unlikely <> Assessment: Pleural effusion",
-            "Conflicting characteristics: Stable small pleural effusion <> Impression: Small pleural effusion",
-            "Multiple vs single statements: Findings: 9 mm lesion right kidney <> Assessment: Right renal lesions",
+            "Positive vs unlikely statements: Lungs: Pleural effusion unlikely \
+                <> Assessment: Pleural effusion",
+            "Conflicting characteristics: Stable small pleural effusion \
+                <> Impression: Small pleural effusion",
+            "Multiple vs single statements: Findings: 9 mm lesion right kidney \
+                <> Assessment: Right renal lesions",
         ],
     ),
 }
