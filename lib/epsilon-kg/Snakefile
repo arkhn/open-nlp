@@ -1,0 +1,7 @@
+rule preprocessing_caml_50:
+	input: "data/caml/train_50.csv"
+	output: "data/preprocessed/caml_train_50.csv"
+	shell: """
+		python scripts/preprocessing.py --input {input} --output {output} \
+		--text-col TEXT --privacy_report data/privacy_report_caml_50.json
+		"""

@@ -1,0 +1,8 @@
+jobs: 20
+latency-wait: 60
+keep-going: true
+rerun-incomplete: false
+use-conda: false
+
+jobscript: "profiles/jobscript.sh"
+cluster: "sbatch"
