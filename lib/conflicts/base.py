@@ -2,100 +2,41 @@ import json
 import logging
 import sqlite3
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Dict, Any
 
 import openai
-from config import DATABASE_PATH, GROQ_API_KEY, GROQ_BASE_URL, GROQ_MODEL
-
-
-@dataclass
-class DocumentPair:
-    """Represents a pair of clinical documents"""
-
-    doc1_id: str
-    doc2_id: str
-    doc1_text: str
-    doc2_text: str
-    subject_id: Optional[str] = None
-    category1: Optional[str] = None
-    category2: Optional[str] = None
-
-
-@dataclass
-class ConflictResult:
-    """Result from the Doctor Agent"""
-
-    conflict_type: str
-    reasoning: str
-    modification_instructions: str
-
-
-@dataclass
-class EditorResult:
-    """Result from the Editor Agent"""
-
-    modified_document1: str
-    modified_document2: str
-    changes_made: str
-
-
-@dataclass
-class ValidationResult:
-    """Result from the Moderator Agent"""
-
-    is_valid: bool
-    validation_score: int
-    feedback: str
-    issues_found: list
-    approval_reasoning: str
-
-
-class GroqAPIClient:
-    """Client for interacting with Groq API"""
-
-    def __init__(self):
-        if not GROQ_API_KEY:
-            raise ValueError("GROQ_API_KEY environment variable is required")
-
-        # Initialize OpenAI client with Groq configuration
-        self.client = openai.OpenAI(api_key=GROQ_API_KEY, base_url=GROQ_BASE_URL)
-        self.model = GROQ_MODEL
-
-    def call_api(self, prompt: str, temperature: float = 0.1, max_tokens: int = 4000) -> str:
-        """Make a call to the Groq API"""
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a helpful AI assistant specialized in clinical \
-                            document analysis. Always respond in valid JSON format when requested.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            logging.error(f"Groq API call failed: {e}")
-            raise
+from config import DATABASE_PATH
+from models import DocumentPair, EditorResult, ValidationResult
 
 
 class BaseAgent(ABC):
     """Abstract base class for all agents"""
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, client: openai.OpenAI, model: str, system_prompt: str = ""):
         self.name = name
-        self.client = GroqAPIClient()
         self.logger = logging.getLogger(f"Agent.{name}")
+        self.client = client
+        self.model = model
+        self.system_prompt = system_prompt
 
     @abstractmethod
-    def process(self, *args, **kwargs) -> Any:
+    def __call__(self, *args, **kwargs) -> Any:
         """Process the input and return result"""
         pass
+
+    def _execute_prompt(self, prompt: str) -> str:
+        """Execute a single prompt"""
+        try:
+            messages = []
+            if self.system_prompt:
+                messages.append({"role": "system", "content": self.system_prompt})
+            messages.append({"role": "user", "content": prompt})
+
+            completion = self.client.chat.completions.create(model=self.model, messages=messages)
+            return completion.choices[0].message.content
+        except Exception as e:
+            self.logger.error(f"API call failed: {e}")
+            raise
 
     def _parse_json_response(self, response: str) -> Dict[str, Any]:
         """Parse JSON response from API, handling potential formatting issues"""
@@ -114,6 +55,12 @@ class BaseAgent(ABC):
             self.logger.error(f"Failed to parse JSON response: {e}")
             self.logger.error(f"Response content: {response}")
             raise ValueError(f"Invalid JSON response from {self.name}: {e}")
+
+    def _truncate_document(self, text: str, max_length: int = 2000) -> str:
+        """truncate document text to fit within prompt limits"""
+        if len(text) <= max_length:
+            return text
+        return text[:max_length] + "..."
 
 
 class DatabaseManager:
@@ -224,36 +171,3 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute("SELECT COUNT(*) FROM validated_documents")
             return cursor.fetchone()[0]
-
-
-class PipelineLogger:
-    """Custom logger for the pipeline"""
-
-    @staticmethod
-    def setup_logging(log_level: str = "INFO", log_file: str = "pipeline.log"):
-        """Setup logging configuration"""
-        logging.basicConfig(
-            level=getattr(logging, log_level.upper()),
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
-        )
-
-        # Create logger for the pipeline
-        logger = logging.getLogger("ClinicalPipeline")
-        return logger
-
-
-def format_conflict_types_for_prompt(conflict_types: Dict) -> str:
-    """Format conflict types dictionary for use in prompts"""
-    formatted_types = []
-    for key, conflict_type in conflict_types.items():
-        examples_str = "\n  ".join([f"- {example}" for example in conflict_type.examples])
-        formatted_types.append(
-            f"""
-{key}: {conflict_type.name}
-Description: {conflict_type.description}
-Examples:
-  {examples_str}
-"""
-        )
-    return "\n".join(formatted_types)
