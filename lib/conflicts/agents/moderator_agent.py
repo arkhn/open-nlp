@@ -1,8 +1,8 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
 from base import BaseAgent
-from models import DocumentPair, EditorResult, ValidationResult
 from config import CONFLICT_TYPES
+from models import DocumentPair, EditorResult, ValidationResult
 
 
 class ModeratorAgent(BaseAgent):
@@ -114,7 +114,8 @@ class ModeratorAgent(BaseAgent):
 
             self.logger.info("Moderator Agent completed validation")
             self.logger.info(
-                f"Validation result: {'VALID' if result.is_valid else 'INVALID'} (Score: {result.validation_score}/100)"
+                f"Validation result: {'VALID' if result.is_valid else 'INVALID'} \
+                    (Score: {result.validation_score}/100)"
             )
 
             if not result.is_valid:

@@ -1,8 +1,8 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
 from base import BaseAgent
-from models import DocumentPair, ConflictResult
 from config import CONFLICT_TYPES
+from models import ConflictResult, DocumentPair
 
 
 def format_conflict_types_for_prompt(conflict_types: Dict) -> str:

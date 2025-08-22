@@ -1,12 +1,11 @@
 import logging
 import random
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
-
+from config import BATCH_SIZE, DATA_PATH
 from models import DocumentPair
-from config import DATA_PATH, BATCH_SIZE
 
 
 class DataLoader:
@@ -77,8 +76,6 @@ class DataLoader:
         Returns:
             Dictionary with dataset statistics
         """
-        if not self.loaded:
-            raise RuntimeError("Data not loaded successfully")
 
         return {
             "total_documents": len(self.data_df),
