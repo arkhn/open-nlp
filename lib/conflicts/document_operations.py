@@ -2,28 +2,28 @@
 
 import json
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 def _extract_json_from_response(response: str) -> Dict[str, Any]:
     """
     Extract and parse JSON data from an LLM response.
-    
+
     Args:
         response: The LLM's response text
-        
+
     Returns:
         Parsed JSON data
-        
+
     Raises:
         ValueError: If JSON cannot be extracted or parsed
     """
     # Try to find JSON between first { and last }
-    json_start = response.find('{')
-    json_end = response.rfind('}')
-    
+    json_start = response.find("{")
+    json_end = response.rfind("}")
+
     if json_start >= 0 and json_end > json_start:
-        json_str = response[json_start:json_end+1]
+        json_str = response[json_start : json_end + 1]
         try:
             data = json.loads(json_str)
             logging.info("Successfully parsed response as JSON")
@@ -50,7 +50,8 @@ def _extract_json_from_response(response: str) -> Dict[str, Any]:
         except json.JSONDecodeError as e:
             logging.warning(f"Response is not in JSON format: {e}")
             raise ValueError(f"Invalid JSON format in response: {e}")
-        
+
+
 def apply_edit_operation(document: str, operation: Dict[str, Any]) -> str:
     """
     Apply edit operation to a document using text-based operations.
@@ -86,42 +87,42 @@ def apply_edit_operation(document: str, operation: Dict[str, Any]) -> str:
 def parse_response(response: str, original_doc_1: str, original_doc_2: str) -> Dict[str, Any]:
     """
     Parse the LLM's response to extract operations and apply them to documents.
-    
+
     Args:
         response: The LLM's response
         original_doc_1: Original content of first document
         original_doc_2: Original content of second document
-        
+
     Returns:
         Dictionary with modified documents and conflict type
-        
+
     Raises:
         ValueError: If response cannot be parsed
     """
     try:
         # Log the first 200 chars of response for debugging
         logging.debug(f"Response preview: {response[:200]}...")
-        
+
         # Extract JSON from response
         data = _extract_json_from_response(response)
-        
+
         # Check if we have the expected edit operations format
         if "doc1" in data and "doc2" in data and "conflict_type" in data:
             logging.info("Found edit operations format, applying operations to documents")
-            
+
             # Apply edit operations to documents
             modified_doc_1 = apply_edit_operation(original_doc_1, data["doc1"])
             modified_doc_2 = apply_edit_operation(original_doc_2, data["doc2"])
             conflict_type = data["conflict_type"]
-            
+
             return {
                 "modified_doc_1": modified_doc_1,
                 "modified_doc_2": modified_doc_2,
-                "conflict_type": conflict_type
+                "conflict_type": conflict_type,
             }
         else:
             raise ValueError("Response missing required fields: doc1, doc2, conflict_type")
-    
+
     except json.JSONDecodeError as e:
         logging.error(f"Failed to parse response as JSON: {e}")
         raise ValueError(f"Failed to parse response as JSON: {e}")

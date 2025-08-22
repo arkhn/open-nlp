@@ -1,19 +1,15 @@
-import time
-from typing import List, Optional, Dict, Any, Tuple
-
 import logging
-import openai
-from base import DatabaseManager
-from models import DocumentPair
+import time
+from typing import Any, Dict, List, Optional, Tuple
 
-from config import LOG_LEVEL, LOG_FILE, API_KEY, BASE_URL, MODEL
-from data_loader import DataLoader
+import openai
 from agents.doctor_agent import DoctorAgent
 from agents.editor_agent import EditorAgent
 from agents.moderator_agent import ModeratorAgent
-from base import ConflictResult, DatabaseManager, DocumentPair, PipelineLogger
-from config import LOG_FILE, LOG_LEVEL, MAX_RETRY_ATTEMPTS
-from data_loader import ClinicalDataLoader, create_sample_data_if_missing
+from base import DatabaseManager
+from config import API_KEY, BASE_URL, LOG_FILE, LOG_LEVEL, MODEL
+from data_loader import DataLoader
+from models import DocumentPair
 
 
 class Pipeline:
@@ -58,57 +54,6 @@ class Pipeline:
             f"Loaded dataset with {stats['total_documents']} documents \
                 from {stats['unique_subjects']} subjects"
         )
-
-    def _execute_agent(self, agent, document_pair: DocumentPair, *extra_args):
-        """
-        Wrapper to execute an agent with timing
-
-        Args:
-            agent: The agent instance to call
-            document_pair: The document pair to process
-            *extra_args: Additional arguments for agent()
-
-        Returns:
-            Tuple of (result, processing_time)
-        """
-        start_time = time.time()
-        result = agent(document_pair, *extra_args)
-        processing_time = time.time() - start_time
-
-        return result, processing_time
-
-    def _save_to_database(
-        self,
-        pair_id: str,
-        document_pair: DocumentPair,
-        editor_result,
-        conflict_type: str,
-        validation_result,
-    ) -> bool:
-        """
-        Save validated documents to database
-
-        Args:
-            pair_id: Document pair ID for logging
-            document_pair: The document pair
-            editor_result: Result from editor agent
-            conflict_type: Type of conflict identified
-            validation_result: Result from moderator agent
-
-        Returns:
-            True if saved successfully, False otherwise
-        """
-        if validation_result.is_valid:
-            doc_id = self.db_manager.save_validated_documents(
-                document_pair, editor_result, conflict_type, validation_result
-            )
-            self.logger.info(f"Document pair {pair_id} processed successfully (DB ID: {doc_id})")
-            return True
-        else:
-            self.logger.warning(
-                f"Document pair {pair_id} failed validation after {self.max_retries} attempts"
-            )
-            return False
 
     def _execute_agent(self, agent, document_pair: DocumentPair, *extra_args):
         """
@@ -271,7 +216,8 @@ class Pipeline:
         total_pairs = len(document_pairs)
 
         self.logger.info(
-            f"Batch completed: {successful}/{total_pairs} successful ({successful/total_pairs*100:.1f}%)"
+            f"Batch completed: {successful}/{total_pairs} \
+                successful ({successful/total_pairs*100:.1f}%)"
         )
 
         return {

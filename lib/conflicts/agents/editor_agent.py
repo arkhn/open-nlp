@@ -1,8 +1,6 @@
-from typing import Dict, Any
-
 from base import BaseAgent
-from models import DocumentPair, ConflictResult, EditorResult
 from document_operations import parse_response
+from models import ConflictResult, DocumentPair, EditorResult
 
 
 class EditorAgent(BaseAgent):

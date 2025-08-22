@@ -1,7 +1,6 @@
 from typing import List, Optional
 
 import typer
-
 from pipeline import Pipeline
 
 app = typer.Typer(help="Clinical Document Conflict Pipeline")
@@ -52,7 +51,8 @@ def stats():
     print(f"Doctor Agent: {stats['agents']['doctor']['name']}")
     print(f"Editor Agent: {stats['agents']['editor']['name']}")
     print(
-        f"Moderator Agent: {stats['agents']['moderator']['name']} (min score: {stats['agents']['moderator']['min_validation_score']})"
+        f"Moderator Agent: {stats['agents']['moderator']['name']} \
+            (min score: {stats['agents']['moderator']['min_validation_score']})"
     )
 
     print("\n=== CONFIGURATION ===")
