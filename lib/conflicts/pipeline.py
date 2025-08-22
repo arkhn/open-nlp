@@ -1,14 +1,13 @@
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional, Dict, Any, Tuple
 
-from base import (
-    PipelineLogger,
-    DatabaseManager,
-    DocumentPair,
-    ConflictResult,
-)
-from config import MAX_RETRY_ATTEMPTS, LOG_LEVEL, LOG_FILE
-from data_loader import ClinicalDataLoader
+import logging
+import openai
+from base import DatabaseManager
+from models import DocumentPair
+
+from config import LOG_LEVEL, LOG_FILE, API_KEY, BASE_URL, MODEL
+from data_loader import DataLoader
 from agents.doctor_agent import DoctorAgent
 from agents.editor_agent import EditorAgent
 from agents.moderator_agent import ModeratorAgent
@@ -17,12 +16,12 @@ from config import LOG_FILE, LOG_LEVEL, MAX_RETRY_ATTEMPTS
 from data_loader import ClinicalDataLoader, create_sample_data_if_missing
 
 
-class ClinicalConflictPipeline:
+class Pipeline:
     """
     Main pipeline controller that manages the three-agent workflow
     """
 
-    def __init__(self, max_retries: int = MAX_RETRY_ATTEMPTS, min_validation_score: int = 70):
+    def __init__(self, max_retries: int = 0, min_validation_score: int = 70):
         """
         Initialize the pipeline
 
@@ -31,24 +30,136 @@ class ClinicalConflictPipeline:
             min_validation_score: Minimum score required for validation approval
         """
         # Setup logging
-        self.logger = PipelineLogger.setup_logging(LOG_LEVEL, LOG_FILE)
+        logging.basicConfig(
+            level=getattr(logging, LOG_LEVEL.upper()),
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()],
+        )
+        self.logger = logging.getLogger("ClinicalPipeline")
 
         # Initialize components
         self.max_retries = max_retries
         self.db_manager = DatabaseManager()
 
-        # Initialize agents
-        self.doctor_agent = DoctorAgent()
-        self.editor_agent = EditorAgent()
-        self.moderator_agent = ModeratorAgent(min_validation_score=min_validation_score)
+        # Create shared OpenAI client
+        self.client = openai.OpenAI(api_key=API_KEY, base_url=BASE_URL)
 
-        self.data_loader = ClinicalDataLoader()
+        # Initialize agents with shared client
+        self.doctor_agent = DoctorAgent(self.client, MODEL)
+        self.editor_agent = EditorAgent(self.client, MODEL)
+        self.moderator_agent = ModeratorAgent(
+            self.client, MODEL, min_validation_score=min_validation_score
+        )
+
+        self.data_loader = DataLoader()
 
         stats = self.data_loader.get_data_statistics()
         self.logger.info(
             f"Loaded dataset with {stats['total_documents']} documents \
                 from {stats['unique_subjects']} subjects"
         )
+
+    def _execute_agent(self, agent, document_pair: DocumentPair, *extra_args):
+        """
+        Wrapper to execute an agent with timing
+
+        Args:
+            agent: The agent instance to call
+            document_pair: The document pair to process
+            *extra_args: Additional arguments for agent()
+
+        Returns:
+            Tuple of (result, processing_time)
+        """
+        start_time = time.time()
+        result = agent(document_pair, *extra_args)
+        processing_time = time.time() - start_time
+
+        return result, processing_time
+
+    def _save_to_database(
+        self,
+        pair_id: str,
+        document_pair: DocumentPair,
+        editor_result,
+        conflict_type: str,
+        validation_result,
+    ) -> bool:
+        """
+        Save validated documents to database
+
+        Args:
+            pair_id: Document pair ID for logging
+            document_pair: The document pair
+            editor_result: Result from editor agent
+            conflict_type: Type of conflict identified
+            validation_result: Result from moderator agent
+
+        Returns:
+            True if saved successfully, False otherwise
+        """
+        if validation_result.is_valid:
+            doc_id = self.db_manager.save_validated_documents(
+                document_pair, editor_result, conflict_type, validation_result
+            )
+            self.logger.info(f"Document pair {pair_id} processed successfully (DB ID: {doc_id})")
+            return True
+        else:
+            self.logger.warning(
+                f"Document pair {pair_id} failed validation after {self.max_retries} attempts"
+            )
+            return False
+
+    def _execute_agent(self, agent, document_pair: DocumentPair, *extra_args):
+        """
+        Wrapper to execute an agent with timing
+
+        Args:
+            agent: The agent instance to call
+            document_pair: The document pair to process
+            *extra_args: Additional arguments for agent()
+
+        Returns:
+            Tuple of (result, processing_time)
+        """
+        start_time = time.time()
+        result = agent(document_pair, *extra_args)
+        processing_time = time.time() - start_time
+
+        return result, processing_time
+
+    def _save_to_database(
+        self,
+        pair_id: str,
+        document_pair: DocumentPair,
+        editor_result,
+        conflict_type: str,
+        validation_result,
+    ) -> bool:
+        """
+        Save validated documents to database
+
+        Args:
+            pair_id: Document pair ID for logging
+            document_pair: The document pair
+            editor_result: Result from editor agent
+            conflict_type: Type of conflict identified
+            validation_result: Result from moderator agent
+
+        Returns:
+            True if saved successfully, False otherwise
+        """
+        if validation_result.is_valid:
+            doc_id = self.db_manager.save_validated_documents(
+                document_pair, editor_result, conflict_type, validation_result
+            )
+            self.logger.info(f"Document pair {pair_id} processed successfully (DB ID: {doc_id})")
+            return True
+        else:
+            self.logger.warning(
+                f"Document pair {pair_id} failed validation after {self.max_retries} attempts"
+            )
+            return False
 
     def process_document_pair(self, document_pair: DocumentPair) -> Tuple[bool, Dict[str, Any]]:
         """
@@ -67,119 +178,61 @@ class ClinicalConflictPipeline:
 
         result_data = {
             "pair_id": pair_id,
-            "doc1_id": document_pair.doc1_id,
-            "doc2_id": document_pair.doc2_id,
             "success": False,
-            "attempts": 0,
-            "final_validation_score": 0,
             "conflict_type": None,
             "processing_time": 0,
-            "error": None,
         }
 
-        # Step 1: Doctor Agent Analysis
-        self.logger.info("Step 1: Doctor Agent analyzing documents...")
-        doctor_start_time = time.time()
+        conflict_result, doctor_time = self._execute_agent(self.doctor_agent, document_pair)
 
-        conflict_result = self.doctor_agent.process(document_pair)
-
-        doctor_processing_time = time.time() - doctor_start_time
-        self.db_manager.log_processing_step(
-            pair_id,
-            "Doctor",
-            {
-                "conflict_type": conflict_result.conflict_type,
-                "reasoning": conflict_result.reasoning,
-            },
-            doctor_processing_time,
-        )
+        doctor_log_data = {
+            "conflict_type": conflict_result.conflict_type,
+            "reasoning": conflict_result.reasoning,
+        }
+        self.db_manager.log_processing_step(pair_id, "Doctor", doctor_log_data, doctor_time)
 
         result_data["conflict_type"] = conflict_result.conflict_type
 
-        # Step 2: Editor and Moderator Loop
         validation_result = None
         editor_result = None
-        attempt = 0
 
-        while attempt < self.max_retries:
-            attempt += 1
-            result_data["attempts"] = attempt
-
-            self.logger.info(
-                f"Step 2: Editor Agent modifying documents (attempt {attempt}/{self.max_retries})..."
+        for attempt in range(1, self.max_retries + 1):
+            editor_result, editor_time = self._execute_agent(
+                self.editor_agent, document_pair, conflict_result
             )
-            editor_start_time = time.time()
 
-            editor_result = self.editor_agent.process(document_pair, conflict_result)
+            editor_log_data = {"attempt": attempt, "changes_made": editor_result.changes_made}
+            self.db_manager.log_processing_step(pair_id, "Editor", editor_log_data, editor_time)
 
-            editor_processing_time = time.time() - editor_start_time
+            validation_result, moderator_time = self._execute_agent(
+                self.moderator_agent, document_pair, editor_result, conflict_result.conflict_type
+            )
+
+            moderator_log_data = {
+                "attempt": attempt,
+                "is_valid": validation_result.is_valid,
+                "validation_score": validation_result.validation_score,
+                "issues_found": validation_result.issues_found,
+            }
             self.db_manager.log_processing_step(
-                pair_id,
-                "Editor",
-                {"attempt": attempt, "changes_made": editor_result.changes_made},
-                editor_processing_time,
+                pair_id, "Moderator", moderator_log_data, moderator_time
             )
-
-            self.logger.info(
-                f"Step 3: Moderator Agent validating modifications (attempt {attempt}/{self.max_retries})..."
-            )
-            moderator_start_time = time.time()
-
-            validation_result = self.moderator_agent.process(
-                document_pair, editor_result, conflict_result.conflict_type
-            )
-
-            moderator_processing_time = time.time() - moderator_start_time
-            self.db_manager.log_processing_step(
-                pair_id,
-                "Moderator",
-                {
-                    "attempt": attempt,
-                    "is_valid": validation_result.is_valid,
-                    "validation_score": validation_result.validation_score,
-                    "issues_found": validation_result.issues_found,
-                },
-                moderator_processing_time,
-            )
-
-            result_data["final_validation_score"] = validation_result.validation_score
 
             if validation_result.is_valid:
                 self.logger.info(f"Validation successful on attempt {attempt}")
                 break
-            else:
-                self.logger.warning(
-                    f"Validation failed on attempt {attempt}: {validation_result.feedback}"
-                )
 
-                if attempt < self.max_retries:
-                    self.logger.info(f"Retrying... ({attempt + 1}/{self.max_retries})")
-                    # Brief pause before retry
-                    time.sleep(1)
+            if attempt < self.max_retries:
+                self.logger.warning(f"Validation failed on attempt {attempt}, retrying...")
+                time.sleep(1)
 
-        # Step 4: Save to database if validation passed
-        if validation_result and validation_result.is_valid:
-            self.logger.info("Saving validated documents to database...")
-
-            doc_id = self.db_manager.save_validated_documents(
-                document_pair, editor_result, conflict_result.conflict_type, validation_result
-            )
-
-            result_data["success"] = True
-            result_data["database_id"] = doc_id
-
-            self.logger.info(
-                f"Document pair {pair_id} processed successfully (DB ID: {doc_id})"
-            )
-        else:
-            result_data["success"] = False
-            result_data["error"] = f"Validation failed after {self.max_retries} attempts"
-            self.logger.error(
-                f"Document pair {pair_id} failed validation after {self.max_retries} attempts"
-            )
+        # Step 3: Save to database if validation passed
+        is_success = self._save_to_database(
+            pair_id, document_pair, editor_result, conflict_result.conflict_type, validation_result
+        )
+        result_data["success"] = is_success
 
         result_data["processing_time"] = time.time() - start_time
-
         return result_data["success"], result_data
 
     def process_batch(
@@ -192,7 +245,6 @@ class ClinicalConflictPipeline:
 
         Args:
             batch_size: Number of document pairs to process
-            same_subject: If True, try to pair documents from the same subject
             category_filter: List of categories to filter documents by
 
         Returns:
@@ -201,59 +253,35 @@ class ClinicalConflictPipeline:
         self.logger.info(f"Starting batch processing of {batch_size} document pairs")
 
         batch_start_time = time.time()
-
-        # Get document pairs
         document_pairs = self.data_loader.get_random_document_pairs(
             count=batch_size, category_filter=category_filter
         )
 
-        # Process each pair
         results = []
         successful = 0
-        failed = 0
 
-        for i, doc_pair in enumerate(document_pairs, 1):
-            self.logger.info(f"Processing pair {i}/{batch_size}")
-
+        for doc_pair in document_pairs:
             success, result_data = self.process_document_pair(doc_pair)
             results.append(result_data)
 
             if success:
                 successful += 1
-            else:
-                failed += 1
-
-            # Log progress
-            if i % 5 == 0 or i == len(document_pairs):
-                self.logger.info(
-                    f"Batch progress: {i}/{batch_size} processed, \
-                        {successful} successful, {failed} failed"
-                )
 
         batch_time = time.time() - batch_start_time
+        total_pairs = len(document_pairs)
 
-        # Calculate statistics
-        batch_summary = {
-            "success": True,
-            "total_pairs": len(document_pairs),
+        self.logger.info(
+            f"Batch completed: {successful}/{total_pairs} successful ({successful/total_pairs*100:.1f}%)"
+        )
+
+        return {
+            "total_pairs": total_pairs,
             "successful": successful,
-            "failed": failed,
-            "success_rate": successful / len(document_pairs) * 100,
+            "failed": total_pairs - successful,
+            "success_rate": successful / total_pairs * 100,
             "total_processing_time": batch_time,
-            "average_processing_time": batch_time / len(document_pairs),
             "results": results,
         }
-
-        self.logger.info(
-            f"Batch processing completed: {successful}/{len(document_pairs)} successful \
-                ({batch_summary['success_rate']:.1f}%)"
-        )
-        self.logger.info(
-            f"Total time: {batch_time:.2f}s, Average per pair: \
-                {batch_summary['average_processing_time']:.2f}s"
-        )
-
-        return batch_summary
 
     def get_pipeline_statistics(self) -> Dict[str, Any]:
         """
@@ -285,72 +313,4 @@ class ClinicalConflictPipeline:
                 "max_retries": self.max_retries,
                 "database_path": self.db_manager.db_path,
             },
-        }
-
-    def test_single_conflict_type(self, conflict_type: str, count: int = 3) -> Dict[str, Any]:
-        """
-        Test the pipeline with a specific conflict type by forcing the Doctor Agent's decision
-
-        Args:
-            conflict_type: The conflict type to test
-            count: Number of document pairs to test with
-
-        Returns:
-            Test results
-        """
-        self.logger.info(f"Testing pipeline with forced conflict type: {conflict_type}")
-
-        # Validate conflict type exists
-        available_types = self.doctor_agent.list_all_conflict_types()
-        if conflict_type not in available_types:
-            return {
-                "success": False,
-                "error": f"Unknown conflict type '{conflict_type}'. \
-                    Available: {list(available_types.keys())}",
-            }
-
-        # Get test document pairs
-        document_pairs = self.data_loader.get_random_document_pairs(count=count)
-
-        test_results = []
-        successful = 0
-
-        for doc_pair in document_pairs:
-            # Create a forced conflict result
-            conflict_info = available_types[conflict_type]
-            forced_conflict = ConflictResult(
-                conflict_type=conflict_type,
-                reasoning=f"Testing forced conflict type: {conflict_info['name']}",
-                modification_instructions=f"Create a {conflict_info['name']} conflict \
-                    between these documents based on the description: \
-                        {conflict_info['description']}",
-            )
-
-            # Process through Editor and Moderator only
-            editor_result = self.editor_agent.process(doc_pair, forced_conflict)
-            validation_result = self.moderator_agent.process(
-                doc_pair, editor_result, conflict_type
-            )
-
-            test_result = {
-                "pair_id": f"{doc_pair.doc1_id}_{doc_pair.doc2_id}",
-                "conflict_type": conflict_type,
-                "editor_success": True,
-                "validation_success": validation_result.is_valid,
-                "validation_score": validation_result.validation_score,
-                "issues_found": validation_result.issues_found,
-            }
-
-            if validation_result.is_valid:
-                successful += 1
-
-            test_results.append(test_result)
-
-        return {
-            "success": True,
-            "conflict_type_tested": conflict_type,
-            "total_pairs": count,
-            "successful_validations": successful,
-            "success_rate": successful / count * 100,
-            "results": test_results,
         }

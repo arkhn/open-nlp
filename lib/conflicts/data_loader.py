@@ -4,11 +4,12 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any
 
 import pandas as pd
-from base import DocumentPair
-from config import BATCH_SIZE, DATA_PATH
+
+from models import DocumentPair
+from config import DATA_PATH, BATCH_SIZE
 
 
-class ClinicalDataLoader:
+class DataLoader:
     """
     Loads and manages clinical document data from the preprocessed MIMIC-III dataset
     """

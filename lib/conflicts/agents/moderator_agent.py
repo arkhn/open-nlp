@@ -1,9 +1,8 @@
-import time
-from typing import Any, Dict
+from typing import Dict, Any
 
-from base import BaseAgent, DocumentPair, EditorResult, ValidationResult
-from config import CONFLICT_TYPES, MODERATOR_AGENT_PROMPT_FILE
-from prompt_loader import load_prompt
+from base import BaseAgent
+from models import DocumentPair, EditorResult, ValidationResult
+from config import CONFLICT_TYPES
 
 
 class ModeratorAgent(BaseAgent):
@@ -13,11 +12,13 @@ class ModeratorAgent(BaseAgent):
     If invalid, they are returned to Editor Agent for re-modification.
     """
 
-    def __init__(self, min_validation_score: int = 70):
-        super().__init__("Moderator")
+    def __init__(self, client, model, min_validation_score: int = 70):
+        with open("prompts/moderator_agent_system.txt", "r", encoding="utf-8") as f:
+            system_prompt = f.read().strip()
+        super().__init__("Moderator", client, model, system_prompt)
         self.min_validation_score = min_validation_score
 
-    def process(
+    def __call__(
         self, original_pair: DocumentPair, modified_docs: EditorResult, conflict_type: str
     ) -> ValidationResult:
         """
@@ -31,8 +32,6 @@ class ModeratorAgent(BaseAgent):
         Returns:
             ValidationResult indicating whether modifications are acceptable
         """
-        start_time = time.time()
-
         self.logger.info(f"Moderator Agent validating '{conflict_type}' conflict modifications")
 
         try:
@@ -44,7 +43,8 @@ class ModeratorAgent(BaseAgent):
                 conflict_name = CONFLICT_TYPES[conflict_type].name
 
             # Load prompt template from file and prepare validation prompt
-            prompt_template = load_prompt(MODERATOR_AGENT_PROMPT_FILE)
+            with open("prompts/moderator_agent.txt", "r", encoding="utf-8") as f:
+                prompt_template = f.read().strip()
 
             prompt = prompt_template.format(
                 original_doc1=self._truncate_document(original_pair.doc1_text),
@@ -58,7 +58,7 @@ class ModeratorAgent(BaseAgent):
             self.logger.debug(f"Sending validation prompt to API (length: {len(prompt)} chars)")
 
             # Call Groq API with low temperature for consistent validation
-            response = self.client.call_api(prompt, temperature=0.2, max_tokens=2000)
+            response = self._execute_prompt(prompt)
 
             self.logger.debug(f"Received validation response from API: {response[:200]}...")
 
@@ -112,11 +112,10 @@ class ModeratorAgent(BaseAgent):
                 ),
             )
 
-            processing_time = time.time() - start_time
-
-            self.logger.info(f"Moderator Agent completed validation in {processing_time:.2f}s")
-            status = "VALID" if result.is_valid else "INVALID"
-            self.logger.info(f"Validation result: {status} (Score: {result.validation_score}/100)")
+            self.logger.info("Moderator Agent completed validation")
+            self.logger.info(
+                f"Validation result: {'VALID' if result.is_valid else 'INVALID'} (Score: {result.validation_score}/100)"
+            )
 
             if not result.is_valid:
                 self.logger.info(f"Issues found: {result.issues_found}")
@@ -133,33 +132,6 @@ class ModeratorAgent(BaseAgent):
                 issues_found=[f"Processing error: {str(e)}"],
                 approval_reasoning="Validation could not be completed due to technical error",
             )
-
-    def _truncate_document(self, text: str, max_length: int = 2500) -> str:
-        """
-        Truncate document text to fit within prompt limits while preserving meaning
-
-        Args:
-            text: Full document text
-            max_length: Maximum character length
-
-        Returns:
-            Truncated text
-        """
-        if len(text) <= max_length:
-            return text
-
-        # Try to cut at sentence boundaries
-        truncated = text[:max_length]
-        last_period = truncated.rfind(".")
-        last_newline = truncated.rfind("\n")
-
-        # Use the latest sentence or line boundary
-        cut_point = max(last_period, last_newline)
-
-        if cut_point > max_length * 0.8:  # Only use if we don't lose too much content
-            return text[: cut_point + 1]
-        else:
-            return text[:max_length] + "..."
 
     def detailed_validation_check(
         self, original_pair: DocumentPair, modified_docs: EditorResult

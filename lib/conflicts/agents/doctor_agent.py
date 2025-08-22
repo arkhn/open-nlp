@@ -1,10 +1,23 @@
-import time
-from typing import Any, Dict
+from typing import Dict, Any
 
-from base import (BaseAgent, ConflictResult, DocumentPair,
-                  format_conflict_types_for_prompt)
-from config import CONFLICT_TYPES, DOCTOR_AGENT_PROMPT_FILE
-from prompt_loader import load_prompt
+from base import BaseAgent
+from models import DocumentPair, ConflictResult
+from config import CONFLICT_TYPES
+
+
+def format_conflict_types_for_prompt(conflict_types: Dict) -> str:
+    """Format conflict types dictionary for use in prompts"""
+    formatted_types = []
+    for key, conflict_type in conflict_types.items():
+        examples_str = "\n  ".join([f"- {example}" for example in conflict_type.examples])
+        formatted_types.append(
+            f"""{key}: {conflict_type.name}
+            Description: {conflict_type.description}
+            Examples:
+            {examples_str}
+            """
+        )
+    return "\n".join(formatted_types)
 
 
 class DoctorAgent(BaseAgent):
@@ -13,10 +26,12 @@ class DoctorAgent(BaseAgent):
     clinical conflict should be introduced between them.
     """
 
-    def __init__(self):
-        super().__init__("Doctor")
+    def __init__(self, client, model):
+        with open("prompts/doctor_agent_system.txt", "r", encoding="utf-8") as f:
+            system_prompt = f.read().strip()
+        super().__init__("Doctor", client, model, system_prompt)
 
-    def process(self, document_pair: DocumentPair) -> ConflictResult:
+    def __call__(self, document_pair: DocumentPair) -> ConflictResult:
         """
         Analyze documents and determine the best conflict type to introduce
 
@@ -26,8 +41,6 @@ class DoctorAgent(BaseAgent):
         Returns:
             ConflictResult containing the chosen conflict type and instructions
         """
-        start_time = time.time()
-
         self.logger.info(
             f"Doctor Agent analyzing document pair: \
                 {document_pair.doc1_id} & {document_pair.doc2_id}"
@@ -35,7 +48,8 @@ class DoctorAgent(BaseAgent):
 
         try:
             # Load prompt template from file
-            prompt_template = load_prompt(DOCTOR_AGENT_PROMPT_FILE)
+            with open("prompts/doctor_agent.txt", "r", encoding="utf-8") as f:
+                prompt_template = f.read().strip()
 
             # Prepare prompt with conflict types and documents
             conflict_types_formatted = format_conflict_types_for_prompt(CONFLICT_TYPES)
@@ -49,7 +63,7 @@ class DoctorAgent(BaseAgent):
             self.logger.debug(f"Sending prompt to API (length: {len(prompt)} chars)")
 
             # Call Groq API
-            response = self.client.call_api(prompt, temperature=0.3)
+            response = self._execute_prompt(prompt)
 
             self.logger.debug(f"Received response from API: {response[:200]}...")
 
@@ -76,9 +90,7 @@ class DoctorAgent(BaseAgent):
                 modification_instructions=parsed_response["modification_instructions"],
             )
 
-            processing_time = time.time() - start_time
-
-            self.logger.info(f"Doctor Agent completed analysis in {processing_time:.2f}s")
+            self.logger.info("Doctor Agent completed analysis")
             self.logger.info(f"Selected conflict type: {result.conflict_type}")
             self.logger.debug(f"Reasoning: {result.reasoning}")
 
@@ -87,33 +99,6 @@ class DoctorAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Doctor Agent processing failed: {e}")
             raise
-
-    def _truncate_document(self, text: str, max_length: int = 2000) -> str:
-        """
-        Truncate document text to fit within prompt limits while preserving meaning
-
-        Args:
-            text: Full document text
-            max_length: Maximum character length
-
-        Returns:
-            Truncated text
-        """
-        if len(text) <= max_length:
-            return text
-
-        # Try to cut at sentence boundaries
-        truncated = text[:max_length]
-        last_period = truncated.rfind(".")
-        last_newline = truncated.rfind("\n")
-
-        # Use the latest sentence or line boundary
-        cut_point = max(last_period, last_newline)
-
-        if cut_point > max_length * 0.8:  # Only use if we don't lose too much content
-            return text[: cut_point + 1]
-        else:
-            return text[:max_length] + "..."
 
     def get_conflict_type_info(self, conflict_type: str) -> Dict[str, Any]:
         """
