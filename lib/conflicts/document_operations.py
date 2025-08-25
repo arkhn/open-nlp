@@ -72,6 +72,11 @@ def apply_edit_operation(document: str, operation: Dict[str, Any]) -> str:
 
     # Check if target_text exists in document
     if target_text not in document:
+        # Additional validation: check for common LLM issues
+        if target_text.endswith("...") or target_text.endswith("n..."):
+            raise ValueError(f"Target text appears to be truncated: '{target_text[:50]}...'")
+        if len(target_text.strip()) < 20:  # Too short to be reliable
+            raise ValueError(f"Target text too short to be reliable: '{target_text[:50]}...'")
         raise ValueError(f"Target text not found in document: '{target_text[:50]}...'")
 
     if op_type == "delete":

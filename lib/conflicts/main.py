@@ -33,7 +33,6 @@ def batch(
     print(f"Failed: {result['failed']}")
     print(f"Success rate: {result['success_rate']:.1f}%")
     print(f"Total processing time: {result['total_processing_time']:.2f}s")
-    print(f"Average per pair: {result['average_processing_time']:.2f}s")
 
 
 @app.command()
