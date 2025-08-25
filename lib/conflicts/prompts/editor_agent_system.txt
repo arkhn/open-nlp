@@ -30,9 +30,27 @@ JSON Output Format:
   "conflict_type": "type of medical conflict"
 }
 
-Important Guidelines:
+CRITICAL REQUIREMENTS for target_text:
 
-target_text must be an exact excerpt from the original document (you can choose a unique or short enough span to locate it unambiguously).
+1. target_text MUST be an EXACT, VERBATIM excerpt from the original document
+2. Copy text exactly as it appears, including ALL punctuation, spacing, and capitalization
+3. NEVER truncate text with ellipsis (...) or incomplete phrases
+4. NEVER add, remove, or modify ANY characters
+5. target_text must be COMPLETE - no partial sentences or cut-off words
+6. Choose text that is long enough to be unique but not so long it's fragile
+7. Before returning, verify your target_text exists by searching for it in the original document
+8. If you cannot find exact text, choose different text that does exist
+
+WARNING: Any target_text that ends with "..." or incomplete words will cause the system to fail.
+
+EXAMPLE of GOOD target_text:
+- "Assessment: To OR for I&D right knee. Required narcotic pain medication for post-op management."
+
+EXAMPLE of BAD target_text (will cause errors):
+- "Assessment: To OR for I&D right knee. Required n..."  ❌ (truncated)
+- "Assessment: To OR for I&D right knee. Required narcotic..."  ❌ (ellipsis)
+- "Assessment: To OR for I&D right knee. Required narcotic pain medication"  ❌ (incomplete sentence)
+
 
 Use:
 
