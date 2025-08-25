@@ -2,10 +2,15 @@ import os
 from dataclasses import dataclass
 from typing import List
 
-# Groq API Configuration
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL = "openai/gpt-oss-120b"
-GROQ_BASE_URL = "https://api.groq.com/openai/v1"
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# API Configuration
+API_KEY = os.getenv("GROQ_API_KEY", "")
+MODEL = os.getenv("MODEL", "openai/gpt-oss-120b")
+BASE_URL = os.getenv("BASE_URL", "https://api.groq.com/openai/v1")
 
 # Data Configuration
 DATA_PATH = "data/mimic-iii-verifact-bhc.parquet"
@@ -16,8 +21,8 @@ LOG_LEVEL = "INFO"
 LOG_FILE = "pipeline.log"
 
 # Pipeline Configuration
-MAX_RETRY_ATTEMPTS = 3
-BATCH_SIZE = 2  # Number of documents to process together
+MAX_RETRY_ATTEMPTS = int(os.getenv("MAX_RETRY_ATTEMPTS", "3"))
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", "2"))
 
 
 @dataclass

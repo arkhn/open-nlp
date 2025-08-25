@@ -265,7 +265,6 @@ Successful: 4
 Failed: 1
 Success rate: 80.0%
 Total processing time: 45.2s
-Average per pair: 9.0s
 ```
 
 ### Conflict Example

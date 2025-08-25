@@ -33,12 +33,12 @@ def show_conflict_types():
 def show_dataset_info():
     """Show dataset information"""
     try:
-        from data_loader import ClinicalDataLoader
+        from data_loader import DataLoader
 
         print("📊 Dataset Information")
         print("-" * 40)
 
-        loader = ClinicalDataLoader()
+        loader = DataLoader()
         stats = loader.get_data_statistics()
 
         print(f"Total documents: {stats['total_documents']:,}")
@@ -64,12 +64,12 @@ def show_dataset_info():
 def show_sample_documents():
     """Show sample documents from the dataset"""
     try:
-        from data_loader import ClinicalDataLoader
+        from data_loader import DataLoader
 
         print("📄 Sample Documents")
         print("-" * 40)
 
-        loader = ClinicalDataLoader()
+        loader = DataLoader()
         pairs = loader.get_random_document_pairs(count=1)
 
         if pairs:
