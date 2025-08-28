@@ -67,6 +67,8 @@ class DataLoader:
             subject_id=f"{doc1['subject_id']},{doc2['subject_id']}",
             category1=doc1["category"],
             category2=doc2["category"],
+            doc1_timestamp=doc1.get("chart_time") if "chart_time" in doc1 else None,
+            doc2_timestamp=doc2.get("chart_time") if "chart_time" in doc2 else None,
         )
 
     def get_data_statistics(self) -> Dict[str, Any]:
