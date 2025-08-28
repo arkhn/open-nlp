@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional
 
 
@@ -13,6 +14,8 @@ class DocumentPair:
     subject_id: Optional[str] = None
     category1: Optional[str] = None
     category2: Optional[str] = None
+    doc1_timestamp: Optional[datetime] = None
+    doc2_timestamp: Optional[datetime] = None
 
 
 @dataclass

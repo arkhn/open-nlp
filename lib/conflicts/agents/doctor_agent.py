@@ -3,6 +3,7 @@ from typing import Any, Dict
 from base import BaseAgent
 from config import CONFLICT_TYPES
 from models import ConflictResult, DocumentPair
+from temporal_analysis import TemporalAnalyzer
 
 
 def format_conflict_types_for_prompt(conflict_types: Dict) -> str:
@@ -47,20 +48,39 @@ class DoctorAgent(BaseAgent):
         )
 
         try:
+            # Perform temporal analysis
+            temporal_analyzer = TemporalAnalyzer()
+            temporal_analysis = temporal_analyzer.analyze_temporal_relationship(
+                document_pair.doc1_timestamp, document_pair.doc2_timestamp
+            )
+
+            # Get temporal conflict recommendations
+            temporal_recommendations = temporal_analyzer.get_temporal_conflict_recommendations(
+                temporal_analysis
+            )
+
             # Load prompt template from file
             with open("prompts/doctor_agent.txt", "r", encoding="utf-8") as f:
                 prompt_template = f.read().strip()
 
-            # Prepare prompt with conflict types and documents
+            # Prepare prompt with conflict types, temporal info, and documents
             conflict_types_formatted = format_conflict_types_for_prompt(CONFLICT_TYPES)
+            temporal_context = temporal_analyzer.format_temporal_context_for_prompt(
+                temporal_analysis
+            )
+            temporal_recommendations_str = ", ".join(temporal_recommendations)
 
             prompt = prompt_template.format(
                 conflict_types=conflict_types_formatted,
+                temporal_context=temporal_context,
+                temporal_recommendations=temporal_recommendations_str,
                 document1=self._truncate_document(document_pair.doc1_text),
                 document2=self._truncate_document(document_pair.doc2_text),
             )
 
             self.logger.debug(f"Sending prompt to API (length: {len(prompt)} chars)")
+            self.logger.debug(f"Temporal analysis: {temporal_analysis}")
+            self.logger.debug(f"Temporal recommendations: {temporal_recommendations}")
 
             # Call Groq API
             response = self._execute_prompt(prompt)
@@ -92,12 +112,14 @@ class DoctorAgent(BaseAgent):
 
             self.logger.info("Doctor Agent completed analysis")
             self.logger.info(f"Selected conflict type: {result.conflict_type}")
-            self.logger.debug(f"Reasoning: {result.reasoning}")
+            self.logger.info(
+                f"Temporal context: {temporal_analysis.get('time_context', 'Unknown')}"
+            )
 
             return result
 
         except Exception as e:
-            self.logger.error(f"Doctor Agent processing failed: {e}")
+            self.logger.error(f"Error in Doctor Agent: {e}")
             raise
 
     def get_conflict_type_info(self, conflict_type: str) -> Dict[str, Any]:
