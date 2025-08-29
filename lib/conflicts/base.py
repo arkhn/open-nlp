@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict
 
 import openai
+import pandas as pd
 from config import DATABASE_PATH
 from models import DocumentPair, EditorResult, ValidationResult
 
@@ -178,3 +179,11 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute("SELECT COUNT(*) FROM validated_documents")
             return cursor.fetchone()[0]
+
+    def save_to_parquet(self, output_path: str = "validated_documents.parquet"):
+        """Save all validated documents to a parquet file"""
+        with sqlite3.connect(self.db_path) as conn:
+            query = "SELECT * FROM validated_documents"
+            df = pd.read_sql_query(query, conn)
+            df.to_parquet(output_path, index=False)
+            print(f"Database saved to parquet file: {output_path}")
