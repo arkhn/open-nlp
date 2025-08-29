@@ -4,6 +4,11 @@ import json
 import logging
 from typing import Any, Dict, List
 
+from config import (EDIT_OPERATIONS, ERROR_MESSAGES, JSON_PARSING,
+                    MIN_TARGET_TEXT_LENGTH, VALIDATION_RULES)
+from utils import (categorize_text_by_medical_domain, find_similar_text,
+                   suggest_edit_operations)
+
 
 def _extract_json_from_response(response: str) -> Dict[str, Any]:
     """
@@ -30,8 +35,8 @@ def _extract_json_from_response(response: str) -> Dict[str, Any]:
             return data
         except json.JSONDecodeError:
             # Try extracting JSON from markdown code blocks
-            if "```json" in response:
-                parts = response.split("```json")
+            if JSON_PARSING["MARKDOWN_CODE_BLOCK"] in response:
+                parts = response.split(JSON_PARSING["MARKDOWN_CODE_BLOCK"])
                 if len(parts) > 1:
                     json_part = parts[1].split("```")[0].strip()
                     data = json.loads(json_part)
@@ -73,7 +78,7 @@ def apply_edit_operation(document: str, operation: Dict[str, Any]) -> str:
     # Check if target_text exists in document
     if target_text not in document:
         # Try to find similar text using fuzzy matching
-        similar_text = _find_similar_text(document, target_text)
+        similar_text = find_similar_text(document, target_text)
 
         if similar_text:
             logging.warning(
@@ -85,172 +90,21 @@ def apply_edit_operation(document: str, operation: Dict[str, Any]) -> str:
             # Additional validation: check for common LLM issues
             if target_text.endswith("...") or target_text.endswith("n..."):
                 raise ValueError(f"Target text appears to be truncated: '{target_text[:50]}...'")
-            if len(target_text.strip()) < 20:  # Too short to be reliable
+            if len(target_text.strip()) < MIN_TARGET_TEXT_LENGTH:
                 raise ValueError(f"Target text too short to be reliable: '{target_text[:50]}...'")
 
             # Provide more helpful error message with suggestions
             error_msg = f"Target text not found in document: '{target_text[:100]}...'"
             raise ValueError(error_msg)
 
-    if op_type == "delete":
+    if op_type == EDIT_OPERATIONS["DELETE"]:
         return document.replace(target_text, "", 1)
-    elif op_type == "insert_after":
+    elif op_type == EDIT_OPERATIONS["INSERT_AFTER"]:
         return document.replace(target_text, target_text + replacement_text, 1)
-    elif op_type == "replace":
+    elif op_type == EDIT_OPERATIONS["REPLACE"]:
         return document.replace(target_text, replacement_text, 1)
     else:
-        raise ValueError(f"Unknown operation type: {op_type}")
-
-
-def _find_similar_text(document: str, target_text: str, similarity_threshold: float = 0.6) -> str:
-    """
-    Find text in the document that is similar to the target text using fuzzy matching.
-
-    Args:
-        document: The document to search in
-        target_text: The text to find similar matches for
-        similarity_threshold: Minimum similarity score (0.0 to 1.0)
-
-    Returns:
-        The most similar text found, or empty string if no good match
-    """
-    try:
-        from difflib import SequenceMatcher
-
-        # Split document into sentences or chunks for better matching
-        sentences = _split_into_sentences(document)
-
-        best_match = ""
-        best_score = 0.0
-
-        # First try exact substring matching with case insensitivity
-        target_lower = target_text.lower()
-        for sentence in sentences:
-            if target_lower in sentence.lower():
-                return sentence
-
-        # If no exact substring match, try fuzzy matching
-        for sentence in sentences:
-            # Calculate similarity between target and this sentence
-            similarity = SequenceMatcher(None, target_lower, sentence.lower()).ratio()
-
-            if similarity > best_score and similarity >= similarity_threshold:
-                best_score = similarity
-                best_match = sentence
-
-        # If still no good match, try word-based matching
-        if not best_match:
-            target_words = set(target_lower.split())
-            for sentence in sentences:
-                sentence_words = set(sentence.lower().split())
-                word_overlap = len(target_words.intersection(sentence_words))
-                if word_overlap >= 2:  # At least 2 words in common
-                    return sentence
-
-        return best_match
-
-    except ImportError:
-        # Fallback if difflib is not available
-        logging.warning("difflib not available, skipping fuzzy matching")
-        return ""
-    except Exception as e:
-        logging.warning(f"Error in fuzzy matching: {e}")
-        return ""
-
-
-def _split_into_sentences(text: str) -> list:
-    """
-    Split text into sentences for better fuzzy matching.
-
-    Args:
-        text: Text to split
-
-    Returns:
-        List of sentences
-    """
-    # Simple sentence splitting - can be improved with more sophisticated NLP
-    import re
-
-    # Split on common sentence endings, but be careful with abbreviations
-    sentences = re.split(r"(?<=[.!?])\s+", text)
-
-    # Filter out very short or empty sentences
-    sentences = [s.strip() for s in sentences if len(s.strip()) > 10]
-
-    return sentences
-
-
-def find_suitable_text_for_editing(
-    document: str, target_keywords: List[str] = None, min_length: int = 20
-) -> List[str]:
-    """
-    Find suitable text segments in a document that could be used for editing operations.
-
-    Args:
-        document: The document to search in
-        target_keywords: Optional list of keywords to prioritize
-        min_length: Minimum length of text segments to return
-
-    Returns:
-        List of suitable text segments
-    """
-    sentences = _split_into_sentences(document)
-
-    if target_keywords:
-        # Score sentences based on keyword relevance
-        scored_sentences = []
-        for sentence in sentences:
-            if len(sentence) >= min_length:
-                score = sum(1 for keyword in target_keywords if keyword.lower() in sentence.lower())
-                if score > 0:
-                    scored_sentences.append((score, sentence))
-
-        # Sort by relevance score and return top candidates
-        scored_sentences.sort(key=lambda x: x[0], reverse=True)
-        return [sentence for _, sentence in scored_sentences[:5]]
-    else:
-        # Return sentences that meet length requirements
-        return [s for s in sentences if len(s) >= min_length]
-
-
-def suggest_edit_operations(document: str, conflict_type: str) -> Dict[str, Any]:
-    """
-    Suggest edit operations based on document content and conflict type.
-
-    Args:
-        document: The document to analyze
-        conflict_type: Type of conflict to create
-
-    Returns:
-        Dictionary with suggested edit operations
-    """
-    suggestions = {
-        "medical_condition": [],
-        "medication": [],
-        "vital_signs": [],
-        "lab_values": [],
-        "procedures": [],
-        "general": [],
-    }
-
-    # Define keywords for different conflict types
-    keyword_mapping = {
-        "medical_condition": ["diagnosis", "condition", "disease", "syndrome", "assessment"],
-        "medication": ["medication", "drug", "prescription", "dose", "mg", "tablet"],
-        "vital_signs": ["blood pressure", "heart rate", "temperature", "pulse", "respiratory"],
-        "lab_values": ["lab", "laboratory", "test", "result", "value", "level"],
-        "procedures": ["procedure", "surgery", "operation", "intervention", "treatment"],
-    }
-
-    # Find suitable text for each category
-    for category, keywords in keyword_mapping.items():
-        suitable_text = find_suitable_text_for_editing(document, keywords, min_length=30)
-        suggestions[category] = suitable_text[:3]  # Top 3 suggestions per category
-
-    # General suggestions (longer sentences that might be good anchors)
-    suggestions["general"] = find_suitable_text_for_editing(document, min_length=50)[:3]
-
-    return suggestions
+        raise ValueError(f"{ERROR_MESSAGES['INVALID_OPERATION_TYPE']}: {op_type}")
 
 
 def parse_response(response: str, original_doc_1: str, original_doc_2: str) -> Dict[str, Any]:
@@ -270,13 +124,14 @@ def parse_response(response: str, original_doc_1: str, original_doc_2: str) -> D
     """
     try:
         # Log the first 200 chars of response for debugging
-        logging.debug(f"Response preview: {response[:200]}...")
+        logging.debug(f"Response preview: {response[:JSON_PARSING['RESPONSE_PREVIEW_LENGTH']]}...")
 
         # Extract JSON from response
         data = _extract_json_from_response(response)
 
         # Check if we have the expected edit operations format
-        if "doc1" in data and "doc2" in data and "conflict_type" in data:
+        required_fields = JSON_PARSING["REQUIRED_FIELDS"]
+        if all(field in data for field in required_fields):
             logging.info("Found edit operations format, applying operations to documents")
 
             # Apply edit operations to documents
@@ -325,11 +180,11 @@ def parse_response(response: str, original_doc_1: str, original_doc_2: str) -> D
                 "conflict_type": conflict_type,
             }
         else:
-            raise ValueError("Response missing required fields: doc1, doc2, conflict_type")
+            raise ValueError(f"{ERROR_MESSAGES['MISSING_REQUIRED_FIELDS']}: {required_fields}")
 
     except json.JSONDecodeError as e:
-        logging.error(f"Failed to parse response as JSON: {e}")
-        raise ValueError(f"Failed to parse response as JSON: {e}")
+        logging.error(f"{ERROR_MESSAGES['JSON_PARSE_FAILED']}: {e}")
+        raise ValueError(f"{ERROR_MESSAGES['JSON_PARSE_FAILED']}: {e}")
     except Exception as e:
         logging.error(f"Error parsing response: {e}")
         raise ValueError(f"Error parsing response: {e}")
@@ -353,17 +208,17 @@ def validate_edit_operation(document: str, operation: Dict[str, Any]) -> Dict[st
     replacement_text = operation.get("replacement_text", "")
 
     # Check operation type
-    if op_type not in ["delete", "insert_after", "replace"]:
+    if op_type not in EDIT_OPERATIONS.values():
         validation_result["is_valid"] = False
         validation_result["issues"].append(f"Invalid operation type: {op_type}")
 
     # Check if target_text exists
     if target_text not in document:
         validation_result["is_valid"] = False
-        validation_result["issues"].append("Target text not found in document")
+        validation_result["issues"].append(ERROR_MESSAGES["TARGET_TEXT_NOT_FOUND"])
 
         # Try to find similar text
-        similar_text = _find_similar_text(document, target_text)
+        similar_text = find_similar_text(document, target_text)
         if similar_text:
             validation_result["similar_text"] = similar_text
             validation_result["suggestions"].append(
@@ -378,18 +233,22 @@ def validate_edit_operation(document: str, operation: Dict[str, Any]) -> Dict[st
                 validation_result["suggestions"].append(f"  {i}. {text[:100]}...")
 
     # Check text quality
-    if len(target_text.strip()) < 20:
+    if len(target_text.strip()) < VALIDATION_RULES["MIN_TARGET_LENGTH"]:
         validation_result["is_valid"] = False
-        validation_result["issues"].append("Target text too short (less than 20 characters)")
+        validation_result["issues"].append(
+            f"Target text too short (less than {VALIDATION_RULES['MIN_TARGET_LENGTH']} characters)"
+        )
 
-    if target_text.endswith("...") or target_text.endswith("n..."):
+    if any(
+        target_text.endswith(indicator) for indicator in VALIDATION_RULES["TRUNCATION_INDICATORS"]
+    ):
         validation_result["is_valid"] = False
-        validation_result["issues"].append("Target text appears to be truncated")
+        validation_result["issues"].append(ERROR_MESSAGES["TARGET_TEXT_TRUNCATED"])
 
     # Check replacement text for replace operations
-    if op_type == "replace" and not replacement_text:
+    if op_type == EDIT_OPERATIONS["REPLACE"] and not replacement_text:
         validation_result["is_valid"] = False
-        validation_result["issues"].append("Replace operation requires replacement_text")
+        validation_result["issues"].append(ERROR_MESSAGES["REPLACE_MISSING_REPLACEMENT"])
 
     return validation_result
 
@@ -404,85 +263,4 @@ def extract_text_by_category(document: str) -> Dict[str, List[str]]:
     Returns:
         Dictionary with text organized by medical categories
     """
-    # Define medical keywords and patterns
-    category_patterns = {
-        "assessment": ["assessment", "diagnosis", "impression", "findings", "clinical picture"],
-        "vital_signs": [
-            "vital signs",
-            "blood pressure",
-            "heart rate",
-            "pulse",
-            "temperature",
-            "respiratory rate",
-            "oxygen saturation",
-            "sp02",
-            "bp",
-            "hr",
-            "temp",
-        ],
-        "laboratory": [
-            "lab",
-            "laboratory",
-            "test",
-            "result",
-            "value",
-            "level",
-            "ng/ml",
-            "mg/dl",
-            "mmol/l",
-            "units",
-            "reference range",
-        ],
-        "medication": [
-            "medication",
-            "drug",
-            "prescription",
-            "dose",
-            "mg",
-            "tablet",
-            "capsule",
-            "injection",
-            "iv",
-            "oral",
-            "subcutaneous",
-        ],
-        "procedures": [
-            "procedure",
-            "surgery",
-            "operation",
-            "intervention",
-            "treatment",
-            "catheterization",
-            "intubation",
-            "ventilation",
-        ],
-        "symptoms": [
-            "symptoms",
-            "complaints",
-            "pain",
-            "shortness of breath",
-            "dyspnea",
-            "nausea",
-            "vomiting",
-            "dizziness",
-            "weakness",
-        ],
-    }
-
-    sentences = _split_into_sentences(document)
-    categorized_text = {category: [] for category in category_patterns.keys()}
-
-    for sentence in sentences:
-        sentence_lower = sentence.lower()
-
-        for category, keywords in category_patterns.items():
-            if any(keyword in sentence_lower for keyword in keywords):
-                categorized_text[category].append(sentence)
-
-    # Add general category for sentences that don't fit specific categories
-    categorized_text["general"] = []
-    for sentence in sentences:
-        if not any(sentence in " ".join(texts) for texts in categorized_text.values() if texts):
-            categorized_text["general"].append(sentence)
-
-    return categorized_text
+    return categorize_text_by_medical_domain(document)
