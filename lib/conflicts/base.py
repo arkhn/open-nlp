@@ -91,7 +91,7 @@ class DatabaseManager:
                     modified_doc1_text TEXT,
                     modified_doc2_text TEXT,
                     conflict_type TEXT,
-                    validation_score INTEGER,
+                    score INTEGER,
                     changes_made TEXT,
                     doc1_timestamp TEXT,
                     doc2_timestamp TEXT,
@@ -131,7 +131,7 @@ class DatabaseManager:
                 """
                 INSERT INTO validated_documents
                 (original_doc1_id, original_doc2_id, original_doc1_text, original_doc2_text, \
-                    modified_doc1_text, modified_doc2_text, conflict_type, validation_score, \
+                    modified_doc1_text, modified_doc2_text, conflict_type, score, \
                         changes_made, doc1_timestamp, doc2_timestamp)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
@@ -143,7 +143,7 @@ class DatabaseManager:
                     modified_docs.modified_document1,
                     modified_docs.modified_document2,
                     conflict_type,
-                    validation_result.validation_score,
+                    validation_result.score,
                     modified_docs.changes_made,
                     str(original_pair.doc1_timestamp) if original_pair.doc1_timestamp else None,
                     str(original_pair.doc2_timestamp) if original_pair.doc2_timestamp else None,

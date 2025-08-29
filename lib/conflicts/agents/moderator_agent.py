@@ -1,7 +1,7 @@
+import re
 from typing import Any, Dict
 
 from base import BaseAgent
-from config import CONFLICT_TYPES
 from models import DocumentPair, EditorResult, ValidationResult
 
 
@@ -12,11 +12,11 @@ class ModeratorAgent(BaseAgent):
     If invalid, they are returned to Editor Agent for re-modification.
     """
 
-    def __init__(self, client, model, min_validation_score: int = 70):
+    def __init__(self, client, model, min_validation_score: int = 4):
         with open("prompts/moderator_agent_system.txt", "r", encoding="utf-8") as f:
             system_prompt = f.read().strip()
         super().__init__("Moderator", client, model, system_prompt)
-        self.min_validation_score = min_validation_score
+        self.min_score = min_validation_score
 
     def __call__(
         self, original_pair: DocumentPair, modified_docs: EditorResult, conflict_type: str
@@ -35,25 +35,17 @@ class ModeratorAgent(BaseAgent):
         self.logger.info(f"Moderator Agent validating '{conflict_type}' conflict modifications")
 
         try:
-            # Get conflict type information for context
-            if conflict_type not in CONFLICT_TYPES:
-                self.logger.warning(f"Unknown conflict type '{conflict_type}' for validation")
-                conflict_name = "Unknown Conflict Type"
-            else:
-                conflict_name = CONFLICT_TYPES[conflict_type].name
-
             # Load prompt template from file and prepare validation prompt
             with open("prompts/moderator_agent.txt", "r", encoding="utf-8") as f:
                 prompt_template = f.read().strip()
 
             prompt = prompt_template.format(
-                original_doc1=self._truncate_document(original_pair.doc1_text),
-                original_doc2=self._truncate_document(original_pair.doc2_text),
-                modified_doc1=self._truncate_document(modified_docs.modified_document1),
-                modified_doc2=self._truncate_document(modified_docs.modified_document2),
-                conflict_type=conflict_name,
-                changes_made=modified_docs.changes_made,
+                context_document_1=self._truncate_document(original_pair.doc1_text),
+                context_document_2=self._truncate_document(original_pair.doc2_text),
+                conflict_1=modified_docs.change_info_1 or "No change info available",
+                conflict_2=modified_docs.change_info_2 or "No change info available",
             )
+            print(prompt)
 
             self.logger.debug(f"Sending validation prompt to API (length: {len(prompt)} chars)")
 
@@ -62,64 +54,34 @@ class ModeratorAgent(BaseAgent):
 
             self.logger.debug(f"Received validation response from API: {response[:200]}...")
 
-            # Parse response
-            parsed_response = self._parse_json_response(response)
+            # Parse response using new score-based format
+            parsed_response = self._parse_score_response(response)
 
-            # Validate required fields
-            required_fields = ["is_valid", "validation_score", "feedback", "approval_reasoning"]
-            for field in required_fields:
-                if field not in parsed_response:
-                    self.logger.warning(
-                        f"Missing field '{field}' in Moderator response, using default"
-                    )
+            # Extract score (1-5 scale) and reasoning from the new format
+            score = parsed_response.get("score", 1)
+            reasoning = parsed_response.get("reasoning", "No reasoning provided")
 
-            # Handle missing issues_found field
-            issues_found = parsed_response.get("issues_found", [])
-            if isinstance(issues_found, str):
-                issues_found = [issues_found]
+            is_valid = True
 
-            # Ensure validation score is within valid range
-            validation_score = parsed_response.get("validation_score", 0)
-            try:
-                validation_score = int(validation_score)
-                validation_score = max(0, min(100, validation_score))
-            except (ValueError, TypeError):
-                self.logger.warning(
-                    f"Invalid validation score '{validation_score}', defaulting to 0"
-                )
-                validation_score = 0
-
-            # Determine final validity based on score and explicit validation
-            is_valid = parsed_response.get("is_valid", False)
-            if isinstance(is_valid, str):
-                is_valid = is_valid.lower() in ["true", "yes", "1", "valid"]
-
-            # Apply minimum score threshold
-            if validation_score < self.min_validation_score:
+            if score < self.min_score:
                 is_valid = False
                 self.logger.info(
-                    f"Validation score {validation_score} below threshold \
-                        {self.min_validation_score}, marking as invalid"
+                    f"Validation score {score} below threshold \
+                        {self.min_score}, marking as invalid"
                 )
 
             result = ValidationResult(
-                is_valid=bool(is_valid),
-                validation_score=validation_score,
-                feedback=parsed_response.get("feedback", "No feedback provided"),
-                issues_found=issues_found,
-                approval_reasoning=parsed_response.get(
-                    "approval_reasoning", "No reasoning provided"
-                ),
+                is_valid=is_valid,
+                score=score,
+                reasoning=reasoning,
             )
 
             self.logger.info("Moderator Agent completed validation")
             self.logger.info(
-                f"Validation result: {'VALID' if result.is_valid else 'INVALID'}"
-                "(Score: {result.validation_score}/100)"
+                f"Validation result: {'VALID' if result.is_valid else 'INVALID'} \
+                    (Score: {result.score}/5)"
             )
-
-            if not result.is_valid:
-                self.logger.info(f"Issues found: {result.issues_found}")
+            self.logger.info(f"Reasoning: {result.reasoning}")
 
             return result
 
@@ -128,10 +90,8 @@ class ModeratorAgent(BaseAgent):
             # Return a safe invalid result on error
             return ValidationResult(
                 is_valid=False,
-                validation_score=0,
-                feedback=f"Validation failed due to error: {str(e)}",
-                issues_found=[f"Processing error: {str(e)}"],
-                approval_reasoning="Validation could not be completed due to technical error",
+                score=1,
+                reasoning=f"Validation failed due to error: {str(e)}",
             )
 
     def detailed_validation_check(
@@ -197,31 +157,27 @@ class ModeratorAgent(BaseAgent):
 
         return checks
 
-    def get_validation_summary(self, validation_result: ValidationResult) -> str:
+    def _parse_score_response(self, response: str) -> dict:
         """
-        Generate a human-readable summary of the validation result
-
-        Args:
-            validation_result: Result from validation process
-
-        Returns:
-            String summary of validation
+        Parse the new response format that expects reasoning + "Score: X"
         """
-        status = "APPROVED" if validation_result.is_valid else "REJECTED"
+        try:
+            # Find the score using regex
+            score = 1
+            if "score:" in response.lower():
+                score_match = re.search(r"score:\s*(\d)", response, re.IGNORECASE)
+                if score_match:
+                    score = int(score_match.group(1))
+                    score = max(1, min(5, score))
 
-        summary = f"""
-=== VALIDATION SUMMARY ===
-Status: {status}
-Score: {validation_result.validation_score}/100
+            return {
+                "reasoning": response.strip(),
+                "score": score,
+            }
 
-Feedback: {validation_result.feedback}
-
-Reasoning: {validation_result.approval_reasoning}
-"""
-
-        if validation_result.issues_found:
-            summary += "\nIssues Found:\n"
-            for issue in validation_result.issues_found:
-                summary += f"  - {issue}\n"
-
-        return summary
+        except Exception as e:
+            self.logger.error(f"Failed to parse score response: {e}")
+            return {
+                "reasoning": response.strip() if response else "Failed to parse response",
+                "score": 1,
+            }

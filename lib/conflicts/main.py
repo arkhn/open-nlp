@@ -8,12 +8,12 @@ app = typer.Typer(help="Clinical Document Conflict Pipeline")
 
 @app.command()
 def batch(
-    size: int = typer.Option(5, help="Batch size"),
+    size: int = typer.Option(5, help="dataset size"),
     categories: Optional[List[str]] = typer.Option(
         None, help='Filter by document categories (e.g. "Discharge summary" "Progress note")'
     ),
     max_retries: int = typer.Option(3, help="Maximum retry attempts for validation failures"),
-    min_score: int = typer.Option(70, "--min-score", help="Minimum validation score required"),
+    min_score: int = typer.Option(4, "--min-score", help="Minimum validation score required"),
 ):
     """Process a batch of document pairs"""
     pipeline = Pipeline(max_retries=max_retries, min_validation_score=min_score)
@@ -21,7 +21,7 @@ def batch(
     print(f"Processing batch of {size} document pairs...")
 
     result = pipeline.process_batch(
-        batch_size=size,
+        dataset_size=size,
         category_filter=categories,
     )
 
@@ -50,8 +50,8 @@ def stats():
     print(f"Doctor Agent: {stats['agents']['doctor']['name']}")
     print(f"Editor Agent: {stats['agents']['editor']['name']}")
     print(
-        f"Moderator Agent: {stats['agents']['moderator']['name']} "
-        f"(min score: {stats['agents']['moderator']['min_validation_score']})"
+        f"Moderator Agent: {stats['agents']['moderator']['name']} \
+            (min score: {stats['agents']['moderator']['min_score']})"
     )
 
     print("\n=== CONFIGURATION ===")

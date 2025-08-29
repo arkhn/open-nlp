@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 from config import MIN_TARGET_TEXT_LENGTH
 from utils import find_similar_text
@@ -53,7 +53,7 @@ def _extract_json_from_response(response: str) -> Dict[str, Any]:
             raise ValueError(f"Invalid JSON format in response: {e}")
 
 
-def apply_edit_operation(document: str, operation: Dict[str, Any]) -> str:
+def apply_edit_operation(document: str, operation: Dict[str, Any]) -> Tuple[str, str]:
     """
     Apply edit operation to a document using text-based operations.
 
@@ -62,7 +62,7 @@ def apply_edit_operation(document: str, operation: Dict[str, Any]) -> str:
         operation: Edit operation with keys: op, target_text, replacement_text (optional)
 
     Returns:
-        Modified document
+        Tuple of (modified document, change description)
 
     Raises:
         ValueError: If operation type is unknown or target_text not found
@@ -86,11 +86,19 @@ def apply_edit_operation(document: str, operation: Dict[str, Any]) -> str:
         raise ValueError(error_msg)
 
     if op_type == "delete":
-        return document.replace(target_text, "", 1)
+        modified_doc = document.replace(target_text, "", 1)
+        change_description = f"Deleted text: '{target_text[:200]}...'"
+        return modified_doc, change_description
     elif op_type == "insert_after":
-        return document.replace(target_text, target_text + replacement_text, 1)
+        modified_doc = document.replace(target_text, target_text + replacement_text, 1)
+        change_description = (
+            f"Inserted '{replacement_text[:200]}...' after '{target_text[:200]}...'"
+        )
+        return modified_doc, change_description
     elif op_type == "replace":
-        return document.replace(target_text, replacement_text, 1)
+        modified_doc = document.replace(target_text, replacement_text, 1)
+        change_description = f"Replaced '{target_text[:200]}...' with '{replacement_text[:200]}...'"
+        return modified_doc, change_description
     else:
         raise ValueError(f"Unknown operation type: {op_type}")
 
@@ -124,8 +132,12 @@ def parse_response(response: str, original_doc_1: str, original_doc_2: str) -> D
 
             # Apply edit operations to documents
             try:
-                modified_doc_1 = apply_edit_operation(original_doc_1, data["doc1"])
-                modified_doc_2 = apply_edit_operation(original_doc_2, data["doc2"])
+                modified_doc_1, change_description_1 = apply_edit_operation(
+                    original_doc_1, data["doc1"]
+                )
+                modified_doc_2, change_description_2 = apply_edit_operation(
+                    original_doc_2, data["doc2"]
+                )
             except ValueError as e:
                 # Provide more helpful error message with suggestions
                 error_msg = f"Failed to apply edit operations: {e}\n\n"
@@ -145,6 +157,8 @@ def parse_response(response: str, original_doc_1: str, original_doc_2: str) -> D
                 "modified_doc_1": modified_doc_1,
                 "modified_doc_2": modified_doc_2,
                 "conflict_type": conflict_type,
+                "change_info_1": change_description_1,
+                "change_info_2": change_description_2,
             }
         else:
             raise ValueError(f"Response missing required fields: {required_fields}")
