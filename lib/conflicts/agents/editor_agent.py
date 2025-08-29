@@ -87,6 +87,8 @@ class EditorAgent(BaseAgent):
             modified_document1=parsed_result["modified_doc_1"],
             modified_document2=parsed_result["modified_doc_2"],
             changes_made=f"Applied {parsed_result['conflict_type']} conflict modifications",
+            change_info_1=parsed_result.get("change_info_1"),
+            change_info_2=parsed_result.get("change_info_2"),
         )
 
         self.logger.info("Editor Agent completed modifications")

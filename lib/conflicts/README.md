@@ -123,7 +123,7 @@ from pipeline import ClinicalConflictPipeline
 # Initialize pipeline
 pipeline = ClinicalConflictPipeline(
     max_retries=3,
-    min_validation_score=70
+    min_score=70
 )
 
 # Process a batch
@@ -211,7 +211,7 @@ The pipeline uses SQLite to store results:
 - `original_doc1_text`, `original_doc2_text`: Original documents
 - `modified_doc1_text`, `modified_doc2_text`: Modified documents
 - `conflict_type`: Type of conflict created
-- `validation_score`: Quality score (0-100)
+- `score`: Quality score (0-100)
 - `changes_made`: Summary of modifications
 - `created_at`: Timestamp
 
