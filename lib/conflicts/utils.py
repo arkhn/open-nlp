@@ -1,10 +1,89 @@
-import logging
 import re
 from typing import Any, Dict, List
 
-from config import (MEDICAL_CATEGORIES, MIN_SENTENCE_LENGTH,
-                    SENTENCE_SPLIT_PATTERN, SIMILARITY_THRESHOLD,
-                    WORD_OVERLAP_THRESHOLD)
+from thefuzz import fuzz
+
+MIN_SENTENCE_LENGTH = 10
+SENTENCE_SPLIT_PATTERN = r"(?<=[.!?])\s+"
+SIMILARITY_THRESHOLD = 0.6
+
+
+MEDICAL_CATEGORIES = {
+    "assessment": ["assessment", "diagnosis", "impression", "findings", "clinical picture"],
+    "vital_signs": [
+        "vital signs",
+        "blood pressure",
+        "heart rate",
+        "pulse",
+        "temperature",
+        "respiratory rate",
+        "oxygen saturation",
+        "sp02",
+        "bp",
+        "hr",
+        "temp",
+    ],
+    "laboratory": [
+        "lab",
+        "laboratory",
+        "test",
+        "result",
+        "value",
+        "level",
+        "ng/ml",
+        "mg/dl",
+        "mmol/l",
+        "units",
+        "reference range",
+    ],
+    "medication": [
+        "medication",
+        "drug",
+        "prescription",
+        "dose",
+        "mg",
+        "tablet",
+        "capsule",
+        "injection",
+        "iv",
+        "oral",
+        "subcutaneous",
+    ],
+    "procedures": [
+        "procedure",
+        "surgery",
+        "operation",
+        "intervention",
+        "treatment",
+        "catheterization",
+        "intubation",
+        "ventilation",
+    ],
+    "symptoms": [
+        "symptoms",
+        "complaints",
+        "pain",
+        "shortness of breath",
+        "dyspnea",
+        "nausea",
+        "vomiting",
+        "dizziness",
+        "weakness",
+    ],
+}
+
+EDIT_SUGGESTION_KEYWORDS = {
+    "medical_condition": ["diagnosis", "condition", "disease", "syndrome", "assessment"],
+    "medication": ["medication", "drug", "prescription", "dose", "mg", "tablet"],
+    "vital_signs": ["blood pressure", "heart rate", "temperature", "pulse", "respiratory"],
+    "lab_values": ["lab", "laboratory", "test", "result", "value", "level"],
+    "procedures": ["procedure", "surgery", "operation", "intervention", "treatment"],
+}
+
+# Text processing constants
+MAX_SUGGESTIONS_PER_CATEGORY = 3
+MIN_TEXT_SEGMENT_LENGTH = 30
+MIN_GENERAL_TEXT_LENGTH = 50
 
 
 def split_into_sentences(text: str) -> List[str]:
@@ -28,61 +107,52 @@ def split_into_sentences(text: str) -> List[str]:
 
 def find_similar_text(document: str, target_text: str, similarity_threshold: float = None) -> str:
     """
-    Find text in the document that is similar to the target text using fuzzy matching.
+    Find text in the document that is similar to the target text using thefuzz library.
 
     Args:
         document: The document to search in
         target_text: The text to find similar matches for
-        similarity_threshold: Minimum similarity score (0.0 to 1.0)
+        similarity_threshold: Minimum similarity score (0.0 to 100.0)
 
     Returns:
         The most similar text found, or empty string if no good match
     """
     if similarity_threshold is None:
-        similarity_threshold = SIMILARITY_THRESHOLD
+        # Convert our 0.6 threshold to thefuzz's 0-100 scale
+        similarity_threshold = SIMILARITY_THRESHOLD * 100
 
-    try:
-        from difflib import SequenceMatcher
+    # Split document into sentences for better matching
+    sentences = split_into_sentences(document)
 
-        # Split document into sentences for better matching
-        sentences = split_into_sentences(document)
+    best_match = ""
+    best_score = 0.0
 
-        best_match = ""
-        best_score = 0.0
+    # First try exact substring matching with case insensitivity
+    target_lower = target_text.lower()
+    for sentence in sentences:
+        if target_lower in sentence.lower():
+            return sentence
 
-        # First try exact substring matching with case insensitivity
-        target_lower = target_text.lower()
+    # If no exact substring match, try fuzzy matching with thefuzz
+    for sentence in sentences:
+        # Use thefuzz's ratio function (0-100 scale)
+        similarity = fuzz.ratio(target_text.lower(), sentence.lower())
+
+        if similarity > best_score and similarity >= similarity_threshold:
+            best_score = similarity
+            best_match = sentence
+
+    # If still no good match, try partial ratio for better substring matching
+    if not best_match:
         for sentence in sentences:
-            if target_lower in sentence.lower():
-                return sentence
-
-        # If no exact substring match, try fuzzy matching
-        for sentence in sentences:
-            # Calculate similarity between target and this sentence
-            similarity = SequenceMatcher(None, target_lower, sentence.lower()).ratio()
+            # Use partial_ratio for better substring matching
+            similarity = fuzz.partial_ratio(target_text.lower(), sentence.lower())
 
             if similarity > best_score and similarity >= similarity_threshold:
                 best_score = similarity
                 best_match = sentence
 
-        # If still no good match, try word-based matching
-        if not best_match:
-            target_words = set(target_lower.split())
-            for sentence in sentences:
-                sentence_words = set(sentence.lower().split())
-                word_overlap = len(target_words.intersection(sentence_words))
-                if word_overlap >= WORD_OVERLAP_THRESHOLD:
-                    return sentence
-
-        return best_match
-
-    except ImportError:
-        # Fallback if difflib is not available
-        logging.warning("difflib not available, skipping fuzzy matching")
-        return ""
-    except Exception as e:
-        logging.warning(f"Error in fuzzy matching: {e}")
-        return ""
+    return best_match
 
 
 def categorize_text_by_medical_domain(document: str) -> Dict[str, List[str]]:
@@ -129,8 +199,6 @@ def find_suitable_text_for_editing(
         List of suitable text segments
     """
     if min_length is None:
-        from config import MIN_TEXT_SEGMENT_LENGTH
-
         min_length = MIN_TEXT_SEGMENT_LENGTH
 
     sentences = split_into_sentences(document)
@@ -163,9 +231,6 @@ def suggest_edit_operations(document: str, conflict_type: str) -> Dict[str, Any]
     Returns:
         Dictionary with suggested edit operations
     """
-    from config import (EDIT_SUGGESTION_KEYWORDS, MAX_SUGGESTIONS_PER_CATEGORY,
-                        MIN_GENERAL_TEXT_LENGTH)
-
     suggestions = {
         "medical_condition": [],
         "medication": [],
