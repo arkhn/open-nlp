@@ -34,6 +34,8 @@ class EditorResult:
     modified_document1: str
     modified_document2: str
     changes_made: str
+    change_info_1: Optional[str] = None
+    change_info_2: Optional[str] = None
 
 
 @dataclass
@@ -41,7 +43,5 @@ class ValidationResult:
     """Result from the Moderator Agent"""
 
     is_valid: bool
-    validation_score: int
-    feedback: str
-    issues_found: list
-    approval_reasoning: str
+    score: int  # 1-5 scale as per new format
+    reasoning: str

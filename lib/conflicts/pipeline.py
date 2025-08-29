@@ -17,13 +17,13 @@ class Pipeline:
     Main pipeline controller that manages the three-agent workflow
     """
 
-    def __init__(self, max_retries: int = 0, min_validation_score: int = 70):
+    def __init__(self, max_retries: int = 0, min_score: int = 70):
         """
         Initialize the pipeline
 
         Args:
             max_retries: Maximum number of retry attempts for validation failures
-            min_validation_score: Minimum score required for validation approval
+            min_score: Minimum score required for validation approval
         """
         # Setup logging
         logging.basicConfig(
@@ -43,9 +43,7 @@ class Pipeline:
         # Initialize agents with shared client
         self.doctor_agent = DoctorAgent(self.client, MODEL)
         self.editor_agent = EditorAgent(self.client, MODEL)
-        self.moderator_agent = ModeratorAgent(
-            self.client, MODEL, min_validation_score=min_validation_score
-        )
+        self.moderator_agent = ModeratorAgent(self.client, MODEL, min_score=min_score)
 
         self.data_loader = DataLoader()
 
@@ -156,8 +154,8 @@ class Pipeline:
             moderator_log_data = {
                 "attempt": attempt,
                 "is_valid": validation_result.is_valid,
-                "validation_score": validation_result.validation_score,
-                "issues_found": validation_result.issues_found,
+                "score": validation_result.score,
+                "reasoning": validation_result.reasoning,
             }
             self.db_manager.log_processing_step(
                 pair_id, "Moderator", moderator_log_data, moderator_time
@@ -182,7 +180,7 @@ class Pipeline:
 
     def process_batch(
         self,
-        batch_size: int = 5,
+        dataset_size: int = 5,
         category_filter: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
@@ -195,11 +193,11 @@ class Pipeline:
         Returns:
             Dictionary with batch processing results
         """
-        self.logger.info(f"Starting batch processing of {batch_size} document pairs")
+        self.logger.info(f"Starting batch processing of {dataset_size} document pairs")
 
         batch_start_time = time.time()
         document_pairs = self.data_loader.get_random_document_pairs(
-            count=batch_size, category_filter=category_filter
+            count=dataset_size, category_filter=category_filter
         )
 
         results = []
@@ -252,7 +250,7 @@ class Pipeline:
                 "editor": {"name": self.editor_agent.name},
                 "moderator": {
                     "name": self.moderator_agent.name,
-                    "min_validation_score": self.moderator_agent.min_validation_score,
+                    "min_score": self.moderator_agent.min_score,
                 },
             },
             "configuration": {
