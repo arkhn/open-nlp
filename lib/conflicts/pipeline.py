@@ -7,9 +7,20 @@ from agents.doctor_agent import DoctorAgent
 from agents.editor_agent import EditorAgent
 from agents.moderator_agent import ModeratorAgent
 from base import DatabaseManager
-from config import API_KEY, BASE_URL, LOG_FILE, LOG_LEVEL, MODEL
+from config import (
+    API_KEY,
+    BASE_URL,
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_MIN_VALIDATION_SCORE,
+    MODEL,
+)
 from data_loader import DataLoader
 from models import DocumentPair
+
+LOG_LEVEL = "INFO"
+LOG_FILE = "pipeline.log"
+LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+PIPELINE_LOGGER_NAME = "ClinicalPipeline"
 
 
 class Pipeline:
@@ -17,7 +28,7 @@ class Pipeline:
     Main pipeline controller that manages the three-agent workflow
     """
 
-    def __init__(self, max_retries: int = 0, min_validation_score: int = 70):
+    def __init__(self, max_retries: int = None, min_validation_score: int = None):
         """
         Initialize the pipeline
 
@@ -25,16 +36,23 @@ class Pipeline:
             max_retries: Maximum number of retry attempts for validation failures
             min_validation_score: Minimum score required for validation approval
         """
+        # Use default values from config if not provided
+        self.max_retries = max_retries if max_retries is not None else DEFAULT_MAX_RETRIES
+        min_validation_score = (
+            min_validation_score
+            if min_validation_score is not None
+            else DEFAULT_MIN_VALIDATION_SCORE
+        )
+
         # Setup logging
         logging.basicConfig(
             level=getattr(logging, LOG_LEVEL.upper()),
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            format=LOG_FORMAT,
             handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()],
         )
-        self.logger = logging.getLogger("ClinicalPipeline")
+        self.logger = logging.getLogger(PIPELINE_LOGGER_NAME)
 
         # Initialize components
-        self.max_retries = max_retries
         self.db_manager = DatabaseManager()
 
         # Create shared OpenAI client
@@ -51,8 +69,8 @@ class Pipeline:
 
         stats = self.data_loader.get_data_statistics()
         self.logger.info(
-            f"Loaded dataset with {stats['total_documents']} documents \
-                from {stats['unique_subjects']} subjects"
+            f"Loaded dataset with {stats['total_documents']} documents"
+            f"from {stats['unique_subjects']} subjects"
         )
 
     def _execute_agent(self, agent, document_pair: DocumentPair, *extra_args):
@@ -126,56 +144,58 @@ class Pipeline:
             "success": False,
             "conflict_type": None,
             "processing_time": 0,
+            "doctor_result": None,
+            "editor_result": None,
+            "moderator_result": None,
+            "doctor_time": 0,
+            "editor_time": 0,
+            "moderator_time": 0,
         }
 
+        # Step 1: Doctor Agent identifies conflict type
         conflict_result, doctor_time = self._execute_agent(self.doctor_agent, document_pair)
-
-        doctor_log_data = {
-            "conflict_type": conflict_result.conflict_type,
-            "reasoning": conflict_result.reasoning,
-        }
-        self.db_manager.log_processing_step(pair_id, "Doctor", doctor_log_data, doctor_time)
-
+        result_data["doctor_result"] = conflict_result
+        result_data["doctor_time"] = doctor_time
         result_data["conflict_type"] = conflict_result.conflict_type
 
+        # Step 2: Editor and Moderator agents with retry logic for editor only
         validation_result = None
         editor_result = None
 
         for attempt in range(1, self.max_retries + 1):
+            # Execute editor agent
             editor_result, editor_time = self._execute_agent(
                 self.editor_agent, document_pair, conflict_result
             )
+            result_data["editor_result"] = editor_result
+            result_data["editor_time"] = editor_time
 
-            editor_log_data = {"attempt": attempt, "changes_made": editor_result.changes_made}
-            self.db_manager.log_processing_step(pair_id, "Editor", editor_log_data, editor_time)
-
+            # Execute moderator agent for validation
             validation_result, moderator_time = self._execute_agent(
                 self.moderator_agent, document_pair, editor_result, conflict_result.conflict_type
             )
-
-            moderator_log_data = {
-                "attempt": attempt,
-                "is_valid": validation_result.is_valid,
-                "validation_score": validation_result.validation_score,
-                "issues_found": validation_result.issues_found,
-            }
-            self.db_manager.log_processing_step(
-                pair_id, "Moderator", moderator_log_data, moderator_time
-            )
+            result_data["moderator_result"] = validation_result
+            result_data["moderator_time"] = moderator_time
 
             if validation_result.is_valid:
                 self.logger.info(f"Validation successful on attempt {attempt}")
+                result_data["success"] = True
                 break
 
             if attempt < self.max_retries:
-                self.logger.warning(f"Validation failed on attempt {attempt}, retrying...")
+                self.logger.warning(f"Validation failed on attempt {attempt}, retrying editor...")
                 time.sleep(1)
 
         # Step 3: Save to database if validation passed
-        is_success = self._save_to_database(
-            pair_id, document_pair, editor_result, conflict_result.conflict_type, validation_result
-        )
-        result_data["success"] = is_success
+        if validation_result and validation_result.is_valid:
+            is_success = self._save_to_database(
+                pair_id,
+                document_pair,
+                editor_result,
+                conflict_result.conflict_type,
+                validation_result,
+            )
+            result_data["success"] = is_success
 
         result_data["processing_time"] = time.time() - start_time
         return result_data["success"], result_data
@@ -213,18 +233,17 @@ class Pipeline:
                 successful += 1
 
         batch_time = time.time() - batch_start_time
-        total_pairs = len(document_pairs)
+        success_rate = (successful / len(document_pairs)) * 100
 
         self.logger.info(
-            f"Batch completed: {successful}/{total_pairs} \
-                successful ({successful/total_pairs*100:.1f}%)"
+            f"Batch completed: {successful}/{len(document_pairs)} successful ({success_rate:.1f}%)"
         )
 
         return {
-            "total_pairs": total_pairs,
+            "total_pairs": len(document_pairs),
             "successful": successful,
-            "failed": total_pairs - successful,
-            "success_rate": successful / total_pairs * 100,
+            "failed": len(document_pairs) - successful,
+            "success_rate": success_rate,
             "total_processing_time": batch_time,
             "results": results,
         }

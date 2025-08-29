@@ -114,8 +114,8 @@ class ModeratorAgent(BaseAgent):
 
             self.logger.info("Moderator Agent completed validation")
             self.logger.info(
-                f"Validation result: {'VALID' if result.is_valid else 'INVALID'} \
-                    (Score: {result.validation_score}/100)"
+                f"Validation result: {'VALID' if result.is_valid else 'INVALID'}"
+                "(Score: {result.validation_score}/100)"
             )
 
             if not result.is_valid:

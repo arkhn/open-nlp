@@ -1,8 +1,38 @@
-"""Document operations module for editing and parsing."""
-
 import json
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List
+
+from config import MIN_TARGET_TEXT_LENGTH
+from utils import (
+    categorize_text_by_medical_domain,
+    find_similar_text,
+    suggest_edit_operations,
+)
+
+EDIT_OPERATIONS = {"DELETE": "delete", "INSERT_AFTER": "insert_after", "REPLACE": "replace"}
+
+ERROR_MESSAGES = {
+    "TARGET_TEXT_NOT_FOUND": "Target text not found in document",
+    "TARGET_TEXT_TOO_SHORT": "Target text too short to be reliable",
+    "TARGET_TEXT_TRUNCATED": "Target text appears to be truncated",
+    "INVALID_OPERATION_TYPE": "Unknown operation type",
+    "REPLACE_MISSING_REPLACEMENT": "Replace operation requires replacement_text",
+    "JSON_PARSE_FAILED": "Failed to parse response as JSON",
+    "MISSING_REQUIRED_FIELDS": "Response missing required fields: doc1, doc2, conflict_type",
+}
+
+JSON_PARSING = {
+    "MARKDOWN_CODE_BLOCK": "```json",
+    "REQUIRED_FIELDS": ["doc1", "doc2", "conflict_type"],
+    "RESPONSE_PREVIEW_LENGTH": 200,
+}
+
+VALIDATION_RULES = {
+    "MIN_TARGET_LENGTH": MIN_TARGET_TEXT_LENGTH,
+    "TRUNCATION_INDICATORS": ["...", "n..."],
+    "REQUIRED_FIELDS": ["op", "target_text"],
+    "REPLACE_REQUIRES_REPLACEMENT": True,
+}
 
 
 def _extract_json_from_response(response: str) -> Dict[str, Any]:
@@ -30,8 +60,8 @@ def _extract_json_from_response(response: str) -> Dict[str, Any]:
             return data
         except json.JSONDecodeError:
             # Try extracting JSON from markdown code blocks
-            if "```json" in response:
-                parts = response.split("```json")
+            if JSON_PARSING["MARKDOWN_CODE_BLOCK"] in response:
+                parts = response.split(JSON_PARSING["MARKDOWN_CODE_BLOCK"])
                 if len(parts) > 1:
                     json_part = parts[1].split("```")[0].strip()
                     data = json.loads(json_part)
@@ -72,21 +102,34 @@ def apply_edit_operation(document: str, operation: Dict[str, Any]) -> str:
 
     # Check if target_text exists in document
     if target_text not in document:
-        # Additional validation: check for common LLM issues
-        if target_text.endswith("...") or target_text.endswith("n..."):
-            raise ValueError(f"Target text appears to be truncated: '{target_text[:50]}...'")
-        if len(target_text.strip()) < 20:  # Too short to be reliable
-            raise ValueError(f"Target text too short to be reliable: '{target_text[:50]}...'")
-        raise ValueError(f"Target text not found in document: '{target_text[:50]}...'")
+        # Try to find similar text using fuzzy matching
+        similar_text = find_similar_text(document, target_text)
 
-    if op_type == "delete":
+        if similar_text:
+            logging.warning(
+                f"Exact target text not found, using similar text: "
+                f"'{target_text[:50]}...' -> '{similar_text[:50]}...'"
+            )
+            target_text = similar_text
+        else:
+            # Additional validation: check for common LLM issues
+            if target_text.endswith("...") or target_text.endswith("n..."):
+                raise ValueError(f"Target text appears to be truncated: '{target_text[:50]}...'")
+            if len(target_text.strip()) < MIN_TARGET_TEXT_LENGTH:
+                raise ValueError(f"Target text too short to be reliable: '{target_text[:50]}...'")
+
+            # Provide more helpful error message with suggestions
+            error_msg = f"Target text not found in document: '{target_text[:100]}...'"
+            raise ValueError(error_msg)
+
+    if op_type == EDIT_OPERATIONS["DELETE"]:
         return document.replace(target_text, "", 1)
-    elif op_type == "insert_after":
+    elif op_type == EDIT_OPERATIONS["INSERT_AFTER"]:
         return document.replace(target_text, target_text + replacement_text, 1)
-    elif op_type == "replace":
+    elif op_type == EDIT_OPERATIONS["REPLACE"]:
         return document.replace(target_text, replacement_text, 1)
     else:
-        raise ValueError(f"Unknown operation type: {op_type}")
+        raise ValueError(f"{ERROR_MESSAGES['INVALID_OPERATION_TYPE']}: {op_type}")
 
 
 def parse_response(response: str, original_doc_1: str, original_doc_2: str) -> Dict[str, Any]:
@@ -106,18 +149,54 @@ def parse_response(response: str, original_doc_1: str, original_doc_2: str) -> D
     """
     try:
         # Log the first 200 chars of response for debugging
-        logging.debug(f"Response preview: {response[:200]}...")
+        logging.debug(f"Response preview: {response[:JSON_PARSING['RESPONSE_PREVIEW_LENGTH']]}...")
 
         # Extract JSON from response
         data = _extract_json_from_response(response)
 
         # Check if we have the expected edit operations format
-        if "doc1" in data and "doc2" in data and "conflict_type" in data:
+        required_fields = JSON_PARSING["REQUIRED_FIELDS"]
+        if all(field in data for field in required_fields):
             logging.info("Found edit operations format, applying operations to documents")
 
             # Apply edit operations to documents
-            modified_doc_1 = apply_edit_operation(original_doc_1, data["doc1"])
-            modified_doc_2 = apply_edit_operation(original_doc_2, data["doc2"])
+            try:
+                modified_doc_1 = apply_edit_operation(original_doc_1, data["doc1"])
+                modified_doc_2 = apply_edit_operation(original_doc_2, data["doc2"])
+            except ValueError as e:
+                # Provide more helpful error message with suggestions
+                error_msg = f"Failed to apply edit operations: {e}\n\n"
+                error_msg += (
+                    "This usually happens when the LLM references text that "
+                    "doesn't exist in the documents.\n\n"
+                )
+
+                # Add suggestions for document 1
+                if "doc1" in data and "target_text" in data["doc1"]:
+                    suggestions_1 = suggest_edit_operations(
+                        original_doc_1, data.get("conflict_type", "general")
+                    )
+                    error_msg += "Document 1 suggestions for editing:\n"
+                    for category, texts in suggestions_1.items():
+                        if texts:
+                            error_msg += f"  {category}: {texts[0][:100]}...\n"
+
+                # Add suggestions for document 2
+                if "doc2" in data and "target_text" in data["doc2"]:
+                    suggestions_2 = suggest_edit_operations(
+                        original_doc_2, data.get("conflict_type", "general")
+                    )
+                    error_msg += "Document 2 suggestions for editing:\n"
+                    for category, texts in suggestions_2.items():
+                        if texts:
+                            error_msg += f"  {category}: {texts[0][:100]}...\n"
+
+                error_msg += (
+                    "\nPlease ensure the LLM only references text that actually "
+                    "exists in the original documents."
+                )
+                raise ValueError(error_msg)
+
             conflict_type = data["conflict_type"]
 
             return {
@@ -126,11 +205,87 @@ def parse_response(response: str, original_doc_1: str, original_doc_2: str) -> D
                 "conflict_type": conflict_type,
             }
         else:
-            raise ValueError("Response missing required fields: doc1, doc2, conflict_type")
+            raise ValueError(f"{ERROR_MESSAGES['MISSING_REQUIRED_FIELDS']}: {required_fields}")
 
     except json.JSONDecodeError as e:
-        logging.error(f"Failed to parse response as JSON: {e}")
-        raise ValueError(f"Failed to parse response as JSON: {e}")
+        logging.error(f"{ERROR_MESSAGES['JSON_PARSE_FAILED']}: {e}")
+        raise ValueError(f"{ERROR_MESSAGES['JSON_PARSE_FAILED']}: {e}")
     except Exception as e:
         logging.error(f"Error parsing response: {e}")
         raise ValueError(f"Error parsing response: {e}")
+
+
+def validate_edit_operation(document: str, operation: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Validate an edit operation before applying it.
+
+    Args:
+        document: The document to validate against
+        operation: The edit operation to validate
+
+    Returns:
+        Dictionary with validation results and suggestions
+    """
+    validation_result = {"is_valid": True, "issues": [], "suggestions": [], "similar_text": None}
+
+    op_type = operation.get("op")
+    target_text = operation.get("target_text", "")
+    replacement_text = operation.get("replacement_text", "")
+
+    # Check operation type
+    if op_type not in EDIT_OPERATIONS.values():
+        validation_result["is_valid"] = False
+        validation_result["issues"].append(f"Invalid operation type: {op_type}")
+
+    # Check if target_text exists
+    if target_text not in document:
+        validation_result["is_valid"] = False
+        validation_result["issues"].append(ERROR_MESSAGES["TARGET_TEXT_NOT_FOUND"])
+
+        # Try to find similar text
+        similar_text = find_similar_text(document, target_text)
+        if similar_text:
+            validation_result["similar_text"] = similar_text
+            validation_result["suggestions"].append(
+                f"Consider using similar text: '{similar_text[:100]}...'"
+            )
+
+        # Provide general suggestions
+        suggestions = suggest_edit_operations(document, "general")
+        if suggestions["general"]:
+            validation_result["suggestions"].append("Available text segments for editing:")
+            for i, text in enumerate(suggestions["general"][:3], 1):
+                validation_result["suggestions"].append(f"  {i}. {text[:100]}...")
+
+    # Check text quality
+    if len(target_text.strip()) < MIN_TARGET_TEXT_LENGTH:
+        validation_result["is_valid"] = False
+        validation_result["issues"].append(
+            f"Target text too short (less than {MIN_TARGET_TEXT_LENGTH} characters)"
+        )
+
+    if any(
+        target_text.endswith(indicator) for indicator in VALIDATION_RULES["TRUNCATION_INDICATORS"]
+    ):
+        validation_result["is_valid"] = False
+        validation_result["issues"].append(ERROR_MESSAGES["TARGET_TEXT_TRUNCATED"])
+
+    # Check replacement text for replace operations
+    if op_type == EDIT_OPERATIONS["REPLACE"] and not replacement_text:
+        validation_result["is_valid"] = False
+        validation_result["issues"].append(ERROR_MESSAGES["REPLACE_MISSING_REPLACEMENT"])
+
+    return validation_result
+
+
+def extract_text_by_category(document: str) -> Dict[str, List[str]]:
+    """
+    Extract text from document organized by medical categories.
+
+    Args:
+        document: The document to analyze
+
+    Returns:
+        Dictionary with text organized by medical categories
+    """
+    return categorize_text_by_medical_domain(document)

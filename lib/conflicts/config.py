@@ -16,13 +16,23 @@ BASE_URL = os.getenv("BASE_URL", "https://api.groq.com/openai/v1")
 DATA_PATH = "data/mimic-iii-verifact-bhc.parquet"
 DATABASE_PATH = "validated_documents.db"
 
-# Logging Configuration
-LOG_LEVEL = "INFO"
-LOG_FILE = "pipeline.log"
-
 # Pipeline Configuration
 MAX_RETRY_ATTEMPTS = int(os.getenv("MAX_RETRY_ATTEMPTS", "3"))
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", "2"))
+DEFAULT_MIN_VALIDATION_SCORE = 70
+DEFAULT_MAX_RETRIES = 3
+
+# Essential Text Processing Thresholds
+MIN_TARGET_TEXT_LENGTH = 20
+SIMILARITY_THRESHOLD = 0.6
+
+# Prompt Configuration
+PROMPTS_DIR = "prompts"
+
+# Prompt file names (without .txt extension)
+DOCTOR_AGENT_PROMPT_FILE = "doctor_agent"
+EDITOR_AGENT_PROMPT_FILE = "editor_agent"
+MODERATOR_AGENT_PROMPT_FILE = "moderator_agent"
 
 
 @dataclass
@@ -101,11 +111,3 @@ CONFLICT_TYPES = {
         ],
     ),
 }
-
-# Prompt Configuration
-PROMPTS_DIR = "prompts"
-
-# Prompt file names (without .txt extension)
-DOCTOR_AGENT_PROMPT_FILE = "doctor_agent"
-EDITOR_AGENT_PROMPT_FILE = "editor_agent"
-MODERATOR_AGENT_PROMPT_FILE = "moderator_agent"
