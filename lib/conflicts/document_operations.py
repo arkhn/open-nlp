@@ -1,13 +1,38 @@
-"""Document operations module for editing and parsing."""
-
 import json
 import logging
 from typing import Any, Dict, List
 
-from config import (EDIT_OPERATIONS, ERROR_MESSAGES, JSON_PARSING,
-                    MIN_TARGET_TEXT_LENGTH, VALIDATION_RULES)
-from utils import (categorize_text_by_medical_domain, find_similar_text,
-                   suggest_edit_operations)
+from config import MIN_TARGET_TEXT_LENGTH
+from utils import (
+    categorize_text_by_medical_domain,
+    find_similar_text,
+    suggest_edit_operations,
+)
+
+EDIT_OPERATIONS = {"DELETE": "delete", "INSERT_AFTER": "insert_after", "REPLACE": "replace"}
+
+ERROR_MESSAGES = {
+    "TARGET_TEXT_NOT_FOUND": "Target text not found in document",
+    "TARGET_TEXT_TOO_SHORT": "Target text too short to be reliable",
+    "TARGET_TEXT_TRUNCATED": "Target text appears to be truncated",
+    "INVALID_OPERATION_TYPE": "Unknown operation type",
+    "REPLACE_MISSING_REPLACEMENT": "Replace operation requires replacement_text",
+    "JSON_PARSE_FAILED": "Failed to parse response as JSON",
+    "MISSING_REQUIRED_FIELDS": "Response missing required fields: doc1, doc2, conflict_type",
+}
+
+JSON_PARSING = {
+    "MARKDOWN_CODE_BLOCK": "```json",
+    "REQUIRED_FIELDS": ["doc1", "doc2", "conflict_type"],
+    "RESPONSE_PREVIEW_LENGTH": 200,
+}
+
+VALIDATION_RULES = {
+    "MIN_TARGET_LENGTH": MIN_TARGET_TEXT_LENGTH,
+    "TRUNCATION_INDICATORS": ["...", "n..."],
+    "REQUIRED_FIELDS": ["op", "target_text"],
+    "REPLACE_REQUIRES_REPLACEMENT": True,
+}
 
 
 def _extract_json_from_response(response: str) -> Dict[str, Any]:
@@ -233,10 +258,10 @@ def validate_edit_operation(document: str, operation: Dict[str, Any]) -> Dict[st
                 validation_result["suggestions"].append(f"  {i}. {text[:100]}...")
 
     # Check text quality
-    if len(target_text.strip()) < VALIDATION_RULES["MIN_TARGET_LENGTH"]:
+    if len(target_text.strip()) < MIN_TARGET_TEXT_LENGTH:
         validation_result["is_valid"] = False
         validation_result["issues"].append(
-            f"Target text too short (less than {VALIDATION_RULES['MIN_TARGET_LENGTH']} characters)"
+            f"Target text too short (less than {MIN_TARGET_TEXT_LENGTH} characters)"
         )
 
     if any(

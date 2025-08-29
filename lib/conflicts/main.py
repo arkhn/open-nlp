@@ -5,6 +5,20 @@ from pipeline import Pipeline
 
 app = typer.Typer(help="Clinical Document Conflict Pipeline")
 
+_pipeline = None
+
+
+def get_pipeline(max_retries: int = None, min_validation_score: int = None) -> Pipeline:
+    """Get or create a pipeline instance with the specified configuration"""
+    global _pipeline
+
+    if _pipeline is None:
+        _pipeline = Pipeline(
+            max_retries=max_retries,
+            min_validation_score=min_validation_score,
+        )
+    return _pipeline
+
 
 @app.command()
 def batch(
@@ -16,10 +30,7 @@ def batch(
     min_score: int = typer.Option(70, "--min-score", help="Minimum validation score required"),
 ):
     """Process a batch of document pairs"""
-    pipeline = Pipeline(
-        max_retries=max_retries,
-        min_validation_score=min_score,
-    )
+    pipeline = get_pipeline(max_retries=max_retries, min_validation_score=min_score)
 
     print(f"Processing batch of {size} document pairs...")
 
@@ -38,7 +49,7 @@ def batch(
 @app.command()
 def stats():
     """Show pipeline statistics"""
-    pipeline = Pipeline()
+    pipeline = get_pipeline()
     stats = pipeline.get_pipeline_statistics()
 
     print(f"Validated documents in database: {stats['validated_documents']}")
@@ -50,8 +61,8 @@ def stats():
     print(f"Doctor Agent: {stats['agents']['doctor']['name']}")
     print(f"Editor Agent: {stats['agents']['editor']['name']}")
     print(
-        f"Moderator Agent: {stats['agents']['moderator']['name']} \
-            (min score: {stats['agents']['moderator']['min_validation_score']})"
+        f"Moderator Agent: {stats['agents']['moderator']['name']} "
+        f"(min score: {stats['agents']['moderator']['min_validation_score']})"
     )
 
     print("\n=== CONFIGURATION ===")

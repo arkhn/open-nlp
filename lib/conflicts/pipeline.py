@@ -7,11 +7,20 @@ from agents.doctor_agent import DoctorAgent
 from agents.editor_agent import EditorAgent
 from agents.moderator_agent import ModeratorAgent
 from base import DatabaseManager
-from config import (API_KEY, BASE_URL, DEFAULT_MAX_RETRIES,
-                    DEFAULT_MIN_VALIDATION_SCORE, LOG_FILE, LOG_FORMAT,
-                    LOG_LEVEL, MODEL, PIPELINE_LOGGER_NAME)
+from config import (
+    API_KEY,
+    BASE_URL,
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_MIN_VALIDATION_SCORE,
+    MODEL,
+)
 from data_loader import DataLoader
 from models import DocumentPair
+
+LOG_LEVEL = "INFO"
+LOG_FILE = "pipeline.log"
+LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+PIPELINE_LOGGER_NAME = "ClinicalPipeline"
 
 
 class Pipeline:
@@ -44,7 +53,6 @@ class Pipeline:
         self.logger = logging.getLogger(PIPELINE_LOGGER_NAME)
 
         # Initialize components
-        self.max_retries = max_retries
         self.db_manager = DatabaseManager()
 
         # Create shared OpenAI client
@@ -136,89 +144,47 @@ class Pipeline:
             "success": False,
             "conflict_type": None,
             "processing_time": 0,
+            "doctor_result": None,
+            "editor_result": None,
+            "moderator_result": None,
+            "doctor_time": 0,
+            "editor_time": 0,
+            "moderator_time": 0,
         }
 
         # Step 1: Doctor Agent identifies conflict type
-        try:
-            conflict_result, doctor_time = self._execute_agent(self.doctor_agent, document_pair)
-        except Exception as e:
-            self.logger.error(f"Doctor Agent failed: {e}")
-            result_data["error"] = f"Doctor Agent failed: {e}"
-            result_data["processing_time"] = time.time() - start_time
-            return False, result_data
-
-        self.db_manager.log_processing_step(
-            pair_id,
-            "Doctor",
-            {
-                "conflict_type": conflict_result.conflict_type,
-                "reasoning": conflict_result.reasoning,
-            },
-            doctor_time,
-        )
-
+        conflict_result, doctor_time = self._execute_agent(self.doctor_agent, document_pair)
+        result_data["doctor_result"] = conflict_result
+        result_data["doctor_time"] = doctor_time
         result_data["conflict_type"] = conflict_result.conflict_type
 
-        # Step 2: Editor Agent creates conflicts
+        # Step 2: Editor and Moderator agents with retry logic for editor only
         validation_result = None
         editor_result = None
 
         for attempt in range(1, self.max_retries + 1):
-            try:
-                # Execute editor agent
-                editor_result, editor_time = self._execute_agent(
-                    self.editor_agent, document_pair, conflict_result
-                )
+            # Execute editor agent
+            editor_result, editor_time = self._execute_agent(
+                self.editor_agent, document_pair, conflict_result
+            )
+            result_data["editor_result"] = editor_result
+            result_data["editor_time"] = editor_time
 
-                # Execute moderator agent for validation
-                validation_result, moderator_time = self._execute_agent(
-                    self.moderator_agent,
-                    document_pair,
-                    editor_result,
-                    conflict_result.conflict_type,
-                )
+            # Execute moderator agent for validation
+            validation_result, moderator_time = self._execute_agent(
+                self.moderator_agent, document_pair, editor_result, conflict_result.conflict_type
+            )
+            result_data["moderator_result"] = validation_result
+            result_data["moderator_time"] = moderator_time
 
-                # Log results for this attempt
-                self._log_agent_results(
-                    pair_id, attempt, editor_result, validation_result, editor_time, moderator_time
-                )
+            if validation_result.is_valid:
+                self.logger.info(f"Validation successful on attempt {attempt}")
+                result_data["success"] = True
+                break
 
-                if validation_result.is_valid:
-                    self.logger.info(f"Validation successful on attempt {attempt}")
-                    break
-
-                if attempt < self.max_retries:
-                    self.logger.warning(f"Validation failed on attempt {attempt}, retrying...")
-                    time.sleep(1)
-
-            except ValueError as e:
-                if self._is_text_matching_error(e):
-                    self._handle_text_matching_error(e, attempt, document_pair, pair_id)
-                    if attempt == self.max_retries:
-                        return self._create_failure_result(
-                            result_data, start_time, e, "text_matching"
-                        )
-                    continue
-                else:
-                    # Re-raise non-text-matching ValueErrors
-                    self.logger.error(f"ValueError in Editor Agent on attempt {attempt}: {e}")
-                    return self._create_failure_result(
-                        result_data, start_time, e, "validation_error"
-                    )
-
-            except (ConnectionError, TimeoutError) as e:
-                # Handle transient network/connection issues
-                self._handle_transient_error(e, attempt, pair_id)
-                if attempt == self.max_retries:
-                    return self._create_failure_result(
-                        result_data, start_time, e, "connection_error"
-                    )
-                continue
-
-            except Exception as e:
-                # Log unexpected errors but don't retry
-                self.logger.error(f"Unexpected error in Editor Agent on attempt {attempt}: {e}")
-                return self._create_failure_result(result_data, start_time, e, "unexpected_error")
+            if attempt < self.max_retries:
+                self.logger.warning(f"Validation failed on attempt {attempt}, retrying editor...")
+                time.sleep(1)
 
         # Step 3: Save to database if validation passed
         if validation_result and validation_result.is_valid:
@@ -230,133 +196,9 @@ class Pipeline:
                 validation_result,
             )
             result_data["success"] = is_success
-        else:
-            self.logger.error(
-                f"Document pair {pair_id} failed validation after {self.max_retries} attempts"
-            )
-            result_data["error"] = "Validation failed after maximum retries"
-            result_data["success"] = False
 
         result_data["processing_time"] = time.time() - start_time
         return result_data["success"], result_data
-
-    def _is_text_matching_error(self, error: Exception) -> bool:
-        """
-        Check if the error is related to text matching issues.
-
-        Args:
-            error: The exception to check
-
-        Returns:
-            True if it's a text matching error, False otherwise
-        """
-        error_str = str(error).lower()
-        text_matching_indicators = [
-            "target text not found",
-            "fictional text",
-            "text doesn't exist",
-            "invalid text reference",
-        ]
-        return any(indicator in error_str for indicator in text_matching_indicators)
-
-    def _handle_text_matching_error(
-        self, error: Exception, attempt: int, document_pair: DocumentPair, pair_id: str
-    ) -> None:
-        """
-        Handle text matching errors with appropriate logging and suggestions.
-
-        Args:
-            error: The text matching error
-            attempt: Current attempt number
-            document_pair: The document pair being processed
-            pair_id: Identifier for the document pair
-        """
-        self.logger.warning(f"Text matching error on attempt {attempt}: {str(error)[:100]}...")
-
-        if attempt < self.max_retries:
-            self.logger.info("Retrying due to text matching issue (likely LLM hallucination)")
-            time.sleep(2)  # Longer delay for hallucination issues
-
-    def _handle_transient_error(self, error: Exception, attempt: int, pair_id: str) -> None:
-        """
-        Handle transient errors (network, timeout) with appropriate logging and retry logic.
-
-        Args:
-            error: The transient error
-            attempt: Current attempt number
-            pair_id: Identifier for the document pair
-        """
-        if attempt < self.max_retries:
-            self.logger.info(f"Retrying after transient error: {type(error).__name__}")
-            time.sleep(1)
-
-    def _log_agent_results(
-        self,
-        pair_id: str,
-        attempt: int,
-        editor_result,
-        validation_result,
-        editor_time: float,
-        moderator_time: float,
-    ) -> None:
-        """
-        Log results from agent executions for monitoring and debugging.
-
-        Args:
-            pair_id: Identifier for the document pair
-            attempt: Current attempt number
-            editor_result: Result from editor agent
-            validation_result: Result from moderator agent
-            editor_time: Time taken by editor agent
-            moderator_time: Time taken by moderator agent
-        """
-        # Log both agent results in a single database call to reduce redundancy
-        combined_log_data = {
-            "attempt": attempt,
-            "editor": {"changes_made": editor_result.changes_made, "processing_time": editor_time},
-            "moderator": {
-                "is_valid": validation_result.is_valid,
-                "validation_score": validation_result.validation_score,
-                "issues_found": validation_result.issues_found,
-                "processing_time": moderator_time,
-            },
-        }
-
-        # Log to database once with combined data
-        self.db_manager.log_processing_step(
-            pair_id, "Agent_Results", combined_log_data, editor_time + moderator_time
-        )
-
-        # Log validation status to console for monitoring
-        if validation_result.is_valid:
-            self.logger.debug(
-                f"Attempt {attempt}: Validation passed "
-                f"(score: {validation_result.validation_score})"
-            )
-        else:
-            self.logger.debug(
-                f"Attempt {attempt}: Validation failed -"
-                f" {len(validation_result.issues_found)} issues found"
-            )
-
-    def _create_failure_result(
-        self, result_data: Dict[str, Any], start_time: float, error: Exception, error_type: str
-    ) -> Tuple[bool, Dict[str, Any]]:
-        """
-        Create a standardized failure result with error information.
-
-        Args:
-            result_data: The base result data dictionary
-            start_time: Start time of processing
-            error: The error that occurred
-            error_type: Category of the error
-
-        Returns:
-            Tuple of (False, result_data) indicating failure
-        """
-        result_data["error"] = f"{error_type}: {error}"
-        result_data["processing_time"] = time.time() - start_time
-        return False, result_data
 
     def process_batch(
         self,

@@ -1,6 +1,5 @@
 from base import BaseAgent
-from document_operations import (extract_text_by_category, parse_response,
-                                 suggest_edit_operations)
+from document_operations import extract_text_by_category, parse_response
 from models import ConflictResult, DocumentPair, EditorResult
 
 
@@ -99,31 +98,8 @@ class EditorAgent(BaseAgent):
                     response, document_pair.doc1_text, document_pair.doc2_text
                 )
             except ValueError as e:
-                # If parsing fails due to text matching issues, provide helpful suggestions
-                if "Target text not found" in str(e) or "fictional text" in str(e):
-                    self.logger.error(f"Text matching failed: {e}")
-
-                    # Provide suggestions for both documents
-                    suggestions_1 = suggest_edit_operations(document_pair.doc1_text, "general")
-                    suggestions_2 = suggest_edit_operations(document_pair.doc2_text, "general")
-
-                    error_msg = f"Edit operation failed: {e}\n\n"
-                    error_msg += "Available text segments in Document 1:\n"
-                    for i, text in enumerate(suggestions_1["general"][:3], 1):
-                        error_msg += f"  {i}. {text[:100]}...\n"
-
-                    error_msg += "\nAvailable text segments in Document 2:\n"
-                    for i, text in enumerate(suggestions_2["general"][:3], 1):
-                        error_msg += f"  {i}. {text[:100]}...\n"
-
-                    error_msg += (
-                        "\nPlease ensure the LLM only references text that "
-                        "actually exists in the documents."
-                    )
-                    raise ValueError(error_msg)
-                else:
-                    # Re-raise other parsing errors
-                    raise
+                self.logger.error(f"Edit operation failed: {e}")
+                raise
 
             # Validate that modifications were actually made
             if (
