@@ -1,28 +1,6 @@
-You are a clinical document validator. Your task is to validate whether the modifications made to create conflicts are acceptable and realistic.
-
-Original Documents:
-Document 1: {original_doc1}
-Document 2: {original_doc2}
-
-Modified Documents:
-Document 1: {modified_doc1}
-Document 2: {modified_doc2}
-
-Expected Conflict Type: {conflict_type}
-Changes Made: {changes_made}
-
-Validate these modifications by checking:
-1. Are the conflicts realistic and clinically plausible?
-2. Do the modifications preserve the overall medical context?
-3. Are the changes appropriate for the specified conflict type?
-4. Would these conflicts be useful for training/validation purposes?
-5. Are there any unrealistic or impossible medical combinations?
-
-Respond with JSON format:
 {{
-    "is_valid": true/false,
-    "validation_score": 0-100,
-    "feedback": "detailed feedback on the modifications",
-    "issues_found": ["list of any issues if invalid"],
-    "approval_reasoning": "explanation of validation decision"
+    context_document_1: "{context_document_1}",
+    conflict_1: "{conflict_1}",
+    context_document_2: "{context_document_2}",
+    conflict_2: "{conflict_2}"
 }}
