@@ -43,8 +43,7 @@ class DoctorAgent(BaseAgent):
             ConflictResult containing the chosen conflict type and instructions
         """
         self.logger.info(
-            f"Doctor Agent analyzing document pair: \
-                {document_pair.doc1_id} & {document_pair.doc2_id}"
+            f"Analyzing document pair: {document_pair.doc1_id} & {document_pair.doc2_id}"
         )
 
         try:
@@ -78,14 +77,10 @@ class DoctorAgent(BaseAgent):
                 document2=self._truncate_document(document_pair.doc2_text),
             )
 
-            self.logger.debug(f"Sending prompt to API (length: {len(prompt)} chars)")
-            self.logger.debug(f"Temporal analysis: {temporal_analysis}")
-            self.logger.debug(f"Temporal recommendations: {temporal_recommendations}")
+            self.logger.debug(f"Prompt length: {len(prompt)} chars")
 
             # Call Groq API
             response = self._execute_prompt(prompt)
-
-            self.logger.debug(f"Received response from API: {response[:200]}...")
 
             # Parse response
             parsed_response = self._parse_json_response(response)

@@ -53,7 +53,6 @@ class BaseAgent(ABC):
 
         except json.JSONDecodeError as e:
             self.logger.error(f"Failed to parse JSON response: {e}")
-            self.logger.error(f"Response content: {response}")
             raise ValueError(f"Invalid JSON response from {self.name}: {e}")
 
     def _truncate_document(self, text: str, max_length: int = 2000) -> str:
