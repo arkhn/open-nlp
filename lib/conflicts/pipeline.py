@@ -7,7 +7,9 @@ from agents.doctor_agent import DoctorAgent
 from agents.editor_agent import EditorAgent
 from agents.moderator_agent import ModeratorAgent
 from base import DatabaseManager
-from config import API_KEY, BASE_URL, LOG_FILE, LOG_LEVEL, MODEL
+from config import (API_KEY, BASE_URL, DEFAULT_MAX_RETRIES,
+                    DEFAULT_MIN_VALIDATION_SCORE, LOG_FILE, LOG_FORMAT,
+                    LOG_LEVEL, MODEL, PIPELINE_LOGGER_NAME)
 from data_loader import DataLoader
 from models import DocumentPair
 
@@ -17,7 +19,7 @@ class Pipeline:
     Main pipeline controller that manages the three-agent workflow
     """
 
-    def __init__(self, max_retries: int = 0, min_validation_score: int = 70):
+    def __init__(self, max_retries: int = None, min_validation_score: int = None):
         """
         Initialize the pipeline
 
@@ -25,13 +27,21 @@ class Pipeline:
             max_retries: Maximum number of retry attempts for validation failures
             min_validation_score: Minimum score required for validation approval
         """
+        # Use default values from config if not provided
+        self.max_retries = max_retries if max_retries is not None else DEFAULT_MAX_RETRIES
+        min_validation_score = (
+            min_validation_score
+            if min_validation_score is not None
+            else DEFAULT_MIN_VALIDATION_SCORE
+        )
+
         # Setup logging
         logging.basicConfig(
             level=getattr(logging, LOG_LEVEL.upper()),
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            format=LOG_FORMAT,
             handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()],
         )
-        self.logger = logging.getLogger("ClinicalPipeline")
+        self.logger = logging.getLogger(PIPELINE_LOGGER_NAME)
 
         # Initialize components
         self.max_retries = max_retries

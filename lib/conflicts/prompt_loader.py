@@ -2,20 +2,22 @@ import logging
 from pathlib import Path
 from typing import Dict
 
+from config import PROMPTS_DIR
+
 
 class PromptLoader:
     """
     Utility class for loading and managing prompt templates from external files
     """
 
-    def __init__(self, prompts_dir: str = "prompts"):
+    def __init__(self, prompts_dir: str = None):
         """
         Initialize the PromptLoader
 
         Args:
             prompts_dir: Directory containing prompt template files
         """
-        self.prompts_dir = Path(prompts_dir)
+        self.prompts_dir = Path(prompts_dir or PROMPTS_DIR)
         self._prompt_cache: Dict[str, str] = {}
         self.logger = logging.getLogger(__name__)
 
