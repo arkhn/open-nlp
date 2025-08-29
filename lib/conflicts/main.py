@@ -31,6 +31,9 @@ def batch(
     print(f"Success rate: {result['success_rate']:.1f}%")
     print(f"Total processing time: {result['total_processing_time']:.2f}s")
 
+    pipeline.db_manager.save_to_parquet()
+    print("Results saved to Parquet file.")
+
 
 @app.command()
 def stats():
