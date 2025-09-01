@@ -2,8 +2,8 @@ import json
 import logging
 from typing import Any, Dict, Tuple
 
-from config import MIN_TARGET_TEXT_LENGTH
-from utils import find_similar_text
+from conflicts.config import MIN_TARGET_TEXT_LENGTH
+from conflicts.utils.utils import find_similar_text
 
 
 def _extract_json_from_response(response: str) -> Dict[str, Any]:

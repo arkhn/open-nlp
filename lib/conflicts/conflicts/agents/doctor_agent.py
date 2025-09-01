@@ -1,9 +1,9 @@
 from typing import Any, Dict
 
-from base import BaseAgent
-from config import CONFLICT_TYPES
-from models import ConflictResult, DocumentPair
-from temporal_analysis import TemporalAnalyzer
+from conflicts.config import CONFLICT_TYPES
+from conflicts.core.base import BaseAgent
+from conflicts.core.temporal_analysis import TemporalAnalyzer
+from conflicts.models import ConflictResult, DocumentPair
 
 
 def format_conflict_types_for_prompt(conflict_types: Dict) -> str:

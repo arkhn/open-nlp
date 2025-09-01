@@ -1,9 +1,9 @@
 from typing import List, Optional
 
 import typer
+from conflicts.pipeline import Pipeline
 from hydra import compose, initialize  # <- API Hydra (pas de décorateur)
 from omegaconf import DictConfig
-from pipeline import Pipeline
 
 app = typer.Typer(help="Clinical Document Conflict Pipeline")
 
@@ -13,7 +13,7 @@ def load_cfg(overrides: Optional[List[str]] = None) -> DictConfig:
     Compose Hydra config without hijacking CLI.
     Example overrides: ["pipeline.dataset_size=100", "agents.editor.model=gpt-4o"]
     """
-    with initialize(version_base=None, config_path="."):
+    with initialize(version_base=None, config_path=".."):
         cfg = compose(config_name="config", overrides=overrides or [])
     return cfg
 

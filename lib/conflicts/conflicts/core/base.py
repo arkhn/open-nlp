@@ -7,7 +7,7 @@ from typing import Any, Dict
 
 import openai
 import pandas as pd
-from models import DocumentPair, EditorResult, ValidationResult
+from conflicts.models import DocumentPair, EditorResult, ValidationResult
 
 
 class BaseAgent(ABC):
