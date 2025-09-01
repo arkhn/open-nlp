@@ -7,16 +7,16 @@ import openai
 from agents.doctor_agent import DoctorAgent
 from agents.editor_agent import EditorAgent
 from agents.moderator_agent import ModeratorAgent
-from base import DatasetManager
-from data_loader import DataLoader
+from conflicts.core.base import DatasetManager
+from conflicts.core.data_loader import DataLoader
+from conflicts.models import DocumentPair
 from dotenv import load_dotenv
-from models import DocumentPair
 from omegaconf import DictConfig
 
 load_dotenv()
 
 LOG_LEVEL = "INFO"
-LOG_FILE = "pipeline.log"
+LOG_FILE = "logs/pipeline.log"
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 PIPELINE_LOGGER_NAME = "ClinicalPipeline"
 
