@@ -9,31 +9,6 @@ from utils import (
     suggest_edit_operations,
 )
 
-EDIT_OPERATIONS = {"DELETE": "delete", "INSERT_AFTER": "insert_after", "REPLACE": "replace"}
-
-ERROR_MESSAGES = {
-    "TARGET_TEXT_NOT_FOUND": "Target text not found in document",
-    "TARGET_TEXT_TOO_SHORT": "Target text too short to be reliable",
-    "TARGET_TEXT_TRUNCATED": "Target text appears to be truncated",
-    "INVALID_OPERATION_TYPE": "Unknown operation type",
-    "REPLACE_MISSING_REPLACEMENT": "Replace operation requires replacement_text",
-    "JSON_PARSE_FAILED": "Failed to parse response as JSON",
-    "MISSING_REQUIRED_FIELDS": "Response missing required fields: doc1, doc2, conflict_type",
-}
-
-JSON_PARSING = {
-    "MARKDOWN_CODE_BLOCK": "```json",
-    "REQUIRED_FIELDS": ["doc1", "doc2", "conflict_type"],
-    "RESPONSE_PREVIEW_LENGTH": 200,
-}
-
-VALIDATION_RULES = {
-    "MIN_TARGET_LENGTH": MIN_TARGET_TEXT_LENGTH,
-    "TRUNCATION_INDICATORS": ["...", "n..."],
-    "REQUIRED_FIELDS": ["op", "target_text"],
-    "REPLACE_REQUIRES_REPLACEMENT": True,
-}
-
 
 def _extract_json_from_response(response: str) -> Dict[str, Any]:
     """
@@ -60,8 +35,8 @@ def _extract_json_from_response(response: str) -> Dict[str, Any]:
             return data
         except json.JSONDecodeError:
             # Try extracting JSON from markdown code blocks
-            if JSON_PARSING["MARKDOWN_CODE_BLOCK"] in response:
-                parts = response.split(JSON_PARSING["MARKDOWN_CODE_BLOCK"])
+            if "```json" in response:
+                parts = response.split("```json")
                 if len(parts) > 1:
                     json_part = parts[1].split("```")[0].strip()
                     data = json.loads(json_part)
@@ -122,14 +97,14 @@ def apply_edit_operation(document: str, operation: Dict[str, Any]) -> str:
             error_msg = f"Target text not found in document: '{target_text[:100]}...'"
             raise ValueError(error_msg)
 
-    if op_type == EDIT_OPERATIONS["DELETE"]:
+    if op_type == "delete":
         return document.replace(target_text, "", 1)
-    elif op_type == EDIT_OPERATIONS["INSERT_AFTER"]:
+    elif op_type == "insert_after":
         return document.replace(target_text, target_text + replacement_text, 1)
-    elif op_type == EDIT_OPERATIONS["REPLACE"]:
+    elif op_type == "replace":
         return document.replace(target_text, replacement_text, 1)
     else:
-        raise ValueError(f"{ERROR_MESSAGES['INVALID_OPERATION_TYPE']}: {op_type}")
+        raise ValueError(f"Unknown operation type: {op_type}")
 
 
 def parse_response(response: str, original_doc_1: str, original_doc_2: str) -> Dict[str, Any]:
@@ -149,13 +124,13 @@ def parse_response(response: str, original_doc_1: str, original_doc_2: str) -> D
     """
     try:
         # Log the first 200 chars of response for debugging
-        logging.debug(f"Response preview: {response[:JSON_PARSING['RESPONSE_PREVIEW_LENGTH']]}...")
+        logging.debug(f"Response preview: {response[:200]}...")
 
         # Extract JSON from response
         data = _extract_json_from_response(response)
 
         # Check if we have the expected edit operations format
-        required_fields = JSON_PARSING["REQUIRED_FIELDS"]
+        required_fields = ["doc1", "doc2", "conflict_type"]
         if all(field in data for field in required_fields):
             logging.info("Found edit operations format, applying operations to documents")
 
@@ -205,11 +180,11 @@ def parse_response(response: str, original_doc_1: str, original_doc_2: str) -> D
                 "conflict_type": conflict_type,
             }
         else:
-            raise ValueError(f"{ERROR_MESSAGES['MISSING_REQUIRED_FIELDS']}: {required_fields}")
+            raise ValueError(f"Response missing required fields: {required_fields}")
 
     except json.JSONDecodeError as e:
-        logging.error(f"{ERROR_MESSAGES['JSON_PARSE_FAILED']}: {e}")
-        raise ValueError(f"{ERROR_MESSAGES['JSON_PARSE_FAILED']}: {e}")
+        logging.error(f"Failed to parse response as JSON: {e}")
+        raise ValueError(f"Failed to parse response as JSON: {e}")
     except Exception as e:
         logging.error(f"Error parsing response: {e}")
         raise ValueError(f"Error parsing response: {e}")
@@ -233,14 +208,14 @@ def validate_edit_operation(document: str, operation: Dict[str, Any]) -> Dict[st
     replacement_text = operation.get("replacement_text", "")
 
     # Check operation type
-    if op_type not in EDIT_OPERATIONS.values():
+    if op_type not in ["delete", "insert_after", "replace"]:
         validation_result["is_valid"] = False
         validation_result["issues"].append(f"Invalid operation type: {op_type}")
 
     # Check if target_text exists
     if target_text not in document:
         validation_result["is_valid"] = False
-        validation_result["issues"].append(ERROR_MESSAGES["TARGET_TEXT_NOT_FOUND"])
+        validation_result["issues"].append("Target text not found in document")
 
         # Try to find similar text
         similar_text = find_similar_text(document, target_text)
@@ -264,16 +239,14 @@ def validate_edit_operation(document: str, operation: Dict[str, Any]) -> Dict[st
             f"Target text too short (less than {MIN_TARGET_TEXT_LENGTH} characters)"
         )
 
-    if any(
-        target_text.endswith(indicator) for indicator in VALIDATION_RULES["TRUNCATION_INDICATORS"]
-    ):
+    if any(target_text.endswith(indicator) for indicator in ["...", "n..."]):
         validation_result["is_valid"] = False
-        validation_result["issues"].append(ERROR_MESSAGES["TARGET_TEXT_TRUNCATED"])
+        validation_result["issues"].append("Target text appears to be truncated")
 
     # Check replacement text for replace operations
-    if op_type == EDIT_OPERATIONS["REPLACE"] and not replacement_text:
+    if op_type == "replace" and not replacement_text:
         validation_result["is_valid"] = False
-        validation_result["issues"].append(ERROR_MESSAGES["REPLACE_MISSING_REPLACEMENT"])
+        validation_result["issues"].append("Replace operation requires replacement_text")
 
     return validation_result
 
