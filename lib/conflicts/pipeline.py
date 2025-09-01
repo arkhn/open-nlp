@@ -7,7 +7,7 @@ import openai
 from agents.doctor_agent import DoctorAgent
 from agents.editor_agent import EditorAgent
 from agents.moderator_agent import ModeratorAgent
-from base import DatabaseManager
+from base import DatasetManager
 from data_loader import DataLoader
 from dotenv import load_dotenv
 from models import DocumentPair
@@ -48,7 +48,7 @@ class Pipeline:
         self.logger = logging.getLogger(PIPELINE_LOGGER_NAME)
 
         # Initialize components
-        self.db_manager = DatabaseManager("validated_documents.db")
+        self.dataset_manager = DatasetManager("validated_documents.parquet")
 
         # Create shared OpenAI client
         self.client = openai.OpenAI(api_key=os.getenv("API_KEY"), base_url=os.getenv("BASE_URL"))
@@ -111,7 +111,7 @@ class Pipeline:
             True if saved successfully, False otherwise
         """
         if validation_result.is_valid:
-            doc_id = self.db_manager.save_validated_documents(
+            doc_id = self.dataset_manager.save_validated_documents(
                 document_pair, editor_result, conflict_type, validation_result
             )
             self.logger.info(f"Document pair {pair_id} processed successfully (DB ID: {doc_id})")
@@ -173,14 +173,10 @@ class Pipeline:
                 self.moderator_agent, document_pair, editor_result, conflict_result.conflict_type
             )
 
-            moderator_log_data = {
-                "attempt": attempt,
-                "is_valid": validation_result.is_valid,
-                "score": validation_result.score,
-                "reasoning": validation_result.reasoning,
-            }
-            self.db_manager.log_processing_step(
-                pair_id, "Moderator", moderator_log_data, moderator_time
+            self.logger.info(
+                f"Moderator validation attempt {attempt}: "
+                f"valid={validation_result.is_valid}, score={validation_result.score}, "
+                f"reasoning={validation_result.reasoning[:100]}..."
             )
 
             if validation_result.is_valid:
@@ -261,7 +257,7 @@ class Pipeline:
         Returns:
             Dictionary with pipeline statistics
         """
-        total_validated = self.db_manager.get_validated_documents_count()
+        total_validated = self.dataset_manager.get_validated_documents_count()
         data_stats = self.data_loader.get_data_statistics()
 
         return {
@@ -282,6 +278,6 @@ class Pipeline:
             },
             "configuration": {
                 "max_retries": self.max_retries,
-                "database_path": self.db_manager.db_path,
+                "dataset_path": self.dataset_manager.parquet_path,
             },
         }
