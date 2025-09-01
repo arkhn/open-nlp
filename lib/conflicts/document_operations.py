@@ -1,13 +1,9 @@
 import json
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from config import MIN_TARGET_TEXT_LENGTH
-from utils import (
-    categorize_text_by_medical_domain,
-    find_similar_text,
-    suggest_edit_operations,
-)
+from utils import find_similar_text
 
 
 def _extract_json_from_response(response: str) -> Dict[str, Any]:
@@ -145,27 +141,6 @@ def parse_response(response: str, original_doc_1: str, original_doc_2: str) -> D
                     "This usually happens when the LLM references text that "
                     "doesn't exist in the documents.\n\n"
                 )
-
-                # Add suggestions for document 1
-                if "doc1" in data and "target_text" in data["doc1"]:
-                    suggestions_1 = suggest_edit_operations(
-                        original_doc_1, data.get("conflict_type", "general")
-                    )
-                    error_msg += "Document 1 suggestions for editing:\n"
-                    for category, texts in suggestions_1.items():
-                        if texts:
-                            error_msg += f"  {category}: {texts[0][:100]}...\n"
-
-                # Add suggestions for document 2
-                if "doc2" in data and "target_text" in data["doc2"]:
-                    suggestions_2 = suggest_edit_operations(
-                        original_doc_2, data.get("conflict_type", "general")
-                    )
-                    error_msg += "Document 2 suggestions for editing:\n"
-                    for category, texts in suggestions_2.items():
-                        if texts:
-                            error_msg += f"  {category}: {texts[0][:100]}...\n"
-
                 error_msg += (
                     "\nPlease ensure the LLM only references text that actually "
                     "exists in the original documents."
@@ -188,77 +163,3 @@ def parse_response(response: str, original_doc_1: str, original_doc_2: str) -> D
     except Exception as e:
         logging.error(f"Error parsing response: {e}")
         raise ValueError(f"Error parsing response: {e}")
-
-
-def validate_edit_operation(document: str, operation: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Validate an edit operation before applying it.
-
-    Args:
-        document: The document to validate against
-        operation: The edit operation to validate
-
-    Returns:
-        Dictionary with validation results and suggestions
-    """
-    validation_result = {"is_valid": True, "issues": [], "suggestions": [], "similar_text": None}
-
-    op_type = operation.get("op")
-    target_text = operation.get("target_text", "")
-    replacement_text = operation.get("replacement_text", "")
-
-    # Check operation type
-    if op_type not in ["delete", "insert_after", "replace"]:
-        validation_result["is_valid"] = False
-        validation_result["issues"].append(f"Invalid operation type: {op_type}")
-
-    # Check if target_text exists
-    if target_text not in document:
-        validation_result["is_valid"] = False
-        validation_result["issues"].append("Target text not found in document")
-
-        # Try to find similar text
-        similar_text = find_similar_text(document, target_text)
-        if similar_text:
-            validation_result["similar_text"] = similar_text
-            validation_result["suggestions"].append(
-                f"Consider using similar text: '{similar_text[:100]}...'"
-            )
-
-        # Provide general suggestions
-        suggestions = suggest_edit_operations(document, "general")
-        if suggestions["general"]:
-            validation_result["suggestions"].append("Available text segments for editing:")
-            for i, text in enumerate(suggestions["general"][:3], 1):
-                validation_result["suggestions"].append(f"  {i}. {text[:100]}...")
-
-    # Check text quality
-    if len(target_text.strip()) < MIN_TARGET_TEXT_LENGTH:
-        validation_result["is_valid"] = False
-        validation_result["issues"].append(
-            f"Target text too short (less than {MIN_TARGET_TEXT_LENGTH} characters)"
-        )
-
-    if any(target_text.endswith(indicator) for indicator in ["...", "n..."]):
-        validation_result["is_valid"] = False
-        validation_result["issues"].append("Target text appears to be truncated")
-
-    # Check replacement text for replace operations
-    if op_type == "replace" and not replacement_text:
-        validation_result["is_valid"] = False
-        validation_result["issues"].append("Replace operation requires replacement_text")
-
-    return validation_result
-
-
-def extract_text_by_category(document: str) -> Dict[str, List[str]]:
-    """
-    Extract text from document organized by medical categories.
-
-    Args:
-        document: The document to analyze
-
-    Returns:
-        Dictionary with text organized by medical categories
-    """
-    return categorize_text_by_medical_domain(document)
