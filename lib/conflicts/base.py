@@ -1,7 +1,8 @@
 import json
 import logging
-import sqlite3
+import os
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Any, Dict
 
 import openai
@@ -68,54 +69,47 @@ class BaseAgent(ABC):
         return text[: self.max_length] + "..."
 
 
-class DatabaseManager:
-    """Manager for SQLite database operations"""
+class DatasetManager:
+    """Manager for Parquet dataset operations"""
 
-    def __init__(self, db_path: str):
-        self.db_path = db_path
-        self._init_database()
+    def __init__(self, parquet_path: str):
+        self.parquet_path = parquet_path
+        self.logger = logging.getLogger("DatasetManager")
+        self.df = self._load_or_create_dataframe()
 
-    def _init_database(self):
-        """Initialize the database with required tables"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-
-            # Create table for validated documents
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS validated_documents (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    original_doc1_id TEXT,
-                    original_doc2_id TEXT,
-                    original_doc1_text TEXT,
-                    original_doc2_text TEXT,
-                    modified_doc1_text TEXT,
-                    modified_doc2_text TEXT,
-                    conflict_type TEXT,
-                    score INTEGER,
-                    changes_made TEXT,
-                    doc1_timestamp TEXT,
-                    doc2_timestamp TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """
+    def _load_or_create_dataframe(self) -> pd.DataFrame:
+        """Load existing parquet file or create empty DataFrame with proper schema"""
+        if os.path.exists(self.parquet_path):
+            df = pd.read_parquet(self.parquet_path)
+            self.logger.info(f"Loaded {len(df)} records from {self.parquet_path}")
+            return df
+        else:
+            # Create empty DataFrame with expected schema
+            df = pd.DataFrame(
+                columns=[
+                    "id",
+                    "original_doc1_id",
+                    "original_doc2_id",
+                    "original_doc1_text",
+                    "original_doc2_text",
+                    "modified_doc1_text",
+                    "modified_doc2_text",
+                    "conflict_type",
+                    "score",
+                    "changes_made",
+                    "doc1_timestamp",
+                    "doc2_timestamp",
+                    "created_at",
+                ]
             )
+            self.logger.info("Created empty DataFrame for new dataset")
+            return df
 
-            # Create table for processing history
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS processing_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    doc_pair_id TEXT,
-                    agent_name TEXT,
-                    result_data TEXT,
-                    processing_time REAL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """
-            )
-
-            conn.commit()
+    def save_to_parquet(self, output_path: str = None):
+        """Save current DataFrame to parquet file"""
+        output_path = output_path or self.parquet_path
+        self.df.to_parquet(output_path, index=False)
+        self.logger.info(f"Saved {len(self.df)} records to {output_path}")
 
     def save_validated_documents(
         self,
@@ -124,67 +118,33 @@ class DatabaseManager:
         conflict_type: str,
         validation_result: ValidationResult,
     ) -> int:
-        """Save validated documents to database"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
+        """Add validated documents to DataFrame"""
+        doc_id = len(self.df) + 1
 
-            cursor.execute(
-                """
-                INSERT INTO validated_documents
-                (original_doc1_id, original_doc2_id, original_doc1_text, original_doc2_text, \
-                    modified_doc1_text, modified_doc2_text, conflict_type, score, \
-                        changes_made, doc1_timestamp, doc2_timestamp)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-                (
-                    original_pair.doc1_id,
-                    original_pair.doc2_id,
-                    original_pair.doc1_text,
-                    original_pair.doc2_text,
-                    modified_docs.modified_document1,
-                    modified_docs.modified_document2,
-                    conflict_type,
-                    validation_result.score,
-                    modified_docs.changes_made,
-                    str(original_pair.doc1_timestamp) if original_pair.doc1_timestamp else None,
-                    str(original_pair.doc2_timestamp) if original_pair.doc2_timestamp else None,
-                ),
-            )
+        new_record = {
+            "id": doc_id,
+            "original_doc1_id": original_pair.doc1_id,
+            "original_doc2_id": original_pair.doc2_id,
+            "original_doc1_text": original_pair.doc1_text,
+            "original_doc2_text": original_pair.doc2_text,
+            "modified_doc1_text": modified_docs.modified_document1,
+            "modified_doc2_text": modified_docs.modified_document2,
+            "conflict_type": conflict_type,
+            "score": validation_result.score,
+            "changes_made": modified_docs.changes_made,
+            "doc1_timestamp": str(original_pair.doc1_timestamp)
+            if original_pair.doc1_timestamp
+            else None,
+            "doc2_timestamp": str(original_pair.doc2_timestamp)
+            if original_pair.doc2_timestamp
+            else None,
+            "created_at": datetime.now().isoformat(),
+        }
 
-            doc_id = cursor.lastrowid
-            conn.commit()
-
-            return doc_id
-
-    def log_processing_step(
-        self, doc_pair_id: str, agent_name: str, result_data: Dict[str, Any], processing_time: float
-    ):
-        """Log a processing step to history"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-
-            cursor.execute(
-                """
-                INSERT INTO processing_history (doc_pair_id, agent_name, \
-                    result_data, processing_time)
-                VALUES (?, ?, ?, ?)
-            """,
-                (doc_pair_id, agent_name, json.dumps(result_data), processing_time),
-            )
-
-            conn.commit()
+        self.df = pd.concat([self.df, pd.DataFrame([new_record])], ignore_index=True)
+        self.logger.info(f"Added document with ID: {doc_id} to dataset")
+        return doc_id
 
     def get_validated_documents_count(self) -> int:
         """Get count of validated documents"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM validated_documents")
-            return cursor.fetchone()[0]
-
-    def save_to_parquet(self, output_path: str = "validated_documents.parquet"):
-        """Save all validated documents to a parquet file"""
-        with sqlite3.connect(self.db_path) as conn:
-            query = "SELECT * FROM validated_documents"
-            df = pd.read_sql_query(query, conn)
-            df.to_parquet(output_path, index=False)
-            print(f"Database saved to parquet file: {output_path}")
+        return len(self.df)
