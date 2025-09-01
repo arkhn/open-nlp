@@ -43,7 +43,7 @@ def batch(
     print(f"Success rate: {result['success_rate']:.1f}%")
     print(f"Total processing time: {result['total_processing_time']:.2f}s")
 
-    pipeline.db_manager.save_to_parquet()
+    pipeline.dataset_manager.save_to_parquet()
     print("Results saved to Parquet file.")
 
 
@@ -74,7 +74,7 @@ def stats(
 
     print("\n=== CONFIGURATION ===")
     print(f"Max retries: {stats['configuration']['max_retries']}")
-    print(f"Database: {stats['configuration']['database_path']}")
+    print(f"Dataset: {stats['configuration']['dataset_path']}")
 
 
 if __name__ == "__main__":
