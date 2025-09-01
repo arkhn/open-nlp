@@ -474,7 +474,7 @@ def main() -> None:
 
     # Save scored dataset
     scored_parquet_path = (
-        f"{args.output_path}/model={args.sts_model.replace('/','-')}_scored.parquet"
+        f"{args.output_path}/model={args.sts_model.replace('/', '-')}_scored.parquet"
     )
     public_dataset.to_parquet(scored_parquet_path)
 
