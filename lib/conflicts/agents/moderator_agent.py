@@ -12,10 +12,10 @@ class ModeratorAgent(BaseAgent):
     If invalid, they are returned to Editor Agent for re-modification.
     """
 
-    def __init__(self, client, model, min_validation_score: int = 4):
+    def __init__(self, client, model, cfg, min_validation_score: int = 4):
         with open("prompts/moderator_agent_system.txt", "r", encoding="utf-8") as f:
             system_prompt = f.read().strip()
-        super().__init__("Moderator", client, model, system_prompt)
+        super().__init__("Moderator", client, model, cfg, system_prompt)
         self.min_score = min_validation_score
 
     def __call__(
@@ -50,7 +50,7 @@ class ModeratorAgent(BaseAgent):
             self.logger.debug(f"Sending validation prompt to API (length: {len(prompt)} chars)")
 
             # Call Groq API with low temperature for consistent validation
-            response = self._execute_prompt(prompt)
+            response = self._execute_prompt(prompt, self.cfg.model.base_temperature)
 
             self.logger.debug(f"Received validation response from API: {response[:200]}...")
 

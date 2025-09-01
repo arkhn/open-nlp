@@ -70,7 +70,7 @@ def show_sample_documents():
         print("-" * 40)
 
         loader = DataLoader()
-        pairs = loader.get_random_document_pairs(count=1)
+        pairs = loader.get_random_document_pairs(dataset_size=1)
 
         if pairs:
             pair = pairs[0]
