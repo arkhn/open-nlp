@@ -72,26 +72,18 @@ def apply_edit_operation(document: str, operation: Dict[str, Any]) -> str:
     replacement_text = operation.get("replacement_text", "")
 
     # Check if target_text exists in document
-    if target_text not in document:
-        # Try to find similar text using fuzzy matching
-        similar_text = find_similar_text(document, target_text)
+    similar_text = find_similar_text(document, target_text)
 
-        if similar_text:
-            logging.warning(
-                f"Exact target text not found, using similar text: "
-                f"'{target_text[:50]}...' -> '{similar_text[:50]}...'"
-            )
-            target_text = similar_text
-        else:
-            # Additional validation: check for common LLM issues
-            if target_text.endswith("...") or target_text.endswith("n..."):
-                raise ValueError(f"Target text appears to be truncated: '{target_text[:50]}...'")
-            if len(target_text.strip()) < MIN_TARGET_TEXT_LENGTH:
-                raise ValueError(f"Target text too short to be reliable: '{target_text[:50]}...'")
+    if not similar_text:
+        # Additional validation: check for common LLM issues
+        if target_text.endswith("...") or target_text.endswith("n..."):
+            raise ValueError(f"Target text appears to be truncated: '{target_text[:50]}...'")
+        if len(target_text.strip()) < MIN_TARGET_TEXT_LENGTH:
+            raise ValueError(f"Target text too short to be reliable: '{target_text[:50]}...'")
 
-            # Provide more helpful error message with suggestions
-            error_msg = f"Target text not found in document: '{target_text[:100]}...'"
-            raise ValueError(error_msg)
+        # Provide more helpful error message with suggestions
+        error_msg = f"Target text not found in document: '{target_text[:100]}...'"
+        raise ValueError(error_msg)
 
     if op_type == "delete":
         return document.replace(target_text, "", 1)
