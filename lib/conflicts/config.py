@@ -26,14 +26,6 @@ DEFAULT_MAX_RETRIES = 3
 MIN_TARGET_TEXT_LENGTH = 20
 SIMILARITY_THRESHOLD = 0.6
 
-# Prompt Configuration
-PROMPTS_DIR = "prompts"
-
-# Prompt file names (without .txt extension)
-DOCTOR_AGENT_PROMPT_FILE = "doctor_agent"
-EDITOR_AGENT_PROMPT_FILE = "editor_agent"
-MODERATOR_AGENT_PROMPT_FILE = "moderator_agent"
-
 
 @dataclass
 class ConflictType:
