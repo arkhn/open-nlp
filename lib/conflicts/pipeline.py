@@ -7,11 +7,7 @@ from agents.doctor_agent import DoctorAgent
 from agents.editor_agent import EditorAgent
 from agents.moderator_agent import ModeratorAgent
 from base import DatabaseManager
-from config import (
-    API_KEY,
-    BASE_URL,
-    MODEL,
-)
+from config import API_KEY, BASE_URL, MODEL
 from data_loader import DataLoader
 from models import DocumentPair
 
@@ -34,13 +30,8 @@ class Pipeline:
             max_retries: Maximum number of retry attempts for validation failures
             min_score: Minimum score required for validation approval
         """
-        # Use default values from config if not provided
-        self.max_retries = max_retries if max_retries is not None else DEFAULT_MAX_RETRIES
-        min_validation_score = (
-            min_validation_score
-            if min_validation_score is not None
-            else DEFAULT_MIN_VALIDATION_SCORE
-        )
+        # Use provided values directly (defaults set in function signature)
+        self.max_retries = max_retries
 
         # Setup logging
         logging.basicConfig(
@@ -60,7 +51,9 @@ class Pipeline:
         self.doctor_agent = DoctorAgent(self.client, MODEL)
         self.editor_agent = EditorAgent(self.client, MODEL)
         self.moderator_agent = ModeratorAgent(
-            self.client, MODEL, min_validation_score=min_validation_score,
+            self.client,
+            MODEL,
+            min_validation_score=min_validation_score,
         )
 
         self.data_loader = DataLoader()
