@@ -27,10 +27,10 @@ class DoctorAgent(BaseAgent):
     clinical conflict should be introduced between them.
     """
 
-    def __init__(self, client, model):
+    def __init__(self, client, model, cfg):
         with open("prompts/doctor_agent_system.txt", "r", encoding="utf-8") as f:
             system_prompt = f.read().strip()
-        super().__init__("Doctor", client, model, system_prompt)
+        super().__init__("Doctor", client, model, cfg, system_prompt)
 
     def __call__(self, document_pair: DocumentPair) -> ConflictResult:
         """
@@ -80,7 +80,7 @@ class DoctorAgent(BaseAgent):
             self.logger.debug(f"Prompt length: {len(prompt)} chars")
 
             # Call Groq API
-            response = self._execute_prompt(prompt)
+            response = self._execute_prompt(prompt, self.cfg.model.base_temperature)
 
             # Parse response
             parsed_response = self._parse_json_response(response)

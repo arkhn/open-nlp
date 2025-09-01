@@ -1,0 +1,18 @@
+model:
+  name: "openai/gpt-oss-120b"
+  base_temperature: 0.7
+  editor_temperature: 0.2
+  max_length: 2000
+
+pipeline:
+  max_retries: 5
+  dataset_size: 1
+
+editor:
+  max_retries: 5
+
+validation:
+  min_validation_score: 4
+
+data:
+  path: "data/mimic-iii-verifact-bhc.parquet"

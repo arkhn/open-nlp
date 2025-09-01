@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -7,9 +8,12 @@ from agents.doctor_agent import DoctorAgent
 from agents.editor_agent import EditorAgent
 from agents.moderator_agent import ModeratorAgent
 from base import DatabaseManager
-from config import API_KEY, BASE_URL, MODEL
 from data_loader import DataLoader
+from dotenv import load_dotenv
 from models import DocumentPair
+from omegaconf import DictConfig
+
+load_dotenv()
 
 LOG_LEVEL = "INFO"
 LOG_FILE = "pipeline.log"
@@ -22,16 +26,18 @@ class Pipeline:
     Main pipeline controller that manages the three-agent workflow
     """
 
-    def __init__(self, max_retries: int = 5, min_validation_score: int = 4):
+    def __init__(self, cfg: DictConfig):
         """
         Initialize the pipeline
 
         Args:
-            max_retries: Maximum number of retry attempts for validation failures
-            min_score: Minimum score required for validation approval
+            cfg: Hydra configuration object
         """
-        # Use provided values directly (defaults set in function signature)
-        self.max_retries = max_retries
+        # Store configuration
+        self.cfg = cfg
+
+        # Use Hydra config values
+        self.max_retries = cfg.pipeline.max_retries
 
         # Setup logging
         logging.basicConfig(
@@ -42,21 +48,22 @@ class Pipeline:
         self.logger = logging.getLogger(PIPELINE_LOGGER_NAME)
 
         # Initialize components
-        self.db_manager = DatabaseManager()
+        self.db_manager = DatabaseManager("validated_documents.db")
 
         # Create shared OpenAI client
-        self.client = openai.OpenAI(api_key=API_KEY, base_url=BASE_URL)
+        self.client = openai.OpenAI(api_key=os.getenv("API_KEY"), base_url=os.getenv("BASE_URL"))
 
-        # Initialize agents with shared client
-        self.doctor_agent = DoctorAgent(self.client, MODEL)
-        self.editor_agent = EditorAgent(self.client, MODEL)
+        # Initialize agents with shared client and configuration
+        self.doctor_agent = DoctorAgent(self.client, cfg.model.name, cfg)
+        self.editor_agent = EditorAgent(self.client, cfg.model.name, cfg)
         self.moderator_agent = ModeratorAgent(
             self.client,
-            MODEL,
-            min_validation_score=min_validation_score,
+            cfg.model.name,
+            cfg,
+            min_validation_score=cfg.validation.min_validation_score,
         )
 
-        self.data_loader = DataLoader()
+        self.data_loader = DataLoader(cfg)
 
         stats = self.data_loader.get_data_statistics()
         self.logger.info(
@@ -199,7 +206,7 @@ class Pipeline:
         result_data["processing_time"] = time.time() - start_time
         return result_data["success"], result_data
 
-    def process_batch(
+    def execute(
         self,
         dataset_size: int = 5,
         category_filter: Optional[List[str]] = None,
@@ -208,7 +215,7 @@ class Pipeline:
         Process a batch of document pairs
 
         Args:
-            batch_size: Number of document pairs to process
+            dataset_size: Number of document pairs to process
             category_filter: List of categories to filter documents by
 
         Returns:
@@ -218,7 +225,7 @@ class Pipeline:
 
         batch_start_time = time.time()
         document_pairs = self.data_loader.get_random_document_pairs(
-            count=dataset_size, category_filter=category_filter
+            dataset_size=dataset_size, category_filter=category_filter
         )
 
         results = []

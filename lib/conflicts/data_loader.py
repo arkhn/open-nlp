@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from config import BATCH_SIZE, DATA_PATH
 from models import DocumentPair
 
 
@@ -13,14 +12,15 @@ class DataLoader:
     Loads and manages clinical document data from the preprocessed MIMIC-III dataset
     """
 
-    def __init__(self, data_path: str = DATA_PATH):
-        self.data_path = Path(data_path)
+    def __init__(self, cfg):
+        self.cfg = cfg
+        self.data_path = Path(cfg.data.path)
         self.logger = logging.getLogger("DataLoader")
         self.data_df = pd.read_parquet(self.data_path)
 
     def get_random_document_pairs(
         self,
-        count: int = BATCH_SIZE,
+        dataset_size: int,
         category_filter: Optional[List[str]] = None,
     ) -> List[DocumentPair]:
         """
@@ -35,7 +35,7 @@ class DataLoader:
         Returns:
             List of DocumentPair objects
         """
-        self.logger.info(f"Generating {count} random document pairs")
+        self.logger.info(f"Generating {dataset_size} random document pairs")
 
         # Apply filters
         filtered_df = self.data_df.copy()
@@ -47,7 +47,7 @@ class DataLoader:
             )
         document_pairs = []
 
-        for _ in range(count):
+        for _ in range(dataset_size):
             subject_counts = filtered_df["subject_id"].value_counts()
             subject = random.choice(subject_counts.index.tolist())
             subject_docs = filtered_df[filtered_df["subject_id"] == subject].sample(n=2)

@@ -6,18 +6,19 @@ from typing import Any, Dict
 
 import openai
 import pandas as pd
-from config import DATABASE_PATH
 from models import DocumentPair, EditorResult, ValidationResult
 
 
 class BaseAgent(ABC):
     """Abstract base class for all agents"""
 
-    def __init__(self, name: str, client: openai.OpenAI, model: str, system_prompt: str = ""):
+    def __init__(self, name: str, client: openai.OpenAI, model: str, cfg, system_prompt: str = ""):
         self.name = name
         self.logger = logging.getLogger(f"Agent.{name}")
         self.client = client
         self.model = model
+        self.cfg = cfg
+        self.max_length = cfg.model.max_length
         self.system_prompt = system_prompt
 
     @abstractmethod
@@ -60,17 +61,17 @@ class BaseAgent(ABC):
             self.logger.error(f"Failed to parse JSON response: {e}")
             raise ValueError(f"Invalid JSON response from {self.name}: {e}")
 
-    def _truncate_document(self, text: str, max_length: int = 2000) -> str:
+    def _truncate_document(self, text: str) -> str:
         """truncate document text to fit within prompt limits"""
-        if len(text) <= max_length:
+        if len(text) <= self.max_length:
             return text
-        return text[:max_length] + "..."
+        return text[: self.max_length] + "..."
 
 
 class DatabaseManager:
     """Manager for SQLite database operations"""
 
-    def __init__(self, db_path: str = DATABASE_PATH):
+    def __init__(self, db_path: str):
         self.db_path = db_path
         self._init_database()
 

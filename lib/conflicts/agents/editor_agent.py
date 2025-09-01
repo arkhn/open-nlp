@@ -9,10 +9,10 @@ class EditorAgent(BaseAgent):
     the Doctor Agent's conflict type and instructions.
     """
 
-    def __init__(self, client, model):
+    def __init__(self, client, model, cfg):
         with open("prompts/editor_agent_system.txt", "r", encoding="utf-8") as f:
             system_prompt = f.read().strip()
-        super().__init__("Editor", client, model, system_prompt)
+        super().__init__("Editor", client, model, cfg, system_prompt)
 
     def __call__(
         self, document_pair: DocumentPair, conflict_instructions: ConflictResult
@@ -28,13 +28,15 @@ class EditorAgent(BaseAgent):
             EditorResult containing modified documents and summary of changes
         """
         self.logger.info(f"Creating '{conflict_instructions.conflict_type}' conflict")
-        return self._try_modification_with_retries(document_pair, conflict_instructions)
+        return self._try_modification_with_retries(
+            document_pair, conflict_instructions, self.cfg.editor.max_retries
+        )
 
     def _try_modification_with_retries(
         self,
         document_pair: DocumentPair,
         conflict_instructions: ConflictResult,
-        max_retries: int = 5,
+        max_retries: int,
     ) -> EditorResult:
         """Try to modify documents with retries on failure"""
         for attempt in range(max_retries):
@@ -52,7 +54,7 @@ class EditorAgent(BaseAgent):
     ) -> EditorResult:
         """Perform a single modification attempt"""
         prompt = self._build_prompt(document_pair, conflict_instructions)
-        response = self._execute_prompt(prompt, temperature=0.2)
+        response = self._execute_prompt(prompt, self.cfg.model.editor_temperature)
         parsed_result = self._parse_and_validate_response(response, document_pair)
         return self._create_result(parsed_result, document_pair)
 
