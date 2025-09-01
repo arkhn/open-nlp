@@ -24,7 +24,7 @@ class BaseAgent(ABC):
         """Process the input and return result"""
         pass
 
-    def _execute_prompt(self, prompt: str) -> str:
+    def _execute_prompt(self, prompt: str, temperature: float = 0.7) -> str:
         """Execute a single prompt"""
         try:
             messages = []
@@ -32,7 +32,11 @@ class BaseAgent(ABC):
                 messages.append({"role": "system", "content": self.system_prompt})
             messages.append({"role": "user", "content": prompt})
 
-            completion = self.client.chat.completions.create(model=self.model, messages=messages)
+            completion = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=temperature,
+            )
             return completion.choices[0].message.content
         except Exception as e:
             self.logger.error(f"API call failed: {e}")
