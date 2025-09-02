@@ -2,7 +2,7 @@ import re
 from typing import Any, Dict
 
 from conflicts.core.base import BaseAgent
-from conflicts.models import DocumentPair, EditorResult, ValidationResult
+from conflicts.core.models import DocumentPair, EditorResult, ValidationResult
 
 
 class ModeratorAgent(BaseAgent):

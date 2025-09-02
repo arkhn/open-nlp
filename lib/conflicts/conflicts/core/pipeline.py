@@ -9,16 +9,11 @@ from agents.editor_agent import EditorAgent
 from agents.moderator_agent import ModeratorAgent
 from conflicts.core.base import DatasetManager
 from conflicts.core.data_loader import DataLoader
-from conflicts.models import DocumentPair
+from conflicts.core.models import DocumentPair
 from dotenv import load_dotenv
 from omegaconf import DictConfig
 
 load_dotenv()
-
-LOG_LEVEL = "INFO"
-LOG_FILE = "logs/pipeline.log"
-LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-PIPELINE_LOGGER_NAME = "ClinicalPipeline"
 
 
 class Pipeline:
@@ -39,13 +34,9 @@ class Pipeline:
         # Use Hydra config values
         self.max_retries = cfg.pipeline.max_retries
 
-        # Setup logging
-        logging.basicConfig(
-            level=getattr(logging, LOG_LEVEL.upper()),
-            format=LOG_FORMAT,
-            handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()],
-        )
-        self.logger = logging.getLogger(PIPELINE_LOGGER_NAME)
+        # Setup logging - Hydra already configures root logger
+        # Just get a logger for this module
+        self.logger = logging.getLogger(__name__)
 
         # Initialize components
         self.dataset_manager = DatasetManager("validated_documents.parquet")
