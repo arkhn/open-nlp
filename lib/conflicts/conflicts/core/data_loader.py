@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from conflicts.models import DocumentPair
+from conflicts.core.models import DocumentPair
 
 
 class DataLoader:
