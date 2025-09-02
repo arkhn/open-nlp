@@ -10,7 +10,7 @@ model:
 
 pipeline:
   max_retries: 5
-  dataset_size: 1
+  dataset_size: 30
 
 editor:
   max_retries: 5
