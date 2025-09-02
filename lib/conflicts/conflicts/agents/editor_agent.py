@@ -13,6 +13,7 @@ class EditorAgent(BaseAgent):
         with open("prompts/editor_agent_system.txt", "r", encoding="utf-8") as f:
             system_prompt = f.read().strip()
         super().__init__("Editor", client, model, cfg, system_prompt)
+        self.min_text_length = cfg.editor.min_text_length
 
     def __call__(
         self, document_pair: DocumentPair, conflict_instructions: ConflictResult
@@ -73,7 +74,12 @@ class EditorAgent(BaseAgent):
         """Parse response and validate modifications were made"""
         self.logger.debug(f"Received modification response from API: {response[:200]}...")
 
-        parsed_result = parse_response(response, document_pair.doc1_text, document_pair.doc2_text)
+        parsed_result = parse_response(
+            response,
+            document_pair.doc1_text,
+            document_pair.doc2_text,
+            self.min_text_length,
+        )
 
         if (
             parsed_result["modified_doc_1"].strip() == document_pair.doc1_text.strip()

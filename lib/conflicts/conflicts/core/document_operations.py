@@ -2,7 +2,6 @@ import json
 import logging
 from typing import Any, Dict, Tuple
 
-from conflicts.config import MIN_TARGET_TEXT_LENGTH
 from conflicts.utils.utils import find_similar_text
 
 
@@ -53,7 +52,11 @@ def _extract_json_from_response(response: str) -> Dict[str, Any]:
             raise ValueError(f"Invalid JSON format in response: {e}")
 
 
-def apply_edit_operation(document: str, operation: Dict[str, Any]) -> Tuple[str, str]:
+def apply_edit_operation(
+    document: str,
+    operation: Dict[str, Any],
+    min_text_length: int,
+) -> Tuple[str, str]:
     """
     Apply edit operation to a document using text-based operations.
 
@@ -78,7 +81,7 @@ def apply_edit_operation(document: str, operation: Dict[str, Any]) -> Tuple[str,
         # Additional validation: check for common LLM issues
         if target_text.endswith("...") or target_text.endswith("n..."):
             raise ValueError(f"Target text appears to be truncated: '{target_text[:50]}...'")
-        if len(target_text.strip()) < MIN_TARGET_TEXT_LENGTH:
+        if len(target_text.strip()) < min_text_length:
             raise ValueError(f"Target text too short to be reliable: '{target_text[:50]}...'")
 
         # Provide more helpful error message with suggestions
@@ -103,7 +106,12 @@ def apply_edit_operation(document: str, operation: Dict[str, Any]) -> Tuple[str,
         raise ValueError(f"Unknown operation type: {op_type}")
 
 
-def parse_response(response: str, original_doc_1: str, original_doc_2: str) -> Dict[str, Any]:
+def parse_response(
+    response: str,
+    original_doc_1: str,
+    original_doc_2: str,
+    min_text_length: int,
+) -> Dict[str, Any]:
     """
     Parse the LLM's response to extract operations and apply them to documents.
 
@@ -133,10 +141,12 @@ def parse_response(response: str, original_doc_1: str, original_doc_2: str) -> D
             # Apply edit operations to documents
             try:
                 modified_doc_1, change_description_1 = apply_edit_operation(
-                    original_doc_1, data["doc1"]
+                    original_doc_1,
+                    data["doc1"],
+                    min_text_length,
                 )
                 modified_doc_2, change_description_2 = apply_edit_operation(
-                    original_doc_2, data["doc2"]
+                    original_doc_2, data["doc2"], min_text_length
                 )
             except ValueError as e:
                 # Provide more helpful error message with suggestions
