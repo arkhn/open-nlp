@@ -1,24 +1,18 @@
+from dataclasses import dataclass
 from typing import Any, Dict
 
-from conflicts.config import CONFLICT_TYPES
 from conflicts.core.base import BaseAgent
 from conflicts.core.temporal_analysis import TemporalAnalyzer
 from conflicts.models import ConflictResult, DocumentPair
 
 
-def format_conflict_types_for_prompt(conflict_types: Dict) -> str:
-    """Format conflict types dictionary for use in prompts"""
-    formatted_types = []
-    for key, conflict_type in conflict_types.items():
-        examples_str = "\n  ".join([f"- {example}" for example in conflict_type.examples])
-        formatted_types.append(
-            f"""{key}: {conflict_type.name}
-            Description: {conflict_type.description}
-            Examples:
-            {examples_str}
-            """
-        )
-    return "\n".join(formatted_types)
+@dataclass
+class ConflictType:
+    """Represents a type of clinical conflict"""
+
+    name: str
+    description: str
+    examples: list[str]
 
 
 class DoctorAgent(BaseAgent):
@@ -31,6 +25,7 @@ class DoctorAgent(BaseAgent):
         with open("prompts/doctor_agent_system.txt", "r", encoding="utf-8") as f:
             system_prompt = f.read().strip()
         super().__init__("Doctor", client, model, cfg, system_prompt)
+        self.conflict_types = self._load_conflict_types(cfg)
 
     def __call__(self, document_pair: DocumentPair) -> ConflictResult:
         """
@@ -63,7 +58,7 @@ class DoctorAgent(BaseAgent):
                 prompt_template = f.read().strip()
 
             # Prepare prompt with conflict types, temporal info, and documents
-            conflict_types_formatted = format_conflict_types_for_prompt(CONFLICT_TYPES)
+            conflict_types_formatted = self.format_conflict_types_for_prompt()
             temporal_context = temporal_analyzer.format_temporal_context_for_prompt(
                 temporal_analysis
             )
@@ -92,7 +87,7 @@ class DoctorAgent(BaseAgent):
                     raise ValueError(f"Missing required field '{field}' in Doctor Agent response")
 
             # Validate conflict type exists
-            if parsed_response["conflict_type"] not in CONFLICT_TYPES:
+            if parsed_response["conflict_type"] not in self.conflict_types:
                 self.logger.warning(
                     f"Unknown conflict type '{parsed_response['conflict_type']}', \
                      defaulting to 'opposition'"
@@ -127,10 +122,10 @@ class DoctorAgent(BaseAgent):
         Returns:
             Dictionary with conflict type information
         """
-        if conflict_type not in CONFLICT_TYPES:
+        if conflict_type not in self.conflict_types:
             raise ValueError(f"Unknown conflict type: {conflict_type}")
 
-        conflict_info = CONFLICT_TYPES[conflict_type]
+        conflict_info = self.conflict_types[conflict_type]
 
         return {
             "name": conflict_info.name,
@@ -152,5 +147,28 @@ class DoctorAgent(BaseAgent):
                 "description": conflict_type.description,
                 "examples": conflict_type.examples,
             }
-            for key, conflict_type in CONFLICT_TYPES.items()
+            for key, conflict_type in self.conflict_types.items()
         }
+
+    def _load_conflict_types(self, cfg) -> Dict[str, ConflictType]:
+        """Load conflict types from configuration"""
+        conflict_types = {}
+        for key, config in cfg.doctor.conflict_types.items():
+            conflict_types[key] = ConflictType(
+                name=config.name, description=config.description, examples=list(config.examples)
+            )
+        return conflict_types
+
+    def format_conflict_types_for_prompt(self) -> str:
+        """Format conflict types dictionary for use in prompts"""
+        formatted_types = []
+        for key, conflict_type in self.conflict_types.items():
+            examples_str = "\n  ".join([f"- {example}" for example in conflict_type.examples])
+            formatted_types.append(
+                f"""{key}: {conflict_type.name}
+                Description: {conflict_type.description}
+                Examples:
+                {examples_str}
+                """
+            )
+        return "\n".join(formatted_types)
