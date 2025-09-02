@@ -36,6 +36,10 @@ class EditorResult:
     changes_made: str
     change_info_1: Optional[str] = None
     change_info_2: Optional[str] = None
+    original_excerpt_1: Optional[str] = None
+    modified_excerpt_1: Optional[str] = None
+    original_excerpt_2: Optional[str] = None
+    modified_excerpt_2: Optional[str] = None
 
 
 @dataclass

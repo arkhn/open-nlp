@@ -56,7 +56,7 @@ def apply_edit_operation(
     document: str,
     operation: Dict[str, Any],
     min_text_length: int,
-) -> Tuple[str, str]:
+) -> Tuple[str, str, str, str]:
     """
     Apply edit operation to a document using text-based operations.
 
@@ -65,7 +65,7 @@ def apply_edit_operation(
         operation: Edit operation with keys: op, target_text, replacement_text (optional)
 
     Returns:
-        Tuple of (modified document, change description)
+        Tuple of (modified document, change description, original_excerpt, modified_excerpt)
 
     Raises:
         ValueError: If operation type is unknown or target_text not found
@@ -88,20 +88,26 @@ def apply_edit_operation(
         error_msg = f"Target text not found in document: '{target_text[:100]}...'"
         raise ValueError(error_msg)
 
+    original_excerpt = target_text
+    modified_excerpt = ""
+
     if op_type == "delete":
         modified_doc = document.replace(target_text, "", 1)
         change_description = f"Deleted text: '{target_text[:200]}...'"
-        return modified_doc, change_description
+        modified_excerpt = ""  # Deleted, so nothing remains
+        return modified_doc, change_description, original_excerpt, modified_excerpt
     elif op_type == "insert_after":
         modified_doc = document.replace(target_text, target_text + replacement_text, 1)
         change_description = (
             f"Inserted '{replacement_text[:200]}...' after '{target_text[:200]}...'"
         )
-        return modified_doc, change_description
+        modified_excerpt = target_text + replacement_text
+        return modified_doc, change_description, original_excerpt, modified_excerpt
     elif op_type == "replace":
         modified_doc = document.replace(target_text, replacement_text, 1)
         change_description = f"Replaced '{target_text[:200]}...' with '{replacement_text[:200]}...'"
-        return modified_doc, change_description
+        modified_excerpt = replacement_text
+        return modified_doc, change_description, original_excerpt, modified_excerpt
     else:
         raise ValueError(f"Unknown operation type: {op_type}")
 
@@ -140,14 +146,22 @@ def parse_response(
 
             # Apply edit operations to documents
             try:
-                modified_doc_1, change_description_1 = apply_edit_operation(
+                (
+                    modified_doc_1,
+                    change_description_1,
+                    orig_excerpt_1,
+                    mod_excerpt_1,
+                ) = apply_edit_operation(
                     original_doc_1,
                     data["doc1"],
                     min_text_length,
                 )
-                modified_doc_2, change_description_2 = apply_edit_operation(
-                    original_doc_2, data["doc2"], min_text_length
-                )
+                (
+                    modified_doc_2,
+                    change_description_2,
+                    orig_excerpt_2,
+                    mod_excerpt_2,
+                ) = apply_edit_operation(original_doc_2, data["doc2"], min_text_length)
             except ValueError as e:
                 # Provide more helpful error message with suggestions
                 error_msg = f"Failed to apply edit operations: {e}\n\n"
@@ -169,6 +183,10 @@ def parse_response(
                 "conflict_type": conflict_type,
                 "change_info_1": change_description_1,
                 "change_info_2": change_description_2,
+                "original_excerpt_1": orig_excerpt_1,
+                "modified_excerpt_1": mod_excerpt_1,
+                "original_excerpt_2": orig_excerpt_2,
+                "modified_excerpt_2": mod_excerpt_2,
             }
         else:
             raise ValueError(f"Response missing required fields: {required_fields}")

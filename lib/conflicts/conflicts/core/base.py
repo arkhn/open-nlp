@@ -97,6 +97,10 @@ class DatasetManager:
                     "conflict_type",
                     "score",
                     "changes_made",
+                    "original_excerpt_1",
+                    "modified_excerpt_1",
+                    "original_excerpt_2",
+                    "modified_excerpt_2",
                     "doc1_timestamp",
                     "doc2_timestamp",
                     "created_at",
@@ -132,6 +136,10 @@ class DatasetManager:
             "conflict_type": conflict_type,
             "score": validation_result.score,
             "changes_made": modified_docs.changes_made,
+            "original_excerpt_1": modified_docs.original_excerpt_1,
+            "modified_excerpt_1": modified_docs.modified_excerpt_1,
+            "original_excerpt_2": modified_docs.original_excerpt_2,
+            "modified_excerpt_2": modified_docs.modified_excerpt_2,
             "doc1_timestamp": str(original_pair.doc1_timestamp)
             if original_pair.doc1_timestamp
             else None,
