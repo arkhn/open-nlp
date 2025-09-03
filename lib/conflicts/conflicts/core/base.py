@@ -3,6 +3,7 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import openai
@@ -27,6 +28,8 @@ class Annotation:
     from_name: str
     to_name: str
     type: str
+    moderator_score: int
+    conflict_type: str
     value: AnnotationValue
 
 
@@ -36,8 +39,11 @@ class DocumentData:
 
     doc_1: str
     doc_2: str
+    orig_doc_1: str
+    orig_doc_2: str
     timestamp_1: Optional[str]
     timestamp_2: Optional[str]
+    created_at: Optional[str]
 
 
 @dataclass
@@ -172,6 +178,9 @@ class DatasetManager:
         doc_data = DocumentData(
             doc_1=modified_docs.modified_document1,
             doc_2=modified_docs.modified_document2,
+            orig_doc_1=original_pair.doc1_text,
+            orig_doc_2=original_pair.doc2_text,
+            created_at=datetime.now().isoformat(),
             timestamp_1=str(original_pair.doc1_timestamp) if original_pair.doc1_timestamp else None,
             timestamp_2=str(original_pair.doc2_timestamp) if original_pair.doc2_timestamp else None,
         )
@@ -193,6 +202,8 @@ class DatasetManager:
                     from_name="labels_doc1",
                     to_name="doc_1",
                     type="labels",
+                    moderator_score=validation_result.score,
+                    conflict_type=conflict_type,
                     value=AnnotationValue(
                         start=start_pos,
                         end=end_pos,
@@ -216,6 +227,8 @@ class DatasetManager:
                     from_name="labels_doc2",
                     to_name="doc_2",
                     type="labels",
+                    moderator_score=validation_result.score,
+                    conflict_type=conflict_type,
                     value=AnnotationValue(
                         start=start_pos,
                         end=end_pos,
