@@ -34,8 +34,8 @@ def main(cfg: DictConfig) -> None:
     log.info(f"Total processing time: {result['total_processing_time']:.2f}s")
 
     # Save results
-    pipeline.dataset_manager.save_to_parquet()
-    log.info("Results saved to Parquet file.")
+    pipeline.dataset_manager.save_to_json()
+    log.info("Results saved to JSON file.")
 
 
 if __name__ == "__main__":

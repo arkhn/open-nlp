@@ -39,7 +39,7 @@ class Pipeline:
         self.logger = logging.getLogger(__name__)
 
         # Initialize components
-        self.dataset_manager = DatasetManager("validated_documents.parquet")
+        self.dataset_manager = DatasetManager("validated_documents.json")
 
         # Create shared OpenAI client
         self.client = openai.OpenAI(api_key=os.getenv("API_KEY"), base_url=os.getenv("BASE_URL"))
@@ -269,6 +269,6 @@ class Pipeline:
             },
             "configuration": {
                 "max_retries": self.max_retries,
-                "dataset_path": self.dataset_manager.parquet_path,
+                "dataset_path": self.dataset_manager.json_path,
             },
         }
