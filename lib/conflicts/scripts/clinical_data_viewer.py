@@ -1,5 +1,6 @@
 import argparse
 import logging
+import re
 
 import pandas as pd
 import plotly.express as px
@@ -8,6 +9,8 @@ import streamlit as st
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+VALIDATION_STATUS_EMOJIS = {"Approved": "✅", "Rejected": "❌", "Needs Review": "⚠️"}
 
 # Page configuration
 st.set_page_config(
@@ -43,13 +46,7 @@ st.markdown(
         border-left: 4px solid #2E86AB;
         margin: 0.5rem 0;
     }
-    .conflict-highlight {
-        background-color: #fff3cd;
-        border: 1px solid #ffeaa7;
-        border-radius: 0.25rem;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
+
     .document-text {
         background-color: #f8f9fa;
         border: 1px solid #dee2e6;
@@ -178,6 +175,31 @@ def format_timestamp(timestamp_value) -> str:
         return str(timestamp_value)  # Fallback to string representation
 
 
+def highlight_excerpt_in_text(document_text: str, excerpt: str) -> str:
+    """Highlight the excerpt within the document text"""
+    if pd.isna(excerpt) or not excerpt.strip():
+        return document_text
+
+    excerpt_escaped = excerpt.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    highlighted_excerpt = (
+        f'<mark style="background-color: #ffeb3b; padding: 2px 4px; border-radius: 3px;">'
+        f"{excerpt_escaped}</mark>"
+    )
+
+    pattern = re.escape(excerpt_escaped)
+    highlighted_text = re.sub(pattern, highlighted_excerpt, document_text, flags=re.IGNORECASE)
+
+    return highlighted_text
+
+
+def display_document_with_highlight(title: str, document_text: str, excerpt: str):
+    """Display a document with highlighted excerpt"""
+    st.markdown(f"#### {title}")
+    highlighted_text = highlight_excerpt_in_text(document_text, excerpt)
+    st.markdown(f'<div class="document-text">{highlighted_text}</div>', unsafe_allow_html=True)
+
+
 def create_conflict_type_chart(df: pd.DataFrame):
     """Create a pie chart of conflict types"""
     conflict_counts = df["conflict_type"].value_counts()
@@ -251,16 +273,13 @@ def main(default_file_path: str = "processed/186fbae0_02092025.parquet"):
         "Upload Parquet File", type=["parquet"], help="Upload your healthcare conflict data file"
     )
 
-    # Use the provided default file path
-    default_file = default_file_path
-
     if uploaded_file is not None:
         # Save uploaded file temporarily
         with open("temp_data.parquet", "wb") as f:
             f.write(uploaded_file.getbuffer())
         file_path = "temp_data.parquet"
     else:
-        file_path = default_file
+        file_path = default_file_path
 
     # Load data
     df = load_data(file_path)
@@ -337,14 +356,12 @@ def main(default_file_path: str = "processed/186fbae0_02092025.parquet"):
         validation_indicator = ""
         validation_status = row.get("validation_status")
         if pd.notna(validation_status) and validation_status != "Pending":
-            status_emoji = {"Approved": "✅", "Rejected": "❌", "Needs Review": "⚠️"}.get(
-                validation_status, "📝"
-            )
+            status_emoji = VALIDATION_STATUS_EMOJIS.get(validation_status, "📝")
             validation_indicator = f" {status_emoji}"
 
         case_options.append(
-            f"Case {row['id']} - {format_conflict_type(row['conflict_type'])}\
-                 (Score: {row['score']}){validation_indicator}"
+            f"Case {row['id']} - {format_conflict_type(row['conflict_type'])} "
+            f"(Score: {row['score']}){validation_indicator}"
         )
 
     if case_options:
@@ -383,60 +400,27 @@ def main(default_file_path: str = "processed/186fbae0_02092025.parquet"):
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown("#### Original Document 1")
-            st.markdown(
-                f'<div class="document-text">{selected_case["original_doc1_text"]}</div>',
-                unsafe_allow_html=True,
+            display_document_with_highlight(
+                "Original Document 1",
+                selected_case["original_doc1_text"],
+                selected_case["original_excerpt_1"],
             )
-
-            st.markdown("#### Modified Document 1")
-            st.markdown(
-                f'<div class="document-text">{selected_case["modified_doc1_text"]}</div>',
-                unsafe_allow_html=True,
-            )
-
-        with col2:
-            st.markdown("#### Original Document 2")
-            st.markdown(
-                f'<div class="document-text">{selected_case["original_doc2_text"]}</div>',
-                unsafe_allow_html=True,
-            )
-
-            st.markdown("#### Modified Document 2")
-            st.markdown(
-                f'<div class="document-text">{selected_case["modified_doc2_text"]}</div>',
-                unsafe_allow_html=True,
-            )
-
-        # Conflict highlights
-        st.markdown("### ⚠️ Conflict Highlights")
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.markdown("#### Original Excerpt 1")
-            st.markdown(
-                f'<div class="conflict-highlight">{selected_case["original_excerpt_1"]}</div>',
-                unsafe_allow_html=True,
-            )
-
-            st.markdown("#### Modified Excerpt 1")
-            st.markdown(
-                f'<div class="conflict-highlight">{selected_case["modified_excerpt_1"]}</div>',
-                unsafe_allow_html=True,
+            display_document_with_highlight(
+                "Modified Document 1",
+                selected_case["modified_doc1_text"],
+                selected_case["modified_excerpt_1"],
             )
 
         with col2:
-            st.markdown("#### Original Excerpt 2")
-            st.markdown(
-                f'<div class="conflict-highlight">{selected_case["original_excerpt_2"]}</div>',
-                unsafe_allow_html=True,
+            display_document_with_highlight(
+                "Original Document 2",
+                selected_case["original_doc2_text"],
+                selected_case["original_excerpt_2"],
             )
-
-            st.markdown("#### Modified Excerpt 2")
-            st.markdown(
-                f'<div class="conflict-highlight">{selected_case["modified_excerpt_2"]}</div>',
-                unsafe_allow_html=True,
+            display_document_with_highlight(
+                "Modified Document 2",
+                selected_case["modified_doc2_text"],
+                selected_case["modified_excerpt_2"],
             )
 
         # Validation section
