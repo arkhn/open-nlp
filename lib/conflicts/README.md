@@ -120,19 +120,22 @@ python main.py list-conflicts
 A user-friendly web interface designed specifically for healthcare domain experts to review and
 validate conflict detection results without requiring technical background.
 
-### Option 1: Using the Launcher Script (Recommended)
-
-```bash
-cd lib/conflicts
-./launch_viewer.sh
-```
-
-### Option 2: Manual Launch
+### Quick Start
 
 ```bash
 cd lib/conflicts
 pip install -r requirements.txt
-streamlit run clinical_data_viewer.py
+streamlit run scripts/clinical_data_viewer.py
+```
+
+### Using Custom Data File
+
+```bash
+# Use a different parquet file as default
+streamlit run scripts/clinical_data_viewer.py -- --data-file "path/to/your/data.parquet"
+
+# Use the default file (same as Quick Start)
+streamlit run scripts/clinical_data_viewer.py -- --data-file "processed/186fbae0_02092025.parquet"
 ```
 
 ## License

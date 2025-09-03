@@ -160,4 +160,3 @@ dmypy.json
 lib/style-transfer/hf_datasets/*/raw/*
 .aider*
 lib/conflicts/analysis/*
-lib/conflicts/processed/*

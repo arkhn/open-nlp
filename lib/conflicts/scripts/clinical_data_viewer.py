@@ -1,3 +1,4 @@
+import argparse
 import logging
 
 import pandas as pd
@@ -226,7 +227,7 @@ def create_score_distribution_chart(df: pd.DataFrame):
     return fig
 
 
-def main():
+def main(default_file_path: str = "processed/186fbae0_02092025.parquet"):
     """Main application function"""
 
     # Header
@@ -250,8 +251,8 @@ def main():
         "Upload Parquet File", type=["parquet"], help="Upload your healthcare conflict data file"
     )
 
-    # Default file path
-    default_file = "processed/186fbae0_02092025.parquet"
+    # Use the provided default file path
+    default_file = default_file_path
 
     if uploaded_file is not None:
         # Save uploaded file temporarily
@@ -514,4 +515,16 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Clinical Conflict Data Viewer")
+    parser.add_argument(
+        "--data-file",
+        type=str,
+        default="processed/186fbae0_02092025.parquet",
+        help="Path to the default parquet data file (default: processed/186fbae0_02092025.parquet)",
+    )
+
+    # Parse arguments
+    args = parser.parse_args()
+
+    # Run the main function with the provided data file
+    main(args.data_file)
