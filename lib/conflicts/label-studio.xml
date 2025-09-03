@@ -18,6 +18,14 @@
     </View>
   </View>
    <Header value="Évaluation globale"/>
-  <Rating name="score" toName="doc_1" maxRating="5" icon="star" size="medium"/>
-  <TextArea name="comment" toName="doc_1" placeholder="Écrire un commentaire ici..." rows="4"/>
+  <Header value="Statut de validation" level="2"/>
+  <Choices name="validation_status" toName="doc_1" choice="single-radio">
+    <Choice value="Approved" alias="Accept"/>
+    <Choice value="Rejected" alias="Reject"/>
+    <Choice value="Needs Review" alias="Need Review"/>
+  </Choices>
+  <Header value="Niveau de confiance" level="2"/>
+  <Number name="confidence_level" toName="doc_1" min="0" max="100" step="5" default="80" slider="true"/>
+  <Header value="Commentaires d'expert" level="2"/>
+  <TextArea name="expert_comments" toName="doc_1" placeholder="Écrire un commentaire ici..." rows="4"/>
 </View>
