@@ -1,0 +1,23 @@
+<View>
+  <View style="display: grid; grid-template-columns: 1fr 1fr; column-gap: 1em;">
+    <View>
+      <Header value="Document 1"/>
+      <Text name="timestamp_1" value="$timestamp_1"/>
+      <Text name="doc_1" value="$doc_1"/>
+      <Labels name="labels_doc1" toName="doc_1">
+        <Label value="Conflict" background="red"/>
+      </Labels>
+    </View>
+    <View>
+      <Header value="Document 2"/>
+      <Text name="timestamp_2" value="$timestamp_2"/>
+      <Text name="doc_2" value="$doc_2"/>
+      <Labels name="labels_doc2" toName="doc_2">
+        <Label value="Conflict" background="red"/>
+      </Labels>
+    </View>
+  </View>
+   <Header value="Évaluation globale"/>
+  <Rating name="score" toName="doc_1" maxRating="5" icon="star" size="medium"/>
+  <TextArea name="comment" toName="doc_1" placeholder="Écrire un commentaire ici..." rows="4"/>
+</View>
