@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import Any, Dict
 
-from conflicts.core.base import BaseAgent
-from conflicts.core.models import ConflictResult, DocumentPair
-from conflicts.core.temporal_analysis import TemporalAnalyzer
+from ..core.base import BaseAgent
+from ..core.models import ConflictResult, DocumentPair
+from ..core.temporal_analysis import TemporalAnalyzer
 
 
 @dataclass

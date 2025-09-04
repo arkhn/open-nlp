@@ -2,7 +2,7 @@ import json
 import logging
 from typing import Any, Dict, Tuple
 
-from conflicts.utils.utils import find_similar_text
+from ..utils.utils import find_similar_text
 
 
 def _extract_json_from_response(response: str) -> Dict[str, Any]:
