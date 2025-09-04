@@ -1,6 +1,6 @@
-from conflicts.core.base import BaseAgent
-from conflicts.core.document_operations import parse_response
-from conflicts.core.models import ConflictResult, DocumentPair, EditorResult
+from ..core.base import BaseAgent
+from ..core.document_operations import parse_response
+from ..core.models import ConflictResult, DocumentPair, EditorResult
 
 
 class EditorAgent(BaseAgent):

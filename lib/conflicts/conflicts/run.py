@@ -1,9 +1,10 @@
 import logging
 
 import hydra
-from conflicts.core.pipeline import Pipeline
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig
+
+from .core.pipeline import Pipeline
 
 log = logging.getLogger(__name__)
 

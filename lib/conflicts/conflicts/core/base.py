@@ -8,7 +8,8 @@ from typing import Any, Dict, List, Optional
 
 import openai
 import pandas as pd
-from conflicts.core.models import DocumentPair, EditorResult, ValidationResult
+
+from .models import DocumentPair, EditorResult, ValidationResult
 
 
 @dataclass

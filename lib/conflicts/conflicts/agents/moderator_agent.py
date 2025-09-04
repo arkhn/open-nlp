@@ -1,8 +1,8 @@
 import re
 from typing import Any, Dict
 
-from conflicts.core.base import BaseAgent
-from conflicts.core.models import DocumentPair, EditorResult, ValidationResult
+from ..core.base import BaseAgent
+from ..core.models import DocumentPair, EditorResult, ValidationResult
 
 
 class ModeratorAgent(BaseAgent):

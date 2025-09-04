@@ -4,14 +4,15 @@ import time
 from typing import Any, Dict, List, Optional, Tuple
 
 import openai
-from agents.doctor_agent import DoctorAgent
-from agents.editor_agent import EditorAgent
-from agents.moderator_agent import ModeratorAgent
-from conflicts.core.base import DatasetManager
-from conflicts.core.data_loader import DataLoader
-from conflicts.core.models import DocumentPair
 from dotenv import load_dotenv
 from omegaconf import DictConfig
+
+from ..agents.doctor_agent import DoctorAgent
+from ..agents.editor_agent import EditorAgent
+from ..agents.moderator_agent import ModeratorAgent
+from .base import DatasetManager
+from .data_loader import DataLoader
+from .models import DocumentPair
 
 load_dotenv()
 
@@ -42,7 +43,11 @@ class Pipeline:
         self.dataset_manager = DatasetManager("validated_documents.json")
 
         # Create shared OpenAI client
-        self.client = openai.OpenAI(api_key=os.getenv("API_KEY"), base_url=os.getenv("BASE_URL"))
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ValueError("GROQ_API_KEY environment variable must be set")
+
+        self.client = openai.OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
 
         # Initialize agents with shared client and configuration
         self.doctor_agent = DoctorAgent(self.client, cfg.model.name, cfg)
