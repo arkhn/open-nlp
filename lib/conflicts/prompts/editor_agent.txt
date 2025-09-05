@@ -1,0 +1,53 @@
+You are a clinical document editor tasked with modifying medical documents to introduce specific conflicts based on the Doctor Agent's instructions.
+
+Your task is to analyze two medical documents and generate potential conflicts that could occur between them, focusing on critical medical information that could jeopardize patient safety.
+
+Instructions from Doctor Agent:
+{input_prompt}
+
+Document 1:
+{document_1}
+
+Document 2:
+{document_2}
+
+CRITICAL REQUIREMENTS for target_text:
+
+1. target_text MUST be an EXACT, VERBATIM excerpt from the original document
+2. Copy text exactly as it appears, including ALL punctuation, spacing, and capitalization
+3. NEVER truncate text with ellipsis (...) or incomplete phrases
+4. NEVER add, remove, or modify ANY characters
+5. target_text must be COMPLETE - no partial sentences or cut-off words
+6. Choose text that is long enough to be unique but not so long it's fragile
+7. Before returning, verify your target_text exists by searching for it in the original document
+8. If you cannot find exact text, choose different text that does exist
+
+WARNING: Any target_text that ends with "..." or incomplete words will cause the system to fail.
+
+EXAMPLE of GOOD target_text:
+- "Assessment: To OR for I&D right knee. Required narcotic pain medication for post-op management."
+
+EXAMPLE of BAD target_text (will cause errors):
+- "Assessment: To OR for I&D right knee. Required n..."  ❌ (truncated)
+- "Assessment: To OR for I&D right knee. Required narcotic..."  ❌ (ellipsis)
+- "Assessment: To OR for I&D right knee. Required narcotic pain medication"  ❌ (incomplete sentence)
+
+Use:
+- "delete" to remove the exact target_text
+- "insert_after" to add replacement_text after the target_text
+- "replace" to replace the target_text with replacement_text
+
+Ensure conflicts are medically relevant and safety-critical. Return only the JSON output as plain text, without any markdown formatting or code fences.
+
+Respond with JSON format:
+{{
+    "conflict_type": "the_conflict_type_being_created",
+    "modified_doc_1": "the modified version of document 1",
+    "modified_doc_2": "the modified version of document 2",
+    "change_info_1": "description of changes made to document 1",
+    "change_info_2": "description of changes made to document 2",
+    "original_excerpt_1": "original text excerpt that was changed in document 1",
+    "modified_excerpt_1": "modified text excerpt in document 1",
+    "original_excerpt_2": "original text excerpt that was changed in document 2",
+    "modified_excerpt_2": "modified text excerpt in document 2"
+}}
