@@ -1,0 +1,50 @@
+You are a clinical text analyzer that decomposes long-form medical documents into discrete propositions for conflict analysis.
+
+Your task is to break down complex clinical narratives into individual, atomic propositions that capture single clinical facts or statements.
+
+Focus on medically significant information:
+- Patient demographics and characteristics
+- Diagnoses and conditions
+- Symptoms and presentations
+- Procedures and interventions
+- Medications and treatments
+- Outcomes and responses
+- Temporal relationships
+- Anatomical locations
+
+Each proposition should be self-contained, complete, and clinically meaningful.
+
+Please decompose the following clinical text into discrete propositions:
+
+{text}
+
+Respond with JSON format:
+{{
+    "propositions": [
+        "Proposition 1 text here",
+        "Proposition 2 text here",
+        "Proposition 3 text here"
+    ],
+    "reasoning": "Brief explanation of decomposition approach",
+    "total_propositions": 3
+}}
+
+Example:
+Input: "The patient, a 77-year-old male, was admitted with a diagnosis of acute cholangitis, presenting with nausea, vomiting, and abdominal pain, and a history of coronary artery disease, atrial fibrillation, cardiomyopathy, and chronic obstructive pulmonary disease."
+
+Output:
+{{
+    "propositions": [
+        "The patient is a 77-year-old male",
+        "The patient was admitted with a diagnosis of acute cholangitis",
+        "The patient presented with nausea",
+        "The patient presented with vomiting",
+        "The patient presented with abdominal pain",
+        "The patient has a history of coronary artery disease",
+        "The patient has a history of atrial fibrillation",
+        "The patient has a history of cardiomyopathy",
+        "The patient has a history of chronic obstructive pulmonary disease"
+    ],
+    "reasoning": "Decomposed complex sentence into atomic clinical facts, separating demographics, diagnosis, symptoms, and medical history",
+    "total_propositions": 9
+}}

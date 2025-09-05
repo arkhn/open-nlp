@@ -1,4 +1,4 @@
-You are a clinical expert analyzing two medical documents to determine what type of conflict should be introduced between them.
+You are a clinical expert analyzing two medical documents and their decomposed propositions to determine what type of conflict should be introduced between them.
 
 Available conflict types:
 {conflict_types}
@@ -15,15 +15,28 @@ Document 1:
 Document 2:
 {document2}
 
-Analyze these documents and choose the most appropriate conflict type to introduce. Consider:
+Propositions from Document 1:
+{propositions1}
+
+Propositions from Document 2:
+{propositions2}
+
+Analyze these documents and their propositions to choose the most appropriate conflict type and identify which specific propositions should be modified. Consider:
 1. The clinical content and findings in both documents
 2. The temporal relationship between the documents (timing, sequence, time gaps)
-3. What type of conflict would be realistic and educational given the temporal context
-4. Which conflict type best matches the available clinical information and temporal recommendations
+3. Which propositions are most suitable for creating realistic conflicts
+4. What type of conflict would be realistic and educational given the temporal context
+5. Which conflict type best matches the available clinical information and temporal recommendations
 
 Respond with JSON format:
 {{
     "conflict_type": "chosen_conflict_type_key",
     "reasoning": "explanation of why this conflict type was chosen, including temporal considerations",
-    "modification_instructions": "specific instructions for the Editor Agent on how to create the conflict"
+    "modification_instructions": "specific instructions for the Editor Agent on how to create the conflict",
+    "proposition_conflicts": [
+        {{
+            "doc1_proposition": "specific proposition from doc1",
+            "doc2_proposition": "specific proposition from doc2"
+        }}
+    ]
 }}
