@@ -18,6 +18,9 @@ Target Propositions from Document 2:
 Conflict Type to Create:
 {conflict_type}
 
+Step-by-Step Editor Instructions:
+{editor_instructions}
+
 CRITICAL REQUIREMENTS for target_text:
 
 1. target_text MUST be an EXACT, VERBATIM excerpt from the original document
@@ -31,13 +34,14 @@ CRITICAL REQUIREMENTS for target_text:
 
 CONFLICT CREATION GUIDELINES:
 
-1. Focus on modifying the specific target propositions identified for each document
-2. Create conflicts based on the specified conflict type and Doctor Agent's instructions
-3. Ensure the modified text maintains clinical realism while introducing the conflict
-4. The conflict should be medically significant and safety-critical
-5. Focus on critical medical information that could impact patient safety
-6. Make modifications that are consistent with the chosen conflict type
-7. Target the exact text that contains the propositions to be modified
+1. Follow the step-by-step editor instructions exactly as provided
+2. Focus on modifying the specific target propositions identified for each document
+3. Create conflicts based on the specified conflict type and Doctor Agent's instructions
+4. Ensure the modified text maintains clinical realism while introducing the conflict
+5. The conflict should be medically significant and safety-critical
+6. Focus on critical medical information that could impact patient safety
+7. Make modifications that are consistent with the chosen conflict type
+8. Target the exact text that contains the propositions to be modified
 
 WARNING: Any target_text that ends with "..." or incomplete words will cause the system to fail.
 

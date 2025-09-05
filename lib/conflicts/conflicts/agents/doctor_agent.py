@@ -117,6 +117,7 @@ class DoctorAgent(BaseAgent):
                 conflict_type=parsed_response["conflict_type"],
                 reasoning=parsed_response["reasoning"],
                 modification_instructions=parsed_response["modification_instructions"],
+                editor_instructions=parsed_response.get("editor_instructions", []),
                 proposition_conflicts=parsed_response.get("proposition_conflicts", []),
             )
 
