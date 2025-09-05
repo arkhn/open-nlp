@@ -1,6 +1,6 @@
 defaults:
-  - override hydra/job_logging: default
-  - override hydra/hydra_logging: default
+  - override hydra/job_logging: colorlog
+  - override hydra/hydra_logging: colorlog
 
 model:
   name: "openai/gpt-oss-120b"

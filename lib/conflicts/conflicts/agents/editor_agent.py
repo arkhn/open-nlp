@@ -6,6 +6,7 @@ from ..core.models import ConflictResult, DocumentPair, EditorResult
 
 prompts_dir = Path(__file__).parent.parent.parent / "prompts"
 EDITOR_SYSTEM_PROMPT_PATH = prompts_dir / "editor_agent_system.txt"
+EDITOR_PROMPT_PATH = prompts_dir / "editor_agent.txt"
 
 
 class EditorAgent(BaseAgent):
@@ -68,10 +69,14 @@ class EditorAgent(BaseAgent):
         self, document_pair: DocumentPair, conflict_instructions: ConflictResult
     ) -> str:
         """Build the prompt for modification"""
-        prompt = f"""input_prompt: "{conflict_instructions.modification_instructions}"
-                document_1: "{self._truncate_document(document_pair.doc1_text)}"
-                document_2: "{self._truncate_document(document_pair.doc2_text)}"
-                """
+        with open(EDITOR_PROMPT_PATH, "r", encoding="utf-8") as f:
+            prompt_template = f.read().strip()
+
+        prompt = prompt_template.format(
+            input_prompt=conflict_instructions.modification_instructions,
+            document_1=self._truncate_document(document_pair.doc1_text),
+            document_2=self._truncate_document(document_pair.doc2_text),
+        )
         self.logger.debug(f"Prompt length: {len(prompt)} chars")
         return prompt
 
