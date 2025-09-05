@@ -5,7 +5,7 @@ from ..core.document_operations import parse_response
 from ..core.models import ConflictResult, DocumentPair, EditorResult
 
 prompts_dir = Path(__file__).parent.parent.parent / "prompts"
-EDITOR_PROMPT_PATH = prompts_dir / "editor_agent.txt"
+EDITOR_SYSTEM_PROMPT_PATH = prompts_dir / "editor_agent_system.txt"
 
 
 class EditorAgent(BaseAgent):
@@ -15,7 +15,7 @@ class EditorAgent(BaseAgent):
     """
 
     def __init__(self, client, model, cfg):
-        with open(EDITOR_PROMPT_PATH, "r", encoding="utf-8") as f:
+        with open(EDITOR_SYSTEM_PROMPT_PATH, "r", encoding="utf-8") as f:
             prompt = f.read().strip()
         super().__init__("Editor", client, model, cfg, prompt)
         self.min_text_length = cfg.editor.min_text_length
