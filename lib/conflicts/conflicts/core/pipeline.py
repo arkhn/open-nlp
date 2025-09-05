@@ -10,6 +10,7 @@ from omegaconf import DictConfig
 from ..agents.doctor_agent import DoctorAgent
 from ..agents.editor_agent import EditorAgent
 from ..agents.moderator_agent import ModeratorAgent
+from ..agents.proposition_agent import PropositionAgent
 from .base import DatasetManager
 from .data_loader import DataLoader
 from .models import DocumentPair
@@ -46,6 +47,7 @@ class Pipeline:
         self.client = openai.OpenAI(api_key=os.getenv("API_KEY"), base_url=os.getenv("BASE_URL"))
 
         # Initialize agents with shared client and configuration
+        self.proposition_agent = PropositionAgent(self.client, cfg.model.name, cfg)
         self.doctor_agent = DoctorAgent(self.client, cfg.model.name, cfg)
         self.editor_agent = EditorAgent(self.client, cfg.model.name, cfg)
         self.moderator_agent = ModeratorAgent(
@@ -134,26 +136,35 @@ class Pipeline:
             "success": False,
             "conflict_type": None,
             "processing_time": 0,
+            "proposition_result": None,
             "doctor_result": None,
             "editor_result": None,
             "moderator_result": None,
+            "proposition_time": 0,
             "doctor_time": 0,
             "editor_time": 0,
             "moderator_time": 0,
         }
 
-        # Step 1: Doctor Agent identifies conflict type
-        conflict_result, doctor_time = self._execute_agent(self.doctor_agent, document_pair)
+        # Step 1: Proposition Agent decomposes documents into propositions
+        start_prop_time = time.time()
+        proposition_result = self.proposition_agent.decompose_document_pair(
+            document_pair.doc1_text, document_pair.doc2_text
+        )
+        proposition_time = time.time() - start_prop_time
+        result_data["proposition_result"] = proposition_result
+        result_data["proposition_time"] = proposition_time
+
+        # Step 2: Doctor Agent identifies conflict type using propositions
+
+        conflict_result, doctor_time = self._execute_agent(
+            self.doctor_agent, document_pair, proposition_result[0], proposition_result[1]
+        )
         result_data["doctor_result"] = conflict_result
         result_data["doctor_time"] = doctor_time
         result_data["conflict_type"] = conflict_result.conflict_type
 
-        self.logger.info(
-            f"Doctor identified conflict type: {conflict_result.conflict_type} "
-            f"reasoning: {conflict_result.reasoning}"
-            f"modification_instructions: {conflict_result.modification_instructions}"
-        )
-        # Step 2: Editor and Moderator agents with retry logic for editor only
+        # Step 3: Editor and Moderator agents with retry logic for editor only
         validation_result = None
         editor_result = None
 
@@ -171,18 +182,16 @@ class Pipeline:
             )
 
             self.logger.info(
-                f"Moderator validation attempt {attempt}: "
-                f"valid={validation_result.is_valid}, score={validation_result.score}, "
-                f"reasoning={validation_result.reasoning[:100]}..."
+                f"Attempt {attempt}: {conflict_result.conflict_type} conflict, "
+                f"valid={validation_result.is_valid}, score={validation_result.score}/5"
             )
 
             if validation_result.is_valid:
-                self.logger.info(f"Validation successful on attempt {attempt}")
                 result_data["success"] = True
                 break
 
             if attempt < self.max_retries:
-                self.logger.warning(f"Validation failed on attempt {attempt}, retrying editor...")
+                self.logger.warning("Validation failed, retrying...")
                 time.sleep(1)
 
         # Step 3: Save to database if validation passed
@@ -197,6 +206,15 @@ class Pipeline:
             result_data["success"] = is_success
 
         result_data["processing_time"] = time.time() - start_time
+
+        # Summary log
+        status = "SUCCESS" if result_data["success"] else "FAILED"
+        self.logger.info(
+            f"Pair {pair_id}: {status} - {conflict_result.conflict_type} conflict, "
+            f"{proposition_result[0].total_propositions + proposition_result[1].total_propositions}"
+            f" propositions"
+        )
+
         return result_data["success"], result_data
 
     def execute(
