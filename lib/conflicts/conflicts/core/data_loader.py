@@ -15,7 +15,8 @@ class DataLoader:
 
     def __init__(self, cfg):
         self.cfg = cfg
-        self.data_path = Path(cfg.data.path)
+        project_root = Path(__file__).parent.parent.parent
+        self.data_path = project_root / cfg.data.path
         self.logger = logging.getLogger("DataLoader")
         self.data_df = pd.read_parquet(self.data_path)
 
