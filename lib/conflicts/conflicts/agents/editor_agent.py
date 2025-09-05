@@ -68,6 +68,12 @@ class EditorAgent(BaseAgent):
             conflict_instructions.proposition_conflicts, "doc2_proposition"
         )
 
+        editor_instructions_str = (
+            "\n".join(conflict_instructions.editor_instructions)
+            if conflict_instructions.editor_instructions
+            else "No specific instructions provided"
+        )
+
         prompt = self.system_prompt.format(
             input_prompt=conflict_instructions.modification_instructions,
             document_1=self._truncate_document(document_pair.doc1_text),
@@ -75,6 +81,7 @@ class EditorAgent(BaseAgent):
             conflict_type=conflict_instructions.conflict_type,
             target_propositions_doc1=target_propositions_doc1,
             target_propositions_doc2=target_propositions_doc2,
+            editor_instructions=editor_instructions_str,
         )
         self.logger.debug(f"Prompt length: {len(prompt)} chars")
         return prompt
