@@ -6,7 +6,7 @@ from ..core.base import BaseAgent
 from ..core.models import DocumentPair, EditorResult, ValidationResult
 
 prompts_dir = Path(__file__).parent.parent.parent / "prompts"
-MODERATOR_PROMPT_PATH = prompts_dir / "moderator_agent.txt"
+MODERATOR_SYSTEM_PROMPT_PATH = prompts_dir / "moderator_agent_system.txt"
 
 
 class ModeratorAgent(BaseAgent):
@@ -17,7 +17,7 @@ class ModeratorAgent(BaseAgent):
     """
 
     def __init__(self, client, model, cfg, min_validation_score: int = 4):
-        with open(MODERATOR_PROMPT_PATH, "r", encoding="utf-8") as f:
+        with open(MODERATOR_SYSTEM_PROMPT_PATH, "r", encoding="utf-8") as f:
             prompt = f.read().strip()
         super().__init__("Moderator", client, model, cfg, prompt)
         self.min_score = min_validation_score

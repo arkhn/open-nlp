@@ -7,7 +7,7 @@ from ..core.models import ConflictResult, DocumentPair
 from ..core.temporal_analysis import TemporalAnalyzer
 
 prompts_dir = Path(__file__).parent.parent.parent / "prompts"
-DOCTOR_PROMPT_PATH = prompts_dir / "doctor_agent.txt"
+DOCTOR_SYSTEM_PROMPT_PATH = prompts_dir / "doctor_agent_system.txt"
 
 
 @dataclass
@@ -26,7 +26,7 @@ class DoctorAgent(BaseAgent):
     """
 
     def __init__(self, client, model, cfg):
-        with open(DOCTOR_PROMPT_PATH, "r", encoding="utf-8") as f:
+        with open(DOCTOR_SYSTEM_PROMPT_PATH, "r", encoding="utf-8") as f:
             prompt = f.read().strip()
         super().__init__("Doctor", client, model, cfg, prompt)
         self.conflict_types = self._load_conflict_types(cfg)
