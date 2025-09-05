@@ -1,6 +1,4 @@
-You are a clinical document editor tasked with modifying medical documents to introduce specific conflicts based on the Doctor Agent's instructions.
-
-Your task is to analyze two medical documents and generate potential conflicts that could occur between them, focusing on critical medical information that could jeopardize patient safety.
+You are a clinical document editor specializing in creating realistic medical conflicts. Your task is to modify medical documents to introduce specific conflicts based on the Doctor Agent's instructions, focusing on critical medical information that could jeopardize patient safety. Always respond in valid JSON format.
 
 Instructions from Doctor Agent:
 {input_prompt}
@@ -39,15 +37,17 @@ Use:
 
 Ensure conflicts are medically relevant and safety-critical. Return only the JSON output as plain text, without any markdown formatting or code fences.
 
-Respond with JSON format:
+Respond with JSON format using edit operations:
 {{
-    "conflict_type": "the_conflict_type_being_created",
-    "modified_doc_1": "the modified version of document 1",
-    "modified_doc_2": "the modified version of document 2",
-    "change_info_1": "description of changes made to document 1",
-    "change_info_2": "description of changes made to document 2",
-    "original_excerpt_1": "original text excerpt that was changed in document 1",
-    "modified_excerpt_1": "modified text excerpt in document 1",
-    "original_excerpt_2": "original text excerpt that was changed in document 2",
-    "modified_excerpt_2": "modified text excerpt in document 2"
+    "doc1": {{
+        "op": "delete" | "insert_after" | "replace",
+        "target_text": "exact text from document 1 to modify",
+        "replacement_text": "new text to insert or replace with"
+    }},
+    "doc2": {{
+        "op": "delete" | "insert_after" | "replace",
+        "target_text": "exact text from document 2 to modify",
+        "replacement_text": "new text to insert or replace with"
+    }},
+    "conflict_type": "type of medical conflict being created"
 }}
