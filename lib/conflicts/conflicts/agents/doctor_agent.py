@@ -1,4 +1,3 @@
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict
@@ -8,8 +7,7 @@ from ..core.models import ConflictResult, DocumentPair
 from ..core.temporal_analysis import TemporalAnalyzer
 
 prompts_dir = Path(__file__).parent.parent.parent / "prompts"
-DOCTOR_SYSTEM_PROMPT_PATH = os.path.join(prompts_dir, "doctor_agent_system.txt")
-DOCTOR_PROMPT_PATH = os.path.join(prompts_dir, "doctor_agent.txt")
+DOCTOR_PROMPT_PATH = prompts_dir / "doctor_agent.txt"
 
 
 @dataclass
@@ -28,9 +26,9 @@ class DoctorAgent(BaseAgent):
     """
 
     def __init__(self, client, model, cfg):
-        with open(DOCTOR_SYSTEM_PROMPT_PATH, "r", encoding="utf-8") as f:
-            system_prompt = f.read().strip()
-        super().__init__("Doctor", client, model, cfg, system_prompt)
+        with open(DOCTOR_PROMPT_PATH, "r", encoding="utf-8") as f:
+            prompt = f.read().strip()
+        super().__init__("Doctor", client, model, cfg, prompt)
         self.conflict_types = self._load_conflict_types(cfg)
 
     def __call__(self, document_pair: DocumentPair) -> ConflictResult:
@@ -59,10 +57,6 @@ class DoctorAgent(BaseAgent):
                 temporal_analysis
             )
 
-            # Load prompt template from file
-            with open(DOCTOR_PROMPT_PATH, "r", encoding="utf-8") as f:
-                prompt_template = f.read().strip()
-
             # Prepare prompt with conflict types, temporal info, and documents
             conflict_types_formatted = self.format_conflict_types_for_prompt()
             temporal_context = temporal_analyzer.format_temporal_context_for_prompt(
@@ -70,7 +64,7 @@ class DoctorAgent(BaseAgent):
             )
             temporal_recommendations_str = ", ".join(temporal_recommendations)
 
-            prompt = prompt_template.format(
+            prompt = self.system_prompt.format(
                 conflict_types=conflict_types_formatted,
                 temporal_context=temporal_context,
                 temporal_recommendations=temporal_recommendations_str,

@@ -5,7 +5,6 @@ from ..core.document_operations import parse_response
 from ..core.models import ConflictResult, DocumentPair, EditorResult
 
 prompts_dir = Path(__file__).parent.parent.parent / "prompts"
-EDITOR_SYSTEM_PROMPT_PATH = prompts_dir / "editor_agent_system.txt"
 EDITOR_PROMPT_PATH = prompts_dir / "editor_agent.txt"
 
 
@@ -16,9 +15,9 @@ class EditorAgent(BaseAgent):
     """
 
     def __init__(self, client, model, cfg):
-        with open(EDITOR_SYSTEM_PROMPT_PATH, "r", encoding="utf-8") as f:
-            system_prompt = f.read().strip()
-        super().__init__("Editor", client, model, cfg, system_prompt)
+        with open(EDITOR_PROMPT_PATH, "r", encoding="utf-8") as f:
+            prompt = f.read().strip()
+        super().__init__("Editor", client, model, cfg, prompt)
         self.min_text_length = cfg.editor.min_text_length
 
     def __call__(
@@ -69,10 +68,7 @@ class EditorAgent(BaseAgent):
         self, document_pair: DocumentPair, conflict_instructions: ConflictResult
     ) -> str:
         """Build the prompt for modification"""
-        with open(EDITOR_PROMPT_PATH, "r", encoding="utf-8") as f:
-            prompt_template = f.read().strip()
-
-        prompt = prompt_template.format(
+        prompt = self.system_prompt.format(
             input_prompt=conflict_instructions.modification_instructions,
             document_1=self._truncate_document(document_pair.doc1_text),
             document_2=self._truncate_document(document_pair.doc2_text),
@@ -84,12 +80,17 @@ class EditorAgent(BaseAgent):
         """Parse response and validate modifications were made"""
         self.logger.debug(f"Received modification response from API: {response[:200]}...")
 
-        parsed_result = parse_response(
-            response,
-            document_pair.doc1_text,
-            document_pair.doc2_text,
-            self.min_text_length,
-        )
+        try:
+            parsed_result = parse_response(
+                response,
+                document_pair.doc1_text,
+                document_pair.doc2_text,
+                self.min_text_length,
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to parse response: {e}")
+            self.logger.error(f"Response was: {response}")
+            raise
 
         if (
             parsed_result["modified_doc_1"].strip() == document_pair.doc1_text.strip()

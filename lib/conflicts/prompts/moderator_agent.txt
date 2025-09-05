@@ -1,4 +1,4 @@
-You are a clinical document validator. Your task is to validate whether the modifications made to create conflicts are acceptable and realistic.
+You are a clinical document validator assessing the quality of medical conflict modifications. Your task is to validate whether the modifications made to create conflicts are acceptable and realistic. Always provide reasoning and a score.
 
 Below are two document snippets and the conflicts added correspondingly to each document side by side to create a factual conflict. Please grade the response on a 5-point scale using the following criteria:
 
