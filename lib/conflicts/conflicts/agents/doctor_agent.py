@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from ..core.base import BaseAgent
-from ..core.models import ConflictResult, DocumentPair
+from ..core.models import ConflictResult, DocumentPair, PropositionResult
 from ..core.temporal_analysis import TemporalAnalyzer
 
 prompts_dir = Path(__file__).parent.parent.parent / "prompts"
@@ -31,12 +31,19 @@ class DoctorAgent(BaseAgent):
         super().__init__("Doctor", client, model, cfg, prompt)
         self.conflict_types = self._load_conflict_types(cfg)
 
-    def __call__(self, document_pair: DocumentPair) -> ConflictResult:
+    def __call__(
+        self,
+        document_pair: DocumentPair,
+        propositions1: PropositionResult = None,
+        propositions2: PropositionResult = None,
+    ) -> ConflictResult:
         """
         Analyze documents and determine the best conflict type to introduce
 
         Args:
             document_pair: Pair of clinical documents to analyze
+            propositions1: Optional PropositionResult from document 1
+            propositions2: Optional PropositionResult from document 2
 
         Returns:
             ConflictResult containing the chosen conflict type and instructions
@@ -63,6 +70,16 @@ class DoctorAgent(BaseAgent):
                 temporal_analysis
             )
             temporal_recommendations_str = ", ".join(temporal_recommendations)
+            propositions1_str = (
+                "\n".join([f"{i}. {prop}" for i, prop in enumerate(propositions1.propositions, 1)])
+                if propositions1 and propositions1.propositions
+                else "No propositions provided"
+            )
+            propositions2_str = (
+                "\n".join([f"{i}. {prop}" for i, prop in enumerate(propositions2.propositions, 1)])
+                if propositions2 and propositions2.propositions
+                else "No propositions provided"
+            )
 
             prompt = self.system_prompt.format(
                 conflict_types=conflict_types_formatted,
@@ -70,6 +87,8 @@ class DoctorAgent(BaseAgent):
                 temporal_recommendations=temporal_recommendations_str,
                 document1=self._truncate_document(document_pair.doc1_text),
                 document2=self._truncate_document(document_pair.doc2_text),
+                propositions1=propositions1_str,
+                propositions2=propositions2_str,
             )
 
             self.logger.debug(f"Prompt length: {len(prompt)} chars")
@@ -98,6 +117,8 @@ class DoctorAgent(BaseAgent):
                 conflict_type=parsed_response["conflict_type"],
                 reasoning=parsed_response["reasoning"],
                 modification_instructions=parsed_response["modification_instructions"],
+                editor_instructions=parsed_response.get("editor_instructions", []),
+                proposition_conflicts=parsed_response.get("proposition_conflicts", []),
             )
 
             self.logger.info("Doctor Agent completed analysis")

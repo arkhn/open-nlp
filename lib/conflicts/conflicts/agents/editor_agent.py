@@ -34,17 +34,9 @@ class EditorAgent(BaseAgent):
             EditorResult containing modified documents and summary of changes
         """
         self.logger.info(f"Creating '{conflict_instructions.conflict_type}' conflict")
-        return self._try_modification_with_retries(
-            document_pair, conflict_instructions, self.cfg.editor.max_retries
-        )
 
-    def _try_modification_with_retries(
-        self,
-        document_pair: DocumentPair,
-        conflict_instructions: ConflictResult,
-        max_retries: int,
-    ) -> EditorResult:
-        """Try to modify documents with retries on failure"""
+        # Try modification with retries on failure
+        max_retries = self.cfg.editor.max_retries
         for attempt in range(max_retries):
             try:
                 self.logger.info(f"Attempt {attempt + 1}/{max_retries}")
@@ -68,13 +60,49 @@ class EditorAgent(BaseAgent):
         self, document_pair: DocumentPair, conflict_instructions: ConflictResult
     ) -> str:
         """Build the prompt for modification"""
+        # Extract specific propositions for each document
+        target_propositions_doc1 = self._extract_target_propositions(
+            conflict_instructions.proposition_conflicts, "doc1_proposition"
+        )
+        target_propositions_doc2 = self._extract_target_propositions(
+            conflict_instructions.proposition_conflicts, "doc2_proposition"
+        )
+
+        editor_instructions_str = (
+            "\n".join(conflict_instructions.editor_instructions)
+            if conflict_instructions.editor_instructions
+            else "No specific instructions provided"
+        )
+
         prompt = self.system_prompt.format(
             input_prompt=conflict_instructions.modification_instructions,
             document_1=self._truncate_document(document_pair.doc1_text),
             document_2=self._truncate_document(document_pair.doc2_text),
+            conflict_type=conflict_instructions.conflict_type,
+            target_propositions_doc1=target_propositions_doc1,
+            target_propositions_doc2=target_propositions_doc2,
+            editor_instructions=editor_instructions_str,
         )
         self.logger.debug(f"Prompt length: {len(prompt)} chars")
         return prompt
+
+    def _extract_target_propositions(
+        self, proposition_conflicts: list[dict], doc_field: str
+    ) -> str:
+        """Extract specific propositions from a document that need modification
+
+        Args:
+            proposition_conflicts: List of proposition conflict dictionaries
+            doc_field: Field name to extract ('doc1_proposition' or 'doc2_proposition')
+
+        Returns:
+            Formatted string of propositions for the specified document
+        """
+        if not proposition_conflicts:
+            return "No specific propositions identified"
+
+        propositions = [conflict.get(doc_field, "N/A") for conflict in proposition_conflicts]
+        return "\n".join([f"- {prop}" for prop in propositions if prop != "N/A"])
 
     def _parse_and_validate_response(self, response: str, document_pair: DocumentPair) -> dict:
         """Parse response and validate modifications were made"""

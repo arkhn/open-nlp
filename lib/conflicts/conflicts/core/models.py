@@ -25,6 +25,8 @@ class ConflictResult:
     conflict_type: str
     reasoning: str
     modification_instructions: str
+    editor_instructions: Optional[list[str]] = None
+    proposition_conflicts: Optional[list[dict]] = None
 
 
 @dataclass
@@ -49,3 +51,12 @@ class ValidationResult:
     is_valid: bool
     score: int  # 1-5 scale as per new format
     reasoning: str
+
+
+@dataclass
+class PropositionResult:
+    """Result from the Proposition Agent"""
+
+    propositions: list[str]
+    reasoning: str
+    total_propositions: int
