@@ -13,7 +13,7 @@ from ..agents.moderator_agent import ModeratorAgent
 from ..agents.proposition_agent import PropositionAgent
 from .base import DatasetManager
 from .data_loader import DataLoader
-from .models import DocumentPair
+from .models import DocumentPair, ValidationResult
 
 load_dotenv()
 
@@ -176,10 +176,26 @@ class Pipeline:
             result_data["editor_result"] = editor_result
             result_data["editor_time"] = editor_time
 
+            # Check if editor agent failed to create modifications
+            if "Failed to create conflict" in editor_result.changes_made:
+                self.logger.warning(
+                    "Editor agent failed to create modifications, skipping moderator validation"
+                )
+                validation_result = ValidationResult(
+                    is_valid=False,
+                    score=1,
+                    reasoning="Editor agent failed to modify - no changes to validate",
+                )
+                result_data["moderator_result"] = validation_result
+                result_data["moderator_time"] = 0
+                break
+
             # Execute moderator agent for validation
             validation_result, moderator_time = self._execute_agent(
                 self.moderator_agent, document_pair, editor_result, conflict_result.conflict_type
             )
+            result_data["moderator_result"] = validation_result
+            result_data["moderator_time"] = moderator_time
 
             self.logger.info(
                 f"Attempt {attempt}: {conflict_result.conflict_type} conflict, "
@@ -243,11 +259,32 @@ class Pipeline:
         successful = 0
 
         for doc_pair in document_pairs:
-            success, result_data = self.process_document_pair(doc_pair)
-            results.append(result_data)
+            try:
+                success, result_data = self.process_document_pair(doc_pair)
+                results.append(result_data)
 
-            if success:
-                successful += 1
+                if success:
+                    successful += 1
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to process document pair {doc_pair.doc1_id}_{doc_pair.doc2_id}: {e}"
+                )
+                failed_result = {
+                    "pair_id": f"{doc_pair.doc1_id}_{doc_pair.doc2_id}",
+                    "success": False,
+                    "conflict_type": None,
+                    "processing_time": 0,
+                    "proposition_result": None,
+                    "doctor_result": None,
+                    "editor_result": None,
+                    "moderator_result": None,
+                    "proposition_time": 0,
+                    "doctor_time": 0,
+                    "editor_time": 0,
+                    "moderator_time": 0,
+                    "error": str(e),
+                }
+                results.append(failed_result)
 
         batch_time = time.time() - batch_start_time
         success_rate = (successful / len(document_pairs)) * 100

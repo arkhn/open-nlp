@@ -30,6 +30,7 @@ class Annotation:
     to_name: str
     type: str
     moderator_score: int
+    moderator_reasoning: str
     conflict_type: str
     value: AnnotationValue
 
@@ -204,6 +205,7 @@ class DatasetManager:
                     to_name="doc_1",
                     type="labels",
                     moderator_score=validation_result.score,
+                    moderator_reasoning=validation_result.reasoning,
                     conflict_type=conflict_type,
                     value=AnnotationValue(
                         start=start_pos,
@@ -229,6 +231,7 @@ class DatasetManager:
                     to_name="doc_2",
                     type="labels",
                     moderator_score=validation_result.score,
+                    moderator_reasoning=validation_result.reasoning,
                     conflict_type=conflict_type,
                     value=AnnotationValue(
                         start=start_pos,
