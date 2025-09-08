@@ -8,6 +8,7 @@ repos:
     rev: v4.5.0
     hooks:
       - id: check-added-large-files # Prevent giant files from being committed
+        args: ["--maxkb=10000"]
       - id: check-ast # Check whether the files parse as valid Python
       - id: check-docstring-first # Checks a common error of defining a docstring after code
       - id: check-json # Check JSON files for parseable syntax
