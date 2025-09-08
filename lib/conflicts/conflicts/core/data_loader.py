@@ -19,6 +19,8 @@ class DataLoader:
         self.data_path = project_root / cfg.data.path
         self.logger = logging.getLogger("DataLoader")
         self.data_df = pd.read_parquet(self.data_path)
+        random.seed(cfg.seed)
+        self.logger.info(f"DataLoader random seed set to {cfg.seed}")
 
     def get_random_document_pairs(
         self,
