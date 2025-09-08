@@ -1,6 +1,9 @@
 import logging
 import os
+import subprocess
 import time
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import openai
@@ -41,7 +44,14 @@ class Pipeline:
         self.logger = logging.getLogger(__name__)
 
         # Initialize components
-        self.dataset_manager = DatasetManager("validated_documents.json")
+        git_sha = (
+            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).decode().strip()[:8]
+        )
+        date_str = datetime.now().strftime("%d%m%Y")
+        processed_dir = Path(__file__).parent.parent.parent / "processed"
+        filename = processed_dir / f"{git_sha}_{date_str}.json"
+
+        self.dataset_manager = DatasetManager(filename)
 
         # Create shared OpenAI client
         self.client = openai.OpenAI(api_key=os.getenv("API_KEY"), base_url=os.getenv("BASE_URL"))
