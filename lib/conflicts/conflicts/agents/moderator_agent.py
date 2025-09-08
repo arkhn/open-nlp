@@ -40,8 +40,8 @@ class ModeratorAgent(BaseAgent):
 
         try:
             prompt = self.system_prompt.format(
-                context_document_1=self._truncate_document(original_pair.doc1_text),
-                context_document_2=self._truncate_document(original_pair.doc2_text),
+                context_document_1=self._truncate_document(modified_docs.modified_document1),
+                context_document_2=self._truncate_document(modified_docs.modified_document2),
                 conflict_1=modified_docs.change_info_1 or "No change info available",
                 conflict_2=modified_docs.change_info_2 or "No change info available",
             )
