@@ -43,8 +43,14 @@ class EditorAgent(BaseAgent):
                 return self._perform_modification(document_pair, conflict_instructions)
             except ValueError as e:
                 if attempt == max_retries - 1:
-                    self.logger.error(f"All {max_retries} attempts failed")
-                    raise
+                    self.logger.error(f"All {max_retries} attempts failed: {e}")
+                    return EditorResult(
+                        modified_document1=document_pair.doc1_text,
+                        modified_document2=document_pair.doc2_text,
+                        changes_made=f"Failed to create conflict after {max_retries} attempts: {e}",
+                        change_info_1="No changes made - all attempts failed",
+                        change_info_2="No changes made - all attempts failed",
+                    )
                 self.logger.warning(f"Attempt {attempt + 1} failed: {e}, retrying...")
 
     def _perform_modification(
