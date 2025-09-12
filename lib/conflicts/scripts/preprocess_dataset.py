@@ -12,10 +12,17 @@ class MIMICDataProcessor:
     """Processes MIMIC-III corpus data with optimized data extraction and cleaning"""
 
     def __init__(self, data_dir: str = "data"):
-        self.data_dir = Path(data_dir)
+        # If data_dir is relative, make it relative to the script's parent directory
+        if not Path(data_dir).is_absolute():
+            script_dir = Path(__file__).parent
+            self.data_dir = script_dir.parent / data_dir
+        else:
+            self.data_dir = Path(data_dir)
+
         self.reference_ehr_dir = (
             self.data_dir / "physionet.org/files/mimic-iii-ext-verifact-bhc/1.0.0/reference_ehr"
         )
+        # Save output to data folder outside scripts directory
         self.output_file = self.data_dir / "mimic-iii-verifact-bhc.parquet"
 
         # Single source of truth for all column mappings
@@ -206,10 +213,20 @@ class MIMICDataProcessor:
             # Clean data - remove rows with missing text
             initial_count = len(result_df)
             result_df = result_df.dropna(subset=["text"])
-            final_count = len(result_df)
+            text_filtered_count = len(result_df)
+            print(f"Removed {initial_count - text_filtered_count} rows with missing text")
 
-            removed_count = initial_count - final_count
-            print(f"Removed {removed_count} rows with missing text")
+            # Remove rows that don't have values in chart_time column
+            if "chart_time" in result_df.columns:
+                result_df = result_df.dropna(subset=["chart_time"])
+                after_date_filter = len(result_df)
+                print(
+                    f"Removed {text_filtered_count - after_date_filter} rows with missing values"
+                    " in chart_time column"
+                )
+            else:
+                print("chart_time column not available for filtering")
+
             print(f"Final data shape: {result_df.shape}")
 
             # Save as parquet
