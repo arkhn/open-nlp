@@ -1,0 +1,10 @@
+defaults:
+  - default
+
+experiment:
+  shot_type: "one"
+  num_examples: 1
+  batch_size: 15
+
+logging:
+  tags: ["llm", "conflict-classification", "clinical-text", "one-shot"]

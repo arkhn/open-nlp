@@ -1,0 +1,35 @@
+defaults:
+  - _self_
+  - override /hydra/sweeper: basic
+  - override /hydra/launcher: basic
+
+# Data configuration
+data:
+  test_ratio: 0.2
+  val_ratio: 0.1
+  max_length: 512
+  data_path: "processed/_12092025.json"
+
+# Model configuration
+model:
+  name: "qwen/qwen3-32b"
+
+# API configuration
+api:
+  api_key: null # Will use GROQ_API_KEY environment variable
+
+# Experiment configuration
+experiment:
+  shot_type: "zero" # Options: "zero", "one", "few"
+  num_examples: 0 # Number of examples for prompting (0 for zero-shot, 1 for one-shot, ignored for few-shot)
+  batch_size: 10 # Batch size for processing
+
+# Logging configuration
+logging:
+  output_dir: "outputs"
+  entity: "clinical-dream-team"
+  project: "llm-baselines"
+  tags: ["llm", "conflict-classification", "clinical-text"]
+
+# Global settings
+global_seed: 42
