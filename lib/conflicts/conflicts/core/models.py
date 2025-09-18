@@ -19,14 +19,21 @@ class DocumentPair:
 
 
 @dataclass
-class ConflictResult:
-    """Result from the Doctor Agent"""
+class ConflictPair:
+    """Represents a single conflict pair for a specific conflict type"""
 
     conflict_type: str
     reasoning: str
     modification_instructions: str
     editor_instructions: Optional[list[str]] = None
     proposition_conflicts: Optional[list[dict]] = None
+
+
+@dataclass
+class ConflictResult:
+    """Result from the Doctor Agent - now contains multiple conflict pairs"""
+
+    conflict_pairs: list[ConflictPair]
 
 
 @dataclass

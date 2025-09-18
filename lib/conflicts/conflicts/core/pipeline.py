@@ -134,16 +134,15 @@ class Pipeline:
         result_data = {
             "pair_id": pair_id,
             "success": False,
-            "conflict_type": None,
+            "conflict_pairs": 0,
+            "successful_pairs": 0,
+            "total_pairs": 0,
             "processing_time": 0,
             "proposition_result": None,
             "doctor_result": None,
-            "editor_result": None,
-            "moderator_result": None,
+            "conflict_pair_results": [],
             "proposition_time": 0,
             "doctor_time": 0,
-            "editor_time": 0,
-            "moderator_time": 0,
         }
 
         # Step 1: Proposition Agent decomposes documents into propositions
@@ -155,78 +154,111 @@ class Pipeline:
         result_data["proposition_result"] = proposition_result
         result_data["proposition_time"] = proposition_time
 
-        # Step 2: Doctor Agent identifies conflict type using propositions
-
+        # Step 2: Doctor Agent identifies conflict pairs using propositions
         conflict_result, doctor_time = self._execute_agent(
             self.doctor_agent, document_pair, proposition_result[0], proposition_result[1]
         )
         result_data["doctor_result"] = conflict_result
         result_data["doctor_time"] = doctor_time
-        result_data["conflict_type"] = conflict_result.conflict_type
+        result_data["conflict_pairs"] = len(conflict_result.conflict_pairs)
 
-        # Step 3: Editor and Moderator agents with retry logic for editor only
-        validation_result = None
-        editor_result = None
+        # Step 3: Process each conflict pair through Editor and Moderator agents
+        all_results = []
+        successful_pairs = 0
 
-        for attempt in range(1, self.max_retries + 1):
-            # Execute editor agent
-            editor_result, editor_time = self._execute_agent(
-                self.editor_agent, document_pair, conflict_result
-            )
-            result_data["editor_result"] = editor_result
-            result_data["editor_time"] = editor_time
-
-            # Check if editor agent failed to create modifications
-            if "Failed to create conflict" in editor_result.changes_made:
-                self.logger.warning(
-                    "Editor agent failed to create modifications, skipping moderator validation"
-                )
-                validation_result = ValidationResult(
-                    is_valid=False,
-                    score=1,
-                    reasoning="Editor agent failed to modify - no changes to validate",
-                )
-                result_data["moderator_result"] = validation_result
-                result_data["moderator_time"] = 0
-                break
-
-            # Execute moderator agent for validation
-            validation_result, moderator_time = self._execute_agent(
-                self.moderator_agent, document_pair, editor_result, conflict_result.conflict_type
-            )
-            result_data["moderator_result"] = validation_result
-            result_data["moderator_time"] = moderator_time
-
+        for i, conflict_pair in enumerate(conflict_result.conflict_pairs):
             self.logger.info(
-                f"Attempt {attempt}: {conflict_result.conflict_type} conflict, "
-                f"valid={validation_result.is_valid}, score={validation_result.score}/5"
+                f"Processing conflict pair {i+1}/{len(conflict_result.conflict_pairs)}:"
+                f" {conflict_pair.conflict_type}"
             )
 
-            if validation_result.is_valid:
-                result_data["success"] = True
-                break
+            pair_result = {
+                "conflict_type": conflict_pair.conflict_type,
+                "success": False,
+                "editor_result": None,
+                "moderator_result": None,
+                "editor_time": 0,
+                "moderator_time": 0,
+                "attempts": 0,
+            }
 
-            if attempt < self.max_retries:
-                self.logger.warning("Validation failed, retrying...")
-                time.sleep(1)
+            validation_result = None
+            editor_result = None
 
-        # Step 3: Save to database if validation passed
-        if validation_result and validation_result.is_valid:
-            is_success = self._save_to_database(
-                pair_id,
-                document_pair,
-                editor_result,
-                conflict_result.conflict_type,
-                validation_result,
-            )
-            result_data["success"] = is_success
+            for attempt in range(1, self.max_retries + 1):
+                pair_result["attempts"] = attempt
+
+                # Execute editor agent
+                editor_result, editor_time = self._execute_agent(
+                    self.editor_agent, document_pair, conflict_pair
+                )
+                pair_result["editor_result"] = editor_result
+                pair_result["editor_time"] = editor_time
+
+                # Check if editor agent failed to create modifications
+                if "Failed to create conflict" in editor_result.changes_made:
+                    self.logger.warning(
+                        f"Editor agent failed to create modifications for "
+                        f"{conflict_pair.conflict_type}, skipping moderator validation"
+                    )
+                    validation_result = ValidationResult(
+                        is_valid=False,
+                        score=1,
+                        reasoning="Editor agent failed to modify - no changes to validate",
+                    )
+                    pair_result["moderator_result"] = validation_result
+                    pair_result["moderator_time"] = 0
+                    break
+
+                # Execute moderator agent for validation
+                validation_result, moderator_time = self._execute_agent(
+                    self.moderator_agent, document_pair, editor_result, conflict_pair.conflict_type
+                )
+                pair_result["moderator_result"] = validation_result
+                pair_result["moderator_time"] = moderator_time
+
+                self.logger.info(
+                    f"Attempt {attempt}: {conflict_pair.conflict_type} conflict, "
+                    f"valid={validation_result.is_valid}, score={validation_result.score}/5"
+                )
+
+                if validation_result.is_valid:
+                    pair_result["success"] = True
+                    successful_pairs += 1
+                    break
+
+                if attempt < self.max_retries:
+                    self.logger.warning(
+                        f"Validation failed for {conflict_pair.conflict_type}, retrying..."
+                    )
+                    time.sleep(1)
+
+            # Save to database if validation passed
+            if validation_result and validation_result.is_valid:
+                is_success = self._save_to_database(
+                    f"{pair_id}_{conflict_pair.conflict_type}",
+                    document_pair,
+                    editor_result,
+                    conflict_pair.conflict_type,
+                    validation_result,
+                )
+                pair_result["success"] = is_success
+
+            all_results.append(pair_result)
+
+        # Update result data with all conflict pair results
+        result_data["conflict_pair_results"] = all_results
+        result_data["successful_pairs"] = successful_pairs
+        result_data["total_pairs"] = len(conflict_result.conflict_pairs)
+        result_data["success"] = successful_pairs > 0  # Success if at least one pair succeeded
 
         result_data["processing_time"] = time.time() - start_time
 
         # Summary log
         status = "SUCCESS" if result_data["success"] else "FAILED"
         self.logger.info(
-            f"Pair {pair_id}: {status} - {conflict_result.conflict_type} conflict, "
+            f"{pair_id}: {status} - {result_data['successful_pairs']}/{result_data['total_pairs']} "
+            "conflict pairs successful, "
             f"{proposition_result[0].total_propositions + proposition_result[1].total_propositions}"
             f" propositions"
         )
@@ -272,16 +304,15 @@ class Pipeline:
                 failed_result = {
                     "pair_id": f"{doc_pair.doc1_id}_{doc_pair.doc2_id}",
                     "success": False,
-                    "conflict_type": None,
+                    "conflict_pairs": 0,
+                    "successful_pairs": 0,
+                    "total_pairs": 0,
                     "processing_time": 0,
                     "proposition_result": None,
                     "doctor_result": None,
-                    "editor_result": None,
-                    "moderator_result": None,
+                    "conflict_pair_results": [],
                     "proposition_time": 0,
                     "doctor_time": 0,
-                    "editor_time": 0,
-                    "moderator_time": 0,
                     "error": str(e),
                 }
                 results.append(failed_result)

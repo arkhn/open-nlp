@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from ..core.base import BaseAgent
-from ..core.models import ConflictResult, DocumentPair, PropositionResult
+from ..core.models import ConflictPair, ConflictResult, DocumentPair, PropositionResult
 from ..core.temporal_analysis import TemporalAnalyzer
 
 prompts_dir = Path(__file__).parent.parent.parent / "prompts"
@@ -100,29 +100,50 @@ class DoctorAgent(BaseAgent):
             parsed_response = self._parse_json_response(response)
 
             # Validate required fields
-            required_fields = ["conflict_type", "reasoning", "modification_instructions"]
-            for field in required_fields:
-                if field not in parsed_response:
-                    raise ValueError(f"Missing required field '{field}' in Doctor Agent response")
+            if "conflict_pairs" not in parsed_response:
+                raise ValueError("Missing required field 'conflict_pairs' in Doctor Agent response")
 
-            # Validate conflict type exists
-            if parsed_response["conflict_type"] not in self.conflict_types:
-                self.logger.warning(
-                    f"Unknown conflict type '{parsed_response['conflict_type']}', \
-                     defaulting to 'opposition'"
+            conflict_pairs = []
+            for pair_data in parsed_response["conflict_pairs"]:
+                # Validate required fields for each conflict pair
+                required_fields = ["conflict_type", "reasoning", "modification_instructions"]
+                for field in required_fields:
+                    if field not in pair_data:
+                        self.logger.warning(
+                            f"Skipping conflict pair due to missing required field '{field}'"
+                        )
+                        continue
+
+                # Validate conflict type exists
+                if pair_data["conflict_type"] not in self.conflict_types:
+                    self.logger.warning(
+                        f"Skipping invalid conflict type '{pair_data['conflict_type']}'. "
+                        f"Valid types: {list(self.conflict_types.keys())}"
+                    )
+                    continue
+
+                conflict_pair = ConflictPair(
+                    conflict_type=pair_data["conflict_type"],
+                    reasoning=pair_data["reasoning"],
+                    modification_instructions=pair_data["modification_instructions"],
+                    editor_instructions=pair_data.get("editor_instructions", []),
+                    proposition_conflicts=pair_data.get("proposition_conflicts", []),
                 )
-                parsed_response["conflict_type"] = "opposition"
+                conflict_pairs.append(conflict_pair)
 
-            result = ConflictResult(
-                conflict_type=parsed_response["conflict_type"],
-                reasoning=parsed_response["reasoning"],
-                modification_instructions=parsed_response["modification_instructions"],
-                editor_instructions=parsed_response.get("editor_instructions", []),
-                proposition_conflicts=parsed_response.get("proposition_conflicts", []),
-            )
+            # Check if we have any valid conflict pairs
+            if not conflict_pairs:
+                raise ValueError(
+                    "No valid conflict pairs found in Doctor Agent response. "
+                    "All conflict pairs were skipped due to validation errors."
+                )
+
+            result = ConflictResult(conflict_pairs=conflict_pairs)
 
             self.logger.info("Doctor Agent completed analysis")
-            self.logger.info(f"Selected conflict type: {result.conflict_type}")
+            self.logger.info(f"Selected {len(result.conflict_pairs)} conflict pairs")
+            for pair in result.conflict_pairs:
+                self.logger.info(f"  - {pair.conflict_type}: {pair.reasoning[:100]}...")
             self.logger.info(
                 f"Temporal context: {temporal_analysis.get('time_context', 'Unknown')}"
             )

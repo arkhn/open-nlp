@@ -2,7 +2,7 @@ from pathlib import Path
 
 from ..core.base import BaseAgent
 from ..core.document_operations import parse_response
-from ..core.models import ConflictResult, DocumentPair, EditorResult
+from ..core.models import ConflictPair, DocumentPair, EditorResult
 
 prompts_dir = Path(__file__).parent.parent.parent / "prompts"
 EDITOR_SYSTEM_PROMPT_PATH = prompts_dir / "editor_agent_system.txt"
@@ -21,7 +21,7 @@ class EditorAgent(BaseAgent):
         self.min_text_length = cfg.editor.min_text_length
 
     def __call__(
-        self, document_pair: DocumentPair, conflict_instructions: ConflictResult
+        self, document_pair: DocumentPair, conflict_instructions: ConflictPair
     ) -> EditorResult:
         """
         Modify documents to introduce the specified conflict
@@ -54,7 +54,7 @@ class EditorAgent(BaseAgent):
                 self.logger.warning(f"Attempt {attempt + 1} failed: {e}, retrying...")
 
     def _perform_modification(
-        self, document_pair: DocumentPair, conflict_instructions: ConflictResult
+        self, document_pair: DocumentPair, conflict_instructions: ConflictPair
     ) -> EditorResult:
         """Perform a single modification attempt"""
         prompt = self._build_prompt(document_pair, conflict_instructions)
@@ -63,7 +63,7 @@ class EditorAgent(BaseAgent):
         return self._create_result(parsed_result, document_pair)
 
     def _build_prompt(
-        self, document_pair: DocumentPair, conflict_instructions: ConflictResult
+        self, document_pair: DocumentPair, conflict_instructions: ConflictPair
     ) -> str:
         """Build the prompt for modification"""
         # Extract specific propositions for each document

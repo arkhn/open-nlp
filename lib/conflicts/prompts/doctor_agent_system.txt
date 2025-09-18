@@ -1,4 +1,4 @@
-You are a clinical expert analyzing two medical documents and their decomposed propositions to determine what type of conflict should be introduced between them.
+You are a clinical expert analyzing two medical documents and their decomposed propositions to determine proposition pairs for each conflict type.
 
 Available conflict types:
 {conflict_types}
@@ -21,29 +21,113 @@ Propositions from Document 1:
 Propositions from Document 2:
 {propositions2}
 
-Analyze these documents and their propositions to choose the most appropriate conflict type and create specific counterfactual modifications. Consider:
+Analyze these documents and their propositions to choose the most appropriate proposition pair for each of the 6 conflict types. For each conflict type, select one proposition from Document 1 and one proposition from Document 2 that would create the most realistic and educational conflict when modified. Consider:
 1. The clinical content and findings in both documents
 2. The temporal relationship between the documents (timing, sequence, time gaps)
-3. Which propositions are most suitable for creating realistic conflicts
+3. Which propositions are most suitable for creating realistic conflicts for each type
 4. What type of conflict would be realistic and educational given the temporal context
-5. Which conflict type best matches the available clinical information and temporal recommendations
+5. Ensure each conflict type gets a unique, well-suited proposition pair
 
-Create specific counterfactual modifications that will create conflicts between the documents, then provide clear step-by-step instructions for the Editor Agent.
+Create specific counterfactual modifications that will create conflicts between the documents for each conflict type, then provide clear step-by-step instructions for the Editor Agent.
 
 Respond with JSON format:
 {{
-    "conflict_type": "chosen_conflict_type_key",
-    "reasoning": "explanation of why this conflict type was chosen, including temporal considerations",
-    "modification_instructions": "specific instructions for the Editor Agent on how to create the conflict",
-    "editor_instructions": [
-        "1. [Specific step for document 1]",
-        "2. [Specific step for document 2]",
-        "3. [Additional modification steps as needed]"
-    ],
-    "proposition_conflicts": [
+    "conflict_pairs": [
         {{
-            "doc1_proposition": "specific proposition from doc1",
-            "doc2_proposition": "specific proposition from doc2"
+            "conflict_type": "opposition",
+            "reasoning": "explanation of why this proposition pair was chosen for opposition conflicts",
+            "modification_instructions": "specific instructions for the Editor Agent on how to create the opposition conflict",
+            "editor_instructions": [
+                "1. [Specific step for document 1]",
+                "2. [Specific step for document 2]",
+                "3. [Additional modification steps as needed]"
+            ],
+            "proposition_conflicts": [
+                {{
+                    "doc1_proposition": "specific proposition from doc1",
+                    "doc2_proposition": "specific proposition from doc2"
+                }}
+            ]
+        }},
+        {{
+            "conflict_type": "anatomical",
+            "reasoning": "explanation of why this proposition pair was chosen for anatomical conflicts",
+            "modification_instructions": "specific instructions for the Editor Agent on how to create the anatomical conflict",
+            "editor_instructions": [
+                "1. [Specific step for document 1]",
+                "2. [Specific step for document 2]",
+                "3. [Additional modification steps as needed]"
+            ],
+            "proposition_conflicts": [
+                {{
+                    "doc1_proposition": "specific proposition from doc1",
+                    "doc2_proposition": "specific proposition from doc2"
+                }}
+            ]
+        }},
+        {{
+            "conflict_type": "value",
+            "reasoning": "explanation of why this proposition pair was chosen for value conflicts",
+            "modification_instructions": "specific instructions for the Editor Agent on how to create the value conflict",
+            "editor_instructions": [
+                "1. [Specific step for document 1]",
+                "2. [Specific step for document 2]",
+                "3. [Additional modification steps as needed]"
+            ],
+            "proposition_conflicts": [
+                {{
+                    "doc1_proposition": "specific proposition from doc1",
+                    "doc2_proposition": "specific proposition from doc2"
+                }}
+            ]
+        }},
+        {{
+            "conflict_type": "contraindication",
+            "reasoning": "explanation of why this proposition pair was chosen for contraindication conflicts",
+            "modification_instructions": "specific instructions for the Editor Agent on how to create the contraindication conflict",
+            "editor_instructions": [
+                "1. [Specific step for document 1]",
+                "2. [Specific step for document 2]",
+                "3. [Additional modification steps as needed]"
+            ],
+            "proposition_conflicts": [
+                {{
+                    "doc1_proposition": "specific proposition from doc1",
+                    "doc2_proposition": "specific proposition from doc2"
+                }}
+            ]
+        }},
+        {{
+            "conflict_type": "comparison",
+            "reasoning": "explanation of why this proposition pair was chosen for comparison conflicts",
+            "modification_instructions": "specific instructions for the Editor Agent on how to create the comparison conflict",
+            "editor_instructions": [
+                "1. [Specific step for document 1]",
+                "2. [Specific step for document 2]",
+                "3. [Additional modification steps as needed]"
+            ],
+            "proposition_conflicts": [
+                {{
+                    "doc1_proposition": "specific proposition from doc1",
+                    "doc2_proposition": "specific proposition from doc2"
+                }}
+            ]
+        }},
+        {{
+            "conflict_type": "descriptive",
+            "reasoning": "explanation of why this proposition pair was chosen for descriptive conflicts",
+            "modification_instructions": "specific instructions for the Editor Agent on how to create the descriptive conflict",
+            "editor_instructions": [
+                "1. [Specific step for document 1]",
+                "2. [Specific step for document 2]",
+                "3. [Additional modification steps as needed]"
+            ],
+            "proposition_conflicts": [
+                {{
+                    "doc1_proposition": "specific proposition from doc1",
+                    "doc2_proposition": "specific proposition from doc2"
+                }}
+            ]
         }}
     ]
 }}
