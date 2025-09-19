@@ -54,7 +54,6 @@ class ValidationResult:
     clinical_plausibility_score: float = 1.0  # 1-5 scale
     record_realism_score: float = 1.0  # 1-5 scale
     clinical_significance_score: float = 1.0  # 1-5 scale
-    retry_attempt: int = 1  # Which retry attempt this result came from
 
 
 @dataclass

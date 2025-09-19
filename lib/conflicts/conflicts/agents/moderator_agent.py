@@ -43,6 +43,14 @@ class ModeratorAgent(BaseAgent):
                 context_document_2=self._truncate_document(modified_docs.modified_document2),
                 conflict_1=modified_docs.change_info_1 or "No change info available",
                 conflict_2=modified_docs.change_info_2 or "No change info available",
+                original_excerpt_1=modified_docs.original_excerpt_1
+                or "No original excerpt available",
+                modified_excerpt_1=modified_docs.modified_excerpt_1
+                or "No modified excerpt available",
+                original_excerpt_2=modified_docs.original_excerpt_2
+                or "No original excerpt available",
+                modified_excerpt_2=modified_docs.modified_excerpt_2
+                or "No modified excerpt available",
             )
 
             self.logger.debug(f"Sending validation prompt to API (length: {len(prompt)} chars)")
@@ -55,20 +63,20 @@ class ModeratorAgent(BaseAgent):
             # Parse response using new score-based format
             parsed_response = self._parse_score_response(response)
 
-            # Extract scores and reasoning from the new format
+            # Extract scores and reasoning
             overall_score = parsed_response.get("score", 1)
             clinical_plausibility_score = parsed_response.get("clinical_plausibility_score", 1)
             record_realism_score = parsed_response.get("record_realism_score", 1)
             clinical_significance_score = parsed_response.get("clinical_significance_score", 1)
             reasoning = parsed_response.get("reasoning", "No reasoning provided")
 
-            is_valid = True
+            # Determine validity based on score threshold
+            is_valid = overall_score >= self.min_score
 
-            if overall_score < self.min_score:
-                is_valid = False
+            if not is_valid:
                 self.logger.info(
-                    f"Overall validation score {overall_score} below threshold \
-                        {self.min_score}, marking as invalid"
+                    f"Overall validation score {overall_score} below"
+                    f" threshold {self.min_score}, marking as invalid"
                 )
 
             result = ValidationResult(
@@ -90,16 +98,18 @@ class ModeratorAgent(BaseAgent):
 
         except Exception as e:
             self.logger.error(f"Moderator Agent processing failed: {e}")
-            # Return a safe invalid result on error
-            return ValidationResult(
-                is_valid=False,
-                score=1.0,
-                reasoning=f"Validation failed due to error: {str(e)}",
-                clinical_plausibility_score=1.0,
-                record_realism_score=1.0,
-                clinical_significance_score=1.0,
-                retry_attempt=1,
-            )
+            return self._create_error_result(str(e))
+
+    def _create_error_result(self, error_message: str) -> ValidationResult:
+        """Create a standardized error result"""
+        return ValidationResult(
+            is_valid=False,
+            score=1.0,
+            reasoning=f"Validation failed due to error: {error_message}",
+            clinical_plausibility_score=1.0,
+            record_realism_score=1.0,
+            clinical_significance_score=1.0,
+        )
 
     def _parse_score_response(self, response: str) -> dict:
         """
@@ -107,17 +117,14 @@ class ModeratorAgent(BaseAgent):
         """
         try:
             # Initialize with defaults
-            clinical_score = 1.0
-            realism_score = 1.0
-            significance_score = 1.0
+            scores = {"clinical": 1.0, "realism": 1.0, "significance": 1.0}
             reasoning = response.strip()
 
-            # Extract scores using simple patterns
+            # Extract scores using flexible patterns (order matters - more specific first)
             patterns = {
+                "significance": r"(?:clinical.*?significance|significance).*?(\d+(?:\.\d+)?)",
                 "clinical": r"(?:clinical.*?plausibility|plausibility).*?(\d+(?:\.\d+)?)",
                 "realism": r"(?:record.*?realism|realism).*?(\d+(?:\.\d+)?)",
-                "significance": r"(?:clinical.*?significance|significance).*?(\d+(?:\.\d+)?)",
-                "overall": r"(?:overall|total).*?score.*?(\d+(?:\.\d+)?)",
             }
 
             for score_type, pattern in patterns.items():
@@ -125,22 +132,17 @@ class ModeratorAgent(BaseAgent):
                 if match:
                     score = float(match.group(1))
                     if 1 <= score <= 5:
-                        if score_type == "clinical":
-                            clinical_score = score
-                        elif score_type == "realism":
-                            realism_score = score
-                        elif score_type == "significance":
-                            significance_score = score
+                        scores[score_type] = score
 
             # Calculate overall score as average
-            overall_score = (clinical_score + realism_score + significance_score) / 3
+            overall_score = sum(scores.values()) / len(scores)
 
             return {
                 "reasoning": reasoning,
                 "score": round(overall_score, 1),
-                "clinical_plausibility_score": round(clinical_score, 1),
-                "record_realism_score": round(realism_score, 1),
-                "clinical_significance_score": round(significance_score, 1),
+                "clinical_plausibility_score": round(scores["clinical"], 1),
+                "record_realism_score": round(scores["realism"], 1),
+                "clinical_significance_score": round(scores["significance"], 1),
             }
 
         except Exception as e:

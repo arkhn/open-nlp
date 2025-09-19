@@ -36,6 +36,7 @@ class Annotation:
     clinical_plausibility_score: float = 1.0
     record_realism_score: float = 1.0
     clinical_significance_score: float = 1.0
+    is_valid: bool = False
     retry_attempt: int = 1
 
 
@@ -50,6 +51,9 @@ class DocumentData:
     timestamp_1: Optional[str]
     timestamp_2: Optional[str]
     created_at: Optional[str]
+    moderator_score: Optional[int] = None
+    moderator_reasoning: Optional[str] = None
+    conflict_type: Optional[str] = None
 
 
 @dataclass
@@ -178,10 +182,33 @@ class DatasetManager:
         validation_result: ValidationResult,
     ) -> int:
         """Add validated documents to dataset in Label Studio format"""
-        doc_id = len(self.data) + 1
+        # Create document data using helper method
+        doc_data = self._create_document_data(
+            modified_docs, original_pair, validation_result, conflict_type
+        )
 
-        # Create document data
-        doc_data = DocumentData(
+        # Create annotations using helper methods
+        annotations = []
+        for excerpt_num in [1, 2]:
+            annotation = self._create_annotation_for_excerpt(
+                modified_docs, validation_result, conflict_type, excerpt_num
+            )
+            if annotation:
+                annotations.append(annotation)
+
+        # Create the complete item and save
+        conflict_item = ConflictDataItem(data=doc_data, annotations=[{"result": annotations}])
+        return self.save_item(conflict_item)
+
+    def _create_document_data(
+        self,
+        modified_docs: EditorResult,
+        original_pair: DocumentPair,
+        validation_result: ValidationResult,
+        conflict_type: str,
+    ) -> DocumentData:
+        """Create DocumentData object with standard fields"""
+        return DocumentData(
             doc_1=modified_docs.modified_document1,
             doc_2=modified_docs.modified_document2,
             orig_doc_1=original_pair.doc1_text,
@@ -189,75 +216,65 @@ class DatasetManager:
             created_at=datetime.now().isoformat(),
             timestamp_1=str(original_pair.doc1_timestamp) if original_pair.doc1_timestamp else None,
             timestamp_2=str(original_pair.doc2_timestamp) if original_pair.doc2_timestamp else None,
+            moderator_score=validation_result.score,
+            moderator_reasoning=validation_result.reasoning,
+            conflict_type=conflict_type,
         )
 
-        # Create annotations list
-        annotations = []
-
-        # Add annotation for excerpt 1 if exists
-        if (
-            modified_docs.modified_excerpt_1
-            and not pd.isna(modified_docs.modified_excerpt_1)
-            and modified_docs.modified_excerpt_1.strip()
-        ):
-            start_pos, end_pos = self.find_text_positions(
-                modified_docs.modified_document1, modified_docs.modified_excerpt_1
+    def _create_annotation_for_excerpt(
+        self,
+        modified_docs: EditorResult,
+        validation_result: ValidationResult,
+        conflict_type: str,
+        excerpt_num: int,
+        retry_attempt: int = 1,
+    ) -> Optional[Annotation]:
+        """Create annotation for a specific excerpt if it exists"""
+        if excerpt_num == 1:
+            excerpt = modified_docs.modified_excerpt_1
+            document = modified_docs.modified_document1
+            to_name = "doc_1"
+            from_name = (
+                f"labels_doc1_attempt_{retry_attempt}" if retry_attempt > 1 else "labels_doc1"
             )
-            if start_pos is not None:
-                annotation = Annotation(
-                    from_name="labels_doc1",
-                    to_name="doc_1",
-                    type="labels",
-                    moderator_score=validation_result.score,
-                    moderator_reasoning=validation_result.reasoning,
-                    conflict_type=conflict_type,
-                    clinical_plausibility_score=validation_result.clinical_plausibility_score,
-                    record_realism_score=validation_result.record_realism_score,
-                    clinical_significance_score=validation_result.clinical_significance_score,
-                    retry_attempt=validation_result.retry_attempt,
-                    value=AnnotationValue(
-                        start=start_pos,
-                        end=end_pos,
-                        text=modified_docs.modified_excerpt_1,
-                        labels=["Conflict"],
-                    ),
-                )
-                annotations.append(annotation)
-
-        # Add annotation for excerpt 2 if exists
-        if (
-            modified_docs.modified_excerpt_2
-            and not pd.isna(modified_docs.modified_excerpt_2)
-            and modified_docs.modified_excerpt_2.strip()
-        ):
-            start_pos, end_pos = self.find_text_positions(
-                modified_docs.modified_document2, modified_docs.modified_excerpt_2
+        else:
+            excerpt = modified_docs.modified_excerpt_2
+            document = modified_docs.modified_document2
+            to_name = "doc_2"
+            from_name = (
+                f"labels_doc2_attempt_{retry_attempt}" if retry_attempt > 1 else "labels_doc2"
             )
-            if start_pos is not None:
-                annotation = Annotation(
-                    from_name="labels_doc2",
-                    to_name="doc_2",
-                    type="labels",
-                    moderator_score=validation_result.score,
-                    moderator_reasoning=validation_result.reasoning,
-                    conflict_type=conflict_type,
-                    clinical_plausibility_score=validation_result.clinical_plausibility_score,
-                    record_realism_score=validation_result.record_realism_score,
-                    clinical_significance_score=validation_result.clinical_significance_score,
-                    retry_attempt=validation_result.retry_attempt,
-                    value=AnnotationValue(
-                        start=start_pos,
-                        end=end_pos,
-                        text=modified_docs.modified_excerpt_2,
-                        labels=["Conflict"],
-                    ),
-                )
-                annotations.append(annotation)
 
-        # Create the complete item
-        conflict_item = ConflictDataItem(data=doc_data, annotations=[{"result": annotations}])
+        if not excerpt or pd.isna(excerpt) or not excerpt.strip():
+            return None
 
-        # Add to data list
+        start_pos, end_pos = self.find_text_positions(document, excerpt)
+        if start_pos is None:
+            return None
+
+        return Annotation(
+            from_name=from_name,
+            to_name=to_name,
+            type="labels",
+            moderator_score=validation_result.score,
+            moderator_reasoning=validation_result.reasoning,
+            conflict_type=conflict_type,
+            clinical_plausibility_score=validation_result.clinical_plausibility_score,
+            record_realism_score=validation_result.record_realism_score,
+            clinical_significance_score=validation_result.clinical_significance_score,
+            is_valid=validation_result.is_valid,
+            retry_attempt=retry_attempt,
+            value=AnnotationValue(
+                start=start_pos,
+                end=end_pos,
+                text=excerpt,
+                labels=["Conflict"],
+            ),
+        )
+
+    def save_item(self, conflict_item: ConflictDataItem) -> int:
+        """Add a conflict item to the dataset"""
+        doc_id = len(self.data) + 1
         self.data.append(conflict_item.to_dict())
         self.logger.info(f"Added document with ID: {doc_id} to dataset")
         return doc_id

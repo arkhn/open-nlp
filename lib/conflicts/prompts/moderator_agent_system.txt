@@ -29,11 +29,16 @@ Input format:
 {{
     context_document_1: "{context_document_1}",
     conflict_1: "{conflict_1}",
+    original_excerpt_1: "{original_excerpt_1}",
+    modified_excerpt_1: "{modified_excerpt_1}",
     context_document_2: "{context_document_2}",
-    conflict_2: "{conflict_2}"
+    conflict_2: "{conflict_2}",
+    original_excerpt_2: "{original_excerpt_2}",
+    modified_excerpt_2: "{modified_excerpt_2}"
 }}
 
-Note: context_document_1 and context_document_2 are the modified documents that should be compared against each other to evaluate the conflict quality. These documents represent entries from an EHR system where inconsistencies have been artificially introduced to create training data for medical conflict detection systems.
+Note: context_document_1 and context_document_2 are the modified documents that should be compared against each other to evaluate the conflict quality. The original_excerpt_1 and original_excerpt_2 and modified_excerpt_1 and modified_excerpt_2 show the specific text changes made to create the conflict - use these to focus your evaluation on the actual modifications.
+These documents represent entries from an EHR system where inconsistencies have been artificially introduced to create training data for medical conflict detection systems.
 
 Please provide your evaluation in the following format:
 
