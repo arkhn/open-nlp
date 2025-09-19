@@ -40,14 +40,7 @@
     <Choice value="Needs Review" alias="Need Review"/>
   </Choices>
 
-  <Header value="Confidence Level" level="3"/>
-  <Number name="confidence_level" toName="doc_1" min="0" max="100" step="5" default="80" slider="true"/>
-
-  <Header value="Expert Comments" level="3"/>
-  <TextArea name="expert_comments" toName="doc_1" placeholder="Add your expert analysis here..." rows="4"/>
-
-  <!-- Quality Assessment -->
-  <Header value="Quality Assessment" level="2"/>
+ <!-- Quality Assessment -->
   <View style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 10px 0;">
 
     <!-- Clinical Plausibility -->
@@ -78,8 +71,10 @@
       <Choice value="C - Weak/noise: trivial inconsistency or artifact (e.g., de-identification error)"/>
     </Choices>
 
+     <Header value="Confidence Level" level="3"/>
+  	 <Rating name="confidence" maxRating="5"/>
     <!-- Additional Comments -->
-    <Header value="Additional Quality Comments" level="3"/>
+    <Header value="Additional Comments" level="3"/>
     <TextArea name="quality_comments" toName="doc_1" placeholder="Add specific observations about the conflict quality..." rows="3"/>
   </View>
 </View>
