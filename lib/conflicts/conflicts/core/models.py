@@ -49,8 +49,11 @@ class ValidationResult:
     """Result from the Moderator Agent"""
 
     is_valid: bool
-    score: int  # 1-5 scale as per new format
+    score: float  # Overall score (average of individual scores)
     reasoning: str
+    clinical_plausibility_score: float = 1.0  # 1-5 scale
+    record_realism_score: float = 1.0  # 1-5 scale
+    clinical_significance_score: float = 1.0  # 1-5 scale
 
 
 @dataclass
