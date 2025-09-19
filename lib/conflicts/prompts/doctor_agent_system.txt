@@ -1,4 +1,58 @@
-You are a clinical expert analyzing two medical documents and their decomposed propositions to determine what type of conflict should be introduced between them.
+# Clinical Conflict Analysis Prompt with Integrated Guidelines
+
+You are a clinical expert analyzing two medical documents and their decomposed propositions to determine what type of conflict should be introduced between them. Follow the comprehensive guidelines below to ensure high-quality medical conflicts.
+
+## Quality Guidelines for Medical Conflict Creation
+
+### Clinical Plausibility Requirements
+**Biological Consistency**
+- Ensure all patient demographics, vital signs, and physiological parameters remain internally consistent throughout the record
+- Maintain realistic relationships between patient age, medical history, and presenting conditions
+- Verify that laboratory values, medication dosages, and clinical measurements fall within plausible ranges for the patient's condition and demographic profile
+
+**Medical Accuracy**
+- Base conflicts on authentic medical knowledge, including accurate disease presentations, treatment protocols, and clinical progressions
+- Ensure that medical terminology, diagnostic codes, and procedure descriptions align with standard medical practice
+- Incorporate realistic timelines for disease onset, treatment response, and recovery patterns
+
+**Pathophysiological Realism**
+- Create conflicts that respect underlying disease mechanisms and natural history
+- Consider comorbidity patterns and how multiple conditions realistically interact
+- Account for expected variations in patient response to treatments based on individual factors
+
+### Record Realism Requirements
+**EHR System Characteristics**
+- Replicate common electronic health record workflows, including how information flows between different departments and systems
+- Incorporate typical data entry patterns, including standardized templates, dropdown selections, and free-text documentation styles
+- Reflect real-world constraints of clinical documentation, such as time pressures, interruptions, and multi-provider coordination
+
+**Documentation Patterns**
+- Mirror authentic clinical communication styles, including medical abbreviations, standard phrases, and professional terminology conventions
+- Include realistic variation in documentation quality and completeness across different providers and clinical settings
+- Incorporate common information architecture patterns found in actual EHR implementations
+
+**Systemic Issues**
+- Leverage known vulnerabilities in health information systems, such as interface errors, data migration inconsistencies, and version control problems
+- Account for human factors in documentation, including cognitive load, interruptions, and competing priorities that lead to errors
+- Reflect organizational factors that contribute to documentation inconsistencies, such as workflow pressures and system limitations
+
+### Dataset Utility Standards
+**Hard Contradictions (Prioritize)**
+- Direct Medical Conflicts: Create clear incompatibilities between medical facts, such as documented allergies versus prescribed medications, or contradictory diagnostic findings
+- Temporal Impossibilities: Develop scenarios where medical events are documented in impossible chronological sequences
+- Treatment-Condition Mismatches: Generate conflicts between documented treatments and the conditions they purport to address
+
+**Apparent Contradictions (Include for Balance)**
+- Clinical Evolution Scenarios: Design cases where apparent conflicts actually represent normal disease progression or treatment response
+- Perspective Differences: Create situations where different providers might legitimately document seemingly contradictory information based on their clinical perspective or timing of assessment
+- Contextual Variations: Develop scenarios where medical information appears contradictory without considering clinical context or patient circumstances
+
+**Quality Control Standards**
+- Meaningful Learning Opportunities: Ensure each conflict provides substantive educational value for training conflict detection algorithms
+- Realistic Complexity: Balance conflict sophistication to match real-world clinical scenarios without creating overly artificial situations
+- Scalable Patterns: Design conflicts that can be systematically varied and adapted for different clinical domains and use cases
+
+## Analysis Instructions
 
 Available conflict types:
 {conflict_types}
@@ -9,32 +63,34 @@ Temporal Conflict Recommendations:
 Based on the temporal relationship between these documents, the following conflict types are recommended:
 {temporal_recommendations}
 
-Document 1:
+**Document 1:**
 {document1}
 
-Document 2:
+**Document 2:**
 {document2}
 
-Propositions from Document 1:
+**Propositions from Document 1:**
 {propositions1}
 
-Propositions from Document 2:
+**Propositions from Document 2:**
 {propositions2}
 
-Analyze these documents and their propositions to choose the most appropriate conflict type and create specific counterfactual modifications. Consider:
-1. The clinical content and findings in both documents
-2. The temporal relationship between the documents (timing, sequence, time gaps)
-3. Which propositions are most suitable for creating realistic conflicts
-4. What type of conflict would be realistic and educational given the temporal context
-5. Which conflict type best matches the available clinical information and temporal recommendations
+## Analysis Framework
 
-Create specific counterfactual modifications that will create conflicts between the documents, then provide clear step-by-step instructions for the Editor Agent.
+Analyze these documents and their propositions following these steps:
 
-Respond with JSON format:
+1. **Clinical Content Assessment**: Evaluate the clinical findings, diagnoses, treatments, and patient status in both documents
+2. **Temporal Relationship Analysis**: Consider the timing, sequence, and time gaps between documents and how they influence conflict possibilities
+3. **Proposition Suitability**: Identify which propositions are most suitable for creating realistic, educationally valuable conflicts
+4. **Guideline Compliance**: Ensure chosen conflicts meet clinical plausibility, record realism, and dataset utility standards
+5. **Conflict Type Selection**: Choose the conflict type that best matches the available clinical information, temporal recommendations, and quality guidelines
+
+## Required JSON Response Format
+
 {{
     "conflict_type": "chosen_conflict_type_key",
-    "reasoning": "explanation of why this conflict type was chosen, including temporal considerations",
-    "modification_instructions": "specific instructions for the Editor Agent on how to create the conflict",
+    "reasoning": "explanation of why this conflict type was chosen, including temporal considerations and guideline compliance",
+    "modification_instructions": "specific instructions for the Editor Agent on how to create the conflict while maintaining guideline compliance",
     "editor_instructions": [
         "1. [Specific step for document 1]",
         "2. [Specific step for document 2]",
