@@ -102,7 +102,7 @@ class Pipeline:
         validation_result,
     ) -> bool:
         """
-        Save validated documents to database
+        Save documents to database (both successful and failed attempts)
 
         Args:
             pair_id: Document pair ID for logging
@@ -114,16 +114,18 @@ class Pipeline:
         Returns:
             True if saved successfully, False otherwise
         """
-        if validation_result.is_valid:
+        try:
             doc_id = self.dataset_manager.save_validated_documents(
                 document_pair, editor_result, conflict_type, validation_result
             )
-            self.logger.info(f"Document pair {pair_id} processed successfully (DB ID: {doc_id})")
-            return True
-        else:
-            self.logger.warning(
-                f"Document pair {pair_id} failed validation after {self.max_retries} attempts"
+            status = "VALID" if validation_result.is_valid else "INVALID"
+            self.logger.info(
+                f"Document pair {pair_id} saved (DB ID: {doc_id}, Status: {status},"
+                f" Attempt: {validation_result.retry_attempt})"
             )
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to save document pair {pair_id}: {e}")
             return False
 
     def process_document_pair(self, document_pair: DocumentPair) -> Tuple[bool, Dict[str, Any]]:
@@ -174,9 +176,10 @@ class Pipeline:
         result_data["doctor_time"] = doctor_time
         result_data["conflict_type"] = conflict_result.conflict_type
 
-        # Step 3: Editor and Moderator agents with retry logic for editor only
+        # Step 3: Editor and Moderator agents with retry logic
         validation_result = None
         editor_result = None
+        all_attempts = []  # Store all attempts for analysis
 
         for attempt in range(1, self.max_retries + 1):
             # Execute editor agent
@@ -198,17 +201,24 @@ class Pipeline:
                     clinical_plausibility_score=1.0,
                     record_realism_score=1.0,
                     clinical_significance_score=1.0,
+                    retry_attempt=attempt,
                 )
                 result_data["moderator_result"] = validation_result
                 result_data["moderator_time"] = 0
+                all_attempts.append((editor_result, validation_result, attempt))
                 break
 
             # Execute moderator agent for validation
             validation_result, moderator_time = self._execute_agent(
                 self.moderator_agent, document_pair, editor_result, conflict_result.conflict_type
             )
+            # Add retry attempt to validation result
+            validation_result.retry_attempt = attempt
             result_data["moderator_result"] = validation_result
             result_data["moderator_time"] = moderator_time
+
+            # Store this attempt
+            all_attempts.append((editor_result, validation_result, attempt))
 
             self.logger.info(
                 f"Attempt {attempt}: {conflict_result.conflict_type} conflict, "
@@ -226,25 +236,39 @@ class Pipeline:
                 self.logger.warning("Validation failed, retrying...")
                 time.sleep(1)
 
-        # Step 3: Save to database if validation passed
-        if validation_result and validation_result.is_valid:
+        # Step 4: Save all attempts to database (both successful and failed)
+        saved_attempts = []
+        for editor_result_attempt, validation_result_attempt, attempt_num in all_attempts:
             is_success = self._save_to_database(
-                pair_id,
+                f"{pair_id}_attempt_{attempt_num}",
                 document_pair,
-                editor_result,
+                editor_result_attempt,
                 conflict_result.conflict_type,
-                validation_result,
+                validation_result_attempt,
             )
-            result_data["success"] = is_success
+            saved_attempts.append(
+                {
+                    "attempt": attempt_num,
+                    "saved": is_success,
+                    "valid": validation_result_attempt.is_valid,
+                    "score": validation_result_attempt.score,
+                }
+            )
+
+        result_data["all_attempts"] = saved_attempts
+        result_data["success"] = validation_result.is_valid if validation_result else False
 
         result_data["processing_time"] = time.time() - start_time
 
         # Summary log
         status = "SUCCESS" if result_data["success"] else "FAILED"
+        total_attempts = len(saved_attempts)
+        successful_attempts = sum(1 for attempt in saved_attempts if attempt["valid"])
+
         self.logger.info(
             f"Pair {pair_id}: {status} - {conflict_result.conflict_type} conflict, "
             f"{proposition_result[0].total_propositions + proposition_result[1].total_propositions}"
-            f" propositions"
+            f" propositions, {successful_attempts}/{total_attempts} attempts saved"
         )
 
         return result_data["success"], result_data

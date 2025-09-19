@@ -98,6 +98,7 @@ class ModeratorAgent(BaseAgent):
                 clinical_plausibility_score=1.0,
                 record_realism_score=1.0,
                 clinical_significance_score=1.0,
+                retry_attempt=1,
             )
 
     def _parse_score_response(self, response: str) -> dict:
