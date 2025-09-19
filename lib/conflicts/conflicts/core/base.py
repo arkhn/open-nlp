@@ -169,7 +169,7 @@ class DatasetManager:
     def save_validated_documents(
         self,
         original_pair: DocumentPair,
-        modified_docs: EditorResult,
+        editor_result: EditorResult,
         conflict_type: str,
         validation_result: ValidationResult,
     ) -> int:
@@ -178,8 +178,8 @@ class DatasetManager:
 
         # Create document data
         doc_data = DocumentData(
-            doc_1=modified_docs.modified_document1,
-            doc_2=modified_docs.modified_document2,
+            doc_1=original_pair.doc1_text,
+            doc_2=editor_result.modified_document2,
             orig_doc_1=original_pair.doc1_text,
             orig_doc_2=original_pair.doc2_text,
             created_at=datetime.now().isoformat(),
@@ -192,12 +192,12 @@ class DatasetManager:
 
         # Add annotation for excerpt 1 if exists
         if (
-            modified_docs.modified_excerpt_1
-            and not pd.isna(modified_docs.modified_excerpt_1)
-            and modified_docs.modified_excerpt_1.strip()
+            editor_result.original_excerpt_1
+            and not pd.isna(editor_result.original_excerpt_1)
+            and editor_result.original_excerpt_1.strip()
         ):
             start_pos, end_pos = self.find_text_positions(
-                modified_docs.modified_document1, modified_docs.modified_excerpt_1
+                original_pair.doc1_text, editor_result.original_excerpt_1
             )
             if start_pos is not None:
                 annotation = Annotation(
@@ -210,7 +210,7 @@ class DatasetManager:
                     value=AnnotationValue(
                         start=start_pos,
                         end=end_pos,
-                        text=modified_docs.modified_excerpt_1,
+                        text=editor_result.original_excerpt_1,
                         labels=["Conflict"],
                     ),
                 )
@@ -218,12 +218,12 @@ class DatasetManager:
 
         # Add annotation for excerpt 2 if exists
         if (
-            modified_docs.modified_excerpt_2
-            and not pd.isna(modified_docs.modified_excerpt_2)
-            and modified_docs.modified_excerpt_2.strip()
+            editor_result.modified_excerpt_2
+            and not pd.isna(editor_result.modified_excerpt_2)
+            and editor_result.modified_excerpt_2.strip()
         ):
             start_pos, end_pos = self.find_text_positions(
-                modified_docs.modified_document2, modified_docs.modified_excerpt_2
+                editor_result.modified_document2, editor_result.modified_excerpt_2
             )
             if start_pos is not None:
                 annotation = Annotation(
@@ -236,7 +236,7 @@ class DatasetManager:
                     value=AnnotationValue(
                         start=start_pos,
                         end=end_pos,
-                        text=modified_docs.modified_excerpt_2,
+                        text=editor_result.modified_excerpt_2,
                         labels=["Conflict"],
                     ),
                 )

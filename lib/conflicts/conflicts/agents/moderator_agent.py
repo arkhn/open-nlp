@@ -23,7 +23,7 @@ class ModeratorAgent(BaseAgent):
         self.min_score = min_validation_score
 
     def __call__(
-        self, original_pair: DocumentPair, modified_docs: EditorResult, conflict_type: str
+        self, original_pair: DocumentPair, editor_result: EditorResult, conflict_type: str
     ) -> ValidationResult:
         """
         Validate the modifications made to clinical documents
@@ -40,10 +40,11 @@ class ModeratorAgent(BaseAgent):
 
         try:
             prompt = self.system_prompt.format(
-                context_document_1=self._truncate_document(modified_docs.modified_document1),
-                context_document_2=self._truncate_document(modified_docs.modified_document2),
-                conflict_1=modified_docs.change_info_1 or "No change info available",
-                conflict_2=modified_docs.change_info_2 or "No change info available",
+                context_document_1=self._truncate_document(original_pair.doc1_text),
+                context_document_2=self._truncate_document(editor_result.modified_document2),
+                excerpt_2=editor_result.modified_excerpt_2,
+                excerpt_1=editor_result.original_excerpt_1,
+                conflict_2=editor_result.change_info_2 or "No change info available",
             )
             print(prompt)
 
@@ -109,15 +110,11 @@ class ModeratorAgent(BaseAgent):
         """
         checks = {
             "documents_modified": {
-                "doc1_changed": original_pair.doc1_text != modified_docs.modified_document1,
                 "doc2_changed": original_pair.doc2_text != modified_docs.modified_document2,
                 "any_changed": False,
             },
             "length_analysis": {
                 "doc1_original_length": len(original_pair.doc1_text),
-                "doc1_modified_length": len(modified_docs.modified_document1),
-                "doc1_length_change": len(modified_docs.modified_document1)
-                - len(original_pair.doc1_text),
                 "doc2_original_length": len(original_pair.doc2_text),
                 "doc2_modified_length": len(modified_docs.modified_document2),
                 "doc2_length_change": len(modified_docs.modified_document2)

@@ -34,8 +34,8 @@ class DoctorAgent(BaseAgent):
     def __call__(
         self,
         document_pair: DocumentPair,
-        propositions1: PropositionResult = None,
-        propositions2: PropositionResult = None,
+        propositions1: PropositionResult,
+        propositions2: PropositionResult,
     ) -> ConflictResult:
         """
         Analyze documents and determine the best conflict type to introduce
@@ -100,7 +100,12 @@ class DoctorAgent(BaseAgent):
             parsed_response = self._parse_json_response(response)
 
             # Validate required fields
-            required_fields = ["conflict_type", "reasoning", "modification_instructions"]
+            required_fields = [
+                "conflict_type",
+                "reasoning",
+                "modification_instructions",
+                "highlighted_text_doc1",
+            ]
             for field in required_fields:
                 if field not in parsed_response:
                     raise ValueError(f"Missing required field '{field}' in Doctor Agent response")
@@ -117,6 +122,7 @@ class DoctorAgent(BaseAgent):
                 conflict_type=parsed_response["conflict_type"],
                 reasoning=parsed_response["reasoning"],
                 modification_instructions=parsed_response["modification_instructions"],
+                highlighted_text_doc1=parsed_response["highlighted_text_doc1"],
                 editor_instructions=parsed_response.get("editor_instructions", []),
                 proposition_conflicts=parsed_response.get("proposition_conflicts", []),
             )

@@ -140,22 +140,12 @@ def parse_response(
         data = _extract_json_from_response(response)
 
         # Check if we have the expected edit operations format
-        required_fields = ["doc1", "doc2", "conflict_type"]
-        if all(field in data for field in required_fields):
+        # Support both old format (doc1 + doc2) and new format (doc2 only)
+        if "doc2" in data and "conflict_type" in data:
             logging.info("Found edit operations format, applying operations to documents")
 
             # Apply edit operations to documents
             try:
-                (
-                    modified_doc_1,
-                    change_description_1,
-                    orig_excerpt_1,
-                    mod_excerpt_1,
-                ) = apply_edit_operation(
-                    original_doc_1,
-                    data["doc1"],
-                    min_text_length,
-                )
                 (
                     modified_doc_2,
                     change_description_2,
@@ -178,18 +168,14 @@ def parse_response(
             conflict_type = data["conflict_type"]
 
             return {
-                "modified_doc_1": modified_doc_1,
                 "modified_doc_2": modified_doc_2,
                 "conflict_type": conflict_type,
-                "change_info_1": change_description_1,
                 "change_info_2": change_description_2,
-                "original_excerpt_1": orig_excerpt_1,
-                "modified_excerpt_1": mod_excerpt_1,
                 "original_excerpt_2": orig_excerpt_2,
                 "modified_excerpt_2": mod_excerpt_2,
             }
         else:
-            raise ValueError(f"Response missing required fields: {required_fields}")
+            raise ValueError("Response missing required fields: doc2 and conflict_type")
 
     except json.JSONDecodeError as e:
         logging.error(f"Failed to parse response as JSON: {e}")
