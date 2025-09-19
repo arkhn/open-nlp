@@ -74,6 +74,10 @@ def apply_edit_operation(
     target_text = operation["target_text"]
     replacement_text = operation.get("replacement_text", "")
 
+    # Handle "none" operation - no changes needed
+    if op_type == "none":
+        return document, "No changes made", "", ""
+
     # Check if target_text exists in document
     similar_text = find_similar_text(document, target_text)
 

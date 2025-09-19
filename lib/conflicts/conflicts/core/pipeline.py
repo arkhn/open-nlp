@@ -14,7 +14,7 @@ from ..agents.doctor_agent import DoctorAgent
 from ..agents.editor_agent import EditorAgent
 from ..agents.moderator_agent import ModeratorAgent
 from ..agents.proposition_agent import PropositionAgent
-from .base import DatasetManager
+from .base import ConflictDataItem, DatasetManager
 from .data_loader import DataLoader
 from .models import DocumentPair, ValidationResult
 
@@ -119,11 +119,77 @@ class Pipeline:
                 document_pair, editor_result, conflict_type, validation_result
             )
             status = "VALID" if validation_result.is_valid else "INVALID"
+            threshold_status = "MEETS" if validation_result.is_valid else "BELOW"
             self.logger.info(
                 f"Document pair {pair_id} saved (DB ID: {doc_id}, Status: {status},"
-                f" Attempt: {validation_result.retry_attempt})"
+                f" Threshold: {threshold_status})"
             )
             return True
+        except Exception as e:
+            self.logger.error(f"Failed to save document pair {pair_id}: {e}")
+            return False
+
+    def _save_all_attempts_to_database(
+        self,
+        pair_id: str,
+        document_pair: DocumentPair,
+        all_attempts: List[Tuple],
+        conflict_type: str,
+    ) -> bool:
+        """
+        Save all attempts to database as multiple annotations within a single document pair
+
+        Args:
+            pair_id: Document pair ID for logging
+            document_pair: Original document pair
+            all_attempts: List of (editor_result, validation_result, attempt_num) tuples
+            conflict_type: Type of conflict identified
+
+        Returns:
+            True if saved successfully, False otherwise
+        """
+        try:
+            # Use the first attempt's editor result for the document content
+            first_editor_result = all_attempts[0][0]
+
+            # Create annotations for all attempts
+            all_annotations = []
+
+            for editor_result_attempt, validation_result_attempt, attempt_num in all_attempts:
+                # Create annotations for both excerpts using helper method
+                for excerpt_num in [1, 2]:
+                    annotation = self.dataset_manager._create_annotation_for_excerpt(
+                        editor_result_attempt,
+                        validation_result_attempt,
+                        conflict_type,
+                        excerpt_num,
+                        attempt_num,
+                    )
+                    if annotation:
+                        all_annotations.append(annotation)
+
+            # Create document data using the first attempt's content
+            doc_data = self.dataset_manager._create_document_data(
+                first_editor_result, document_pair, all_attempts[0][1], conflict_type
+            )
+
+            # Create the complete item with all annotations
+            conflict_item = ConflictDataItem(
+                data=doc_data, annotations=[{"result": all_annotations}]
+            )
+
+            # Save to database
+            doc_id = self.dataset_manager.save_item(conflict_item)
+
+            status = "VALID" if any(attempt[1].is_valid for attempt in all_attempts) else "INVALID"
+            threshold_count = sum(1 for attempt in all_attempts if attempt[1].is_valid)
+
+            self.logger.info(
+                f"Document pair {pair_id} saved (DB ID: {doc_id}, Status: {status},"
+                f" {threshold_count}/{len(all_attempts)} attempts meet threshold)"
+            )
+            return True
+
         except Exception as e:
             self.logger.error(f"Failed to save document pair {pair_id}: {e}")
             return False
@@ -201,7 +267,6 @@ class Pipeline:
                     clinical_plausibility_score=1.0,
                     record_realism_score=1.0,
                     clinical_significance_score=1.0,
-                    retry_attempt=attempt,
                 )
                 result_data["moderator_result"] = validation_result
                 result_data["moderator_time"] = 0
@@ -212,8 +277,7 @@ class Pipeline:
             validation_result, moderator_time = self._execute_agent(
                 self.moderator_agent, document_pair, editor_result, conflict_result.conflict_type
             )
-            # Add retry attempt to validation result
-            validation_result.retry_attempt = attempt
+            # The meets_threshold field is already calculated in the moderator agent
             result_data["moderator_result"] = validation_result
             result_data["moderator_time"] = moderator_time
 
@@ -228,30 +292,34 @@ class Pipeline:
                 f"significance={validation_result.clinical_significance_score}/5"
             )
 
+            # Check if this attempt was successful
             if validation_result.is_valid:
                 result_data["success"] = True
+                self.logger.info("Validation passed, stopping retries...")
                 break
 
             if attempt < self.max_retries:
                 self.logger.warning("Validation failed, retrying...")
                 time.sleep(1)
 
-        # Step 4: Save all attempts to database (both successful and failed)
+        # Step 4: Save all attempts to database (no duplication, all attempts in one document pair)
         saved_attempts = []
+        is_success = self._save_all_attempts_to_database(
+            pair_id,
+            document_pair,
+            all_attempts,
+            conflict_result.conflict_type,
+        )
+
+        # Track all attempts for analysis
         for editor_result_attempt, validation_result_attempt, attempt_num in all_attempts:
-            is_success = self._save_to_database(
-                f"{pair_id}_attempt_{attempt_num}",
-                document_pair,
-                editor_result_attempt,
-                conflict_result.conflict_type,
-                validation_result_attempt,
-            )
             saved_attempts.append(
                 {
                     "attempt": attempt_num,
                     "saved": is_success,
                     "valid": validation_result_attempt.is_valid,
                     "score": validation_result_attempt.score,
+                    "meets_threshold": validation_result_attempt.is_valid,
                 }
             )
 
@@ -264,11 +332,13 @@ class Pipeline:
         status = "SUCCESS" if result_data["success"] else "FAILED"
         total_attempts = len(saved_attempts)
         successful_attempts = sum(1 for attempt in saved_attempts if attempt["valid"])
+        threshold_attempts = sum(1 for attempt in saved_attempts if attempt["meets_threshold"])
 
         self.logger.info(
             f"Pair {pair_id}: {status} - {conflict_result.conflict_type} conflict, "
             f"{proposition_result[0].total_propositions + proposition_result[1].total_propositions}"
-            f" propositions, {successful_attempts}/{total_attempts} attempts saved"
+            f" propositions, {successful_attempts}/{total_attempts} valid,"
+            f" {threshold_attempts}/{total_attempts} meet threshold"
         )
 
         return result_data["success"], result_data
