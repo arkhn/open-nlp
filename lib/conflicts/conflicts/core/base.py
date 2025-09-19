@@ -36,6 +36,7 @@ class Annotation:
     clinical_plausibility_score: float = 1.0
     record_realism_score: float = 1.0
     clinical_significance_score: float = 1.0
+    retry_attempt: int = 1
 
 
 @dataclass
@@ -213,6 +214,7 @@ class DatasetManager:
                     clinical_plausibility_score=validation_result.clinical_plausibility_score,
                     record_realism_score=validation_result.record_realism_score,
                     clinical_significance_score=validation_result.clinical_significance_score,
+                    retry_attempt=validation_result.retry_attempt,
                     value=AnnotationValue(
                         start=start_pos,
                         end=end_pos,
@@ -242,6 +244,7 @@ class DatasetManager:
                     clinical_plausibility_score=validation_result.clinical_plausibility_score,
                     record_realism_score=validation_result.record_realism_score,
                     clinical_significance_score=validation_result.clinical_significance_score,
+                    retry_attempt=validation_result.retry_attempt,
                     value=AnnotationValue(
                         start=start_pos,
                         end=end_pos,
