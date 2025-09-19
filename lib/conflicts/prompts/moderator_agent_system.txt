@@ -11,9 +11,10 @@ Below are two modified documents that have been altered to create a factual conf
 Input format:
 {{
     context_document_1: "{context_document_1}",
-    conflict_1: "{conflict_1}",
+    excerpt_1: "{excerpt_1}",
     context_document_2: "{context_document_2}",
     conflict_2: "{conflict_2}"
+    excerpt_2: "{excerpt_2}"
 }}
 
 Note: context_document_1 and context_document_2 are the modified documents that should be compared against each other to evaluate the conflict quality.

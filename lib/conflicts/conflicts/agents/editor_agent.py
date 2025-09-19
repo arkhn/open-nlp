@@ -45,22 +45,20 @@ class EditorAgent(BaseAgent):
                 if attempt == max_retries - 1:
                     self.logger.error(f"All {max_retries} attempts failed: {e}")
                     return EditorResult(
-                        modified_document1=document_pair.doc1_text,
                         modified_document2=document_pair.doc2_text,
                         changes_made=f"Failed to create conflict after {max_retries} attempts: {e}",
-                        change_info_1="No changes made - all attempts failed",
                         change_info_2="No changes made - all attempts failed",
                     )
                 self.logger.warning(f"Attempt {attempt + 1} failed: {e}, retrying...")
 
     def _perform_modification(
-        self, document_pair: DocumentPair, conflict_instructions: ConflictResult
+        self, document_pair: DocumentPair, conflict_result: ConflictResult
     ) -> EditorResult:
         """Perform a single modification attempt"""
-        prompt = self._build_prompt(document_pair, conflict_instructions)
+        prompt = self._build_prompt(document_pair, conflict_result)
         response = self._execute_prompt(prompt, self.cfg.model.editor_temperature)
         parsed_result = self._parse_and_validate_response(response, document_pair)
-        return self._create_result(parsed_result, document_pair)
+        return self._create_result(parsed_result, document_pair, conflict_result)
 
     def _build_prompt(
         self, document_pair: DocumentPair, conflict_instructions: ConflictResult
@@ -126,24 +124,23 @@ class EditorAgent(BaseAgent):
             self.logger.error(f"Response was: {response}")
             raise
 
-        if (
-            parsed_result["modified_doc_1"].strip() == document_pair.doc1_text.strip()
-            and parsed_result["modified_doc_2"].strip() == document_pair.doc2_text.strip()
-        ):
+        if parsed_result["modified_doc_2"].strip() == document_pair.doc2_text.strip():
             raise ValueError("No modifications were applied to the documents")
 
         return parsed_result
 
-    def _create_result(self, parsed_result: dict, document_pair: DocumentPair) -> EditorResult:
+    def _create_result(
+        self,
+        parsed_result: dict,
+        document_pair: DocumentPair,
+        conflict_instructions: ConflictResult,
+    ) -> EditorResult:
         """Create and log the final result"""
         result = EditorResult(
-            modified_document1=parsed_result["modified_doc_1"],
             modified_document2=parsed_result["modified_doc_2"],
             changes_made=f"Applied {parsed_result['conflict_type']} conflict modifications",
-            change_info_1=parsed_result.get("change_info_1"),
             change_info_2=parsed_result.get("change_info_2"),
-            original_excerpt_1=parsed_result.get("original_excerpt_1"),
-            modified_excerpt_1=parsed_result.get("modified_excerpt_1"),
+            original_excerpt_1=conflict_instructions.highlighted_text_doc1,
             original_excerpt_2=parsed_result.get("original_excerpt_2"),
             modified_excerpt_2=parsed_result.get("modified_excerpt_2"),
         )
@@ -152,10 +149,9 @@ class EditorAgent(BaseAgent):
         self.logger.info(f"Conflict type: {parsed_result['conflict_type']}")
 
         # Log document length changes
-        orig_len1, orig_len2 = len(document_pair.doc1_text), len(document_pair.doc2_text)
-        mod_len1, mod_len2 = len(result.modified_document1), len(result.modified_document2)
+        orig_len2 = len(document_pair.doc2_text)
+        mod_len2 = len(result.modified_document2)
 
-        self.logger.debug(f"Document 1 length: {orig_len1} -> {mod_len1} ({mod_len1-orig_len1:+d})")
         self.logger.debug(f"Document 2 length: {orig_len2} -> {mod_len2} ({mod_len2-orig_len2:+d})")
 
         return result

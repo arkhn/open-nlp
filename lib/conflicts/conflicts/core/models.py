@@ -25,6 +25,7 @@ class ConflictResult:
     conflict_type: str
     reasoning: str
     modification_instructions: str
+    highlighted_text_doc1: str
     editor_instructions: Optional[list[str]] = None
     proposition_conflicts: Optional[list[dict]] = None
 
@@ -33,13 +34,10 @@ class ConflictResult:
 class EditorResult:
     """Result from the Editor Agent"""
 
-    modified_document1: str
     modified_document2: str
     changes_made: str
-    change_info_1: Optional[str] = None
     change_info_2: Optional[str] = None
     original_excerpt_1: Optional[str] = None
-    modified_excerpt_1: Optional[str] = None
     original_excerpt_2: Optional[str] = None
     modified_excerpt_2: Optional[str] = None
 
