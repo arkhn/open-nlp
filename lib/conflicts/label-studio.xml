@@ -17,15 +17,50 @@
       </Labels>
     </View>
   </View>
-   <Header value="Évaluation globale"/>
-  <Header value="Statut de validation" level="2"/>
-  <Choices name="validation_status" toName="doc_1" choice="single-radio">
-    <Choice value="Approved" alias="Accept"/>
-    <Choice value="Rejected" alias="Reject"/>
-    <Choice value="Needs Review" alias="Need Review"/>
-  </Choices>
-  <Header value="Niveau de confiance" level="2"/>
-  <Number name="confidence_level" toName="doc_1" min="0" max="100" step="5" default="80" slider="true"/>
-  <Header value="Commentaires d'expert" level="2"/>
-  <TextArea name="expert_comments" toName="doc_1" placeholder="Écrire un commentaire ici..." rows="4"/>
+
+
+ <!-- Quality Assessment -->
+  <View style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 10px 0;">
+     <Header value="Validation Status" level="3"/>
+    <Choices name="validation_status" toName="doc_1" choice="single-radio">
+     <Choice value="Approved" alias="Accept"/>
+     <Choice value="Rejected" alias="Reject"/>
+     <Choice value="Needs Review" alias="Need Review"/>
+    </Choices>
+    <!-- Clinical Plausibility -->
+    <Header value="Clinical Plausibility (1–5)" level="3"/>
+    <Choices name="clinical_plausibility" toName="doc_1" choice="single-radio">
+      <Choice value="1 - Clinically consistent and expected given the context (e.g., blood pressure improving after antihypertensive therapy, wound healing progression notes)"/>
+      <Choice value="2 - Plausible with reasonable clinical explanation (e.g., medication dosage changes over time, symptom improvement with treatment)"/>
+      <Choice value="3 - Biologically impossible (e.g., patient is both 30 and 73 years old)"/>
+      <Choice value="4 - Highly implausible physiologically (e.g., lab values swing drastically without explanation)"/>
+      <Choice value="5 - Possible but doubtful (e.g., stent documented as placed vs not placed)"/>
+    </Choices>
+
+    <!-- Clinical Significance -->
+    <Header value="Clinical Significance (1–5)" level="3"/>
+    <Choices name="clinical_significance" toName="doc_1" choice="single-radio">
+      <Choice value="1 - Trivial inconsistency with no clinical impact (e.g., minor formatting differences)"/>
+      <Choice value="2 - Minor inconsistency that doesn't affect patient care (e.g., different date formats)"/>
+      <Choice value="3 - Moderate inconsistency that could cause confusion (e.g., conflicting medication dosages)"/>
+      <Choice value="4 - Significant inconsistency that could impact clinical decisions (e.g., conflicting diagnoses)"/>
+      <Choice value="5 - Critical inconsistency that could harm patient safety (e.g., conflicting allergies, incompatible vital signs)"/>
+    </Choices>
+
+    <!-- Temporal Appropriateness -->
+    <Header value="Temporal Appropriateness (1–5)" level="3"/>
+    <Choices name="temporal_appropriateness" toName="doc_1" choice="single-radio">
+      <Choice value="1 - Temporally inappropriate - contradiction easily explained by normal clinical evolution (e.g., 'No fever' on Day 1 vs 'Fever 101°F' on Day 3 during infection treatment)"/>
+      <Choice value="2 - Poor temporal context - contradiction likely reflects expected clinical progression (e.g., 'Hypertensive crisis' on Day 1 vs 'Blood pressure controlled' on Day 3 with therapy)"/>
+      <Choice value="3 - Questionable temporal appropriateness - contradiction spans timeframe where some clinical change possible but not expected (e.g., 'No known drug allergies' on Day 1 vs 'Allergic to penicillin' on Day 2 without new exposure)"/>
+      <Choice value="4 - Good temporal appropriateness - same-day contradictions for conditions that should remain stable (e.g., 'Gallbladder removed in 2015' vs 'Cholelithiasis present' documented on same day)"/>
+      <Choice value="5 - Optimal temporal appropriateness - contradictions involving immutable historical facts or same-day stable conditions (e.g., 'Previous coronary bypass surgery' vs 'No cardiac surgical history' regardless of timeframe)"/>
+    </Choices>
+
+     <Header value="Confidence Level" level="3"/>
+  	 <Rating name="confidence" maxRating="5"/>
+    <!-- Additional Comments -->
+    <Header value="Additional Comments" level="3"/>
+    <TextArea name="quality_comments" toName="doc_1" placeholder="Add specific observations about the conflict quality..." rows="3"/>
+  </View>
 </View>
