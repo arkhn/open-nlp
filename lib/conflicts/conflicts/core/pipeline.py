@@ -262,7 +262,7 @@ class Pipeline:
                 )
                 validation_result = ValidationResult(
                     is_valid=False,
-                    score=1.0,
+                    overall_score=1.0,
                     reasoning="Editor agent failed to modify - no changes to validate",
                     clinical_plausibility_score=1.0,
                     record_realism_score=1.0,
@@ -286,7 +286,7 @@ class Pipeline:
 
             self.logger.info(
                 f"Attempt {attempt}: {conflict_result.conflict_type} conflict, "
-                f"valid={validation_result.is_valid}, overall={validation_result.score}/5, "
+                f"valid={validation_result.is_valid}, overall={validation_result.overall_score}/5, "
                 f"clinical={validation_result.clinical_plausibility_score}/5, "
                 f"realism={validation_result.record_realism_score}/5, "
                 f"significance={validation_result.clinical_significance_score}/5"
@@ -318,7 +318,7 @@ class Pipeline:
                     "attempt": attempt_num,
                     "saved": is_success,
                     "valid": validation_result_attempt.is_valid,
-                    "score": validation_result_attempt.score,
+                    "overall_score": validation_result_attempt.overall_score,
                     "meets_threshold": validation_result_attempt.is_valid,
                 }
             )
