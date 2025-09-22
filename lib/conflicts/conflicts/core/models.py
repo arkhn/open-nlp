@@ -49,7 +49,7 @@ class ValidationResult:
     """Result from the Moderator Agent"""
 
     is_valid: bool
-    score: float  # Overall score (average of individual scores)
+    overall_score: float  # Overall score (average of individual scores)
     reasoning: str
     clinical_plausibility_score: float = 1.0  # 1-5 scale
     record_realism_score: float = 1.0  # 1-5 scale

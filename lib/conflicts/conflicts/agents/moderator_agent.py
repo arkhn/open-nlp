@@ -64,7 +64,7 @@ class ModeratorAgent(BaseAgent):
             parsed_response = self._parse_score_response(response)
 
             # Extract scores and reasoning
-            overall_score = parsed_response.get("score", 1)
+            overall_score = parsed_response.get("overall_score", 1)
             clinical_plausibility_score = parsed_response.get("clinical_plausibility_score", 1)
             record_realism_score = parsed_response.get("record_realism_score", 1)
             clinical_significance_score = parsed_response.get("clinical_significance_score", 1)
@@ -81,7 +81,7 @@ class ModeratorAgent(BaseAgent):
 
             result = ValidationResult(
                 is_valid=is_valid,
-                score=overall_score,
+                overall_score=overall_score,
                 reasoning=reasoning,
                 clinical_plausibility_score=clinical_plausibility_score,
                 record_realism_score=record_realism_score,
@@ -90,7 +90,7 @@ class ModeratorAgent(BaseAgent):
 
             self.logger.info(
                 f"Moderator validation completed: {'VALID' if result.is_valid else 'INVALID'} "
-                f"(Overall: {result.score}/5, Clinical: {clinical_plausibility_score}/5, "
+                f"(Overall: {result.overall_score}/5, Clinical: {clinical_plausibility_score}/5, "
                 f"Realism: {record_realism_score}/5, Significance: {clinical_significance_score}/5)"
             )
 
@@ -104,7 +104,7 @@ class ModeratorAgent(BaseAgent):
         """Create a standardized error result"""
         return ValidationResult(
             is_valid=False,
-            score=1.0,
+            overall_score=1.0,
             reasoning=f"Validation failed due to error: {error_message}",
             clinical_plausibility_score=1.0,
             record_realism_score=1.0,
@@ -125,6 +125,7 @@ class ModeratorAgent(BaseAgent):
                 "significance": r"(?:clinical.*?significance|significance).*?(\d+(?:\.\d+)?)",
                 "clinical": r"(?:clinical.*?plausibility|plausibility).*?(\d+(?:\.\d+)?)",
                 "realism": r"(?:record.*?realism|realism).*?(\d+(?:\.\d+)?)",
+                "overall_score": r"(?:overall.*?score|score).*?(\d+(?:\.\d+)?)",
             }
 
             for score_type, pattern in patterns.items():
@@ -134,12 +135,9 @@ class ModeratorAgent(BaseAgent):
                     if 1 <= score <= 5:
                         scores[score_type] = score
 
-            # Calculate overall score as average
-            overall_score = sum(scores.values()) / len(scores)
-
             return {
                 "reasoning": reasoning,
-                "score": round(overall_score, 1),
+                "overall_score": scores["overall_score"],
                 "clinical_plausibility_score": round(scores["clinical"], 1),
                 "record_realism_score": round(scores["realism"], 1),
                 "clinical_significance_score": round(scores["significance"], 1),
@@ -149,7 +147,7 @@ class ModeratorAgent(BaseAgent):
             self.logger.error(f"Failed to parse score response: {e}")
             return {
                 "reasoning": response.strip() if response else "Failed to parse response",
-                "score": 1.0,
+                "overall_score": 1.0,
                 "clinical_plausibility_score": 1.0,
                 "record_realism_score": 1.0,
                 "clinical_significance_score": 1.0,

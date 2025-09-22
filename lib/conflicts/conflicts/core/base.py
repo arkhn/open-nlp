@@ -216,7 +216,7 @@ class DatasetManager:
             created_at=datetime.now().isoformat(),
             timestamp_1=str(original_pair.doc1_timestamp) if original_pair.doc1_timestamp else None,
             timestamp_2=str(original_pair.doc2_timestamp) if original_pair.doc2_timestamp else None,
-            moderator_score=validation_result.score,
+            moderator_score=validation_result.overall_score,
             moderator_reasoning=validation_result.reasoning,
             conflict_type=conflict_type,
         )
@@ -256,7 +256,7 @@ class DatasetManager:
             from_name=from_name,
             to_name=to_name,
             type="labels",
-            moderator_score=validation_result.score,
+            moderator_score=validation_result.overall_score,
             moderator_reasoning=validation_result.reasoning,
             conflict_type=conflict_type,
             clinical_plausibility_score=validation_result.clinical_plausibility_score,
