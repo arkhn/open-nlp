@@ -30,12 +30,6 @@ Analyze these documents and their propositions to choose the most appropriate co
 
 Create specific counterfactual modifications that will create conflicts between the documents, then provide clear step-by-step instructions for the Editor Agent.
 
-CRITICAL: Respond with valid JSON format only. Ensure:
-- No trailing commas
-- All strings properly escaped
-- No markdown formatting or code fences
-- Valid JSON syntax throughout
-
 Respond with JSON format:
 {{
     "conflict_type": "chosen_conflict_type_key",

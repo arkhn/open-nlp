@@ -48,6 +48,4 @@ Clinical Plausibility Score: [1-5]
 Record Realism Score: [1-5]
 Clinical Significance Score: [1-5]
 
-Overall Score: [Average of the three scores above, rounded to 1 decimal place]
-
 Answer in the style of an AI Assistant, with knowledge from web search if needed. To derive the final score, evaluate each criterion independently and then calculate the average.
