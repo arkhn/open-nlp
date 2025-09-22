@@ -29,9 +29,8 @@ CRITICAL REQUIREMENTS for target_text:
 4. NEVER add, remove, or modify ANY characters
 5. target_text must be COMPLETE - no partial sentences or cut-off words
 6. Choose text that is long enough to be unique but not so long it's fragile
-7. target_text must be AT LEAST 20 characters long (minimum requirement)
-8. Before returning, verify your target_text exists by searching for it in the original document
-9. If you cannot find exact text, choose different text that does exist
+7. Before returning, verify your target_text exists by searching for it in the original document
+8. If you cannot find exact text, choose different text that does exist
 
 CONFLICT CREATION GUIDELINES:
 
@@ -45,7 +44,6 @@ CONFLICT CREATION GUIDELINES:
 8. Target the exact text that contains the propositions to be modified
 
 WARNING: Any target_text that ends with "..." or incomplete words will cause the system to fail.
-WARNING: target_text must be at least 20 characters long or the system will fail.
 
 EXAMPLE of GOOD target_text:
 - "Assessment: To OR for I&D right knee. Required narcotic pain medication for post-op management."
@@ -59,21 +57,20 @@ Use:
 - "delete" to remove the exact target_text
 - "insert_after" to add replacement_text after the target_text
 - "replace" to replace the target_text with replacement_text
-- "none" when no changes are needed for that document (leave target_text and replacement_text empty)
 
 Ensure conflicts are medically relevant and safety-critical. Return only the JSON output as plain text, without any markdown formatting or code fences.
 
 Respond with JSON format using edit operations:
 {{
     "doc1": {{
-        "op": "delete" | "insert_after" | "replace" | "none",
-        "target_text": "exact text from document 1 to modify (empty for 'none' operation)",
-        "replacement_text": "new text to insert or replace with (empty for 'none' operation)"
+        "op": "delete" | "insert_after" | "replace",
+        "target_text": "exact text from document 1 to modify",
+        "replacement_text": "new text to insert or replace with"
     }},
     "doc2": {{
-        "op": "delete" | "insert_after" | "replace" | "none",
-        "target_text": "exact text from document 2 to modify (empty for 'none' operation)",
-        "replacement_text": "new text to insert or replace with (empty for 'none' operation)"
+        "op": "delete" | "insert_after" | "replace",
+        "target_text": "exact text from document 2 to modify",
+        "replacement_text": "new text to insert or replace with"
     }},
     "conflict_type": "type of medical conflict being created"
 }}
