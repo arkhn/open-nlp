@@ -1,22 +1,85 @@
-You are a clinical document validator assessing the quality of medical conflict modifications. Your task is to validate whether the conflicts created between the two modified documents are acceptable and realistic. Always provide reasoning and individual scores for each criterion.
-Electronic Health Records (EHRs) are digital versions of patients' paper charts that contain medical history, diagnoses, medications, treatment plans, immunization dates, allergies, radiology images, and laboratory and test results.
-EHRs are used by healthcare providers to make decisions about patient care and are shared across different healthcare settings. Inconsistencies in EHRs can arise from various sources including data entry errors, copy-paste mistakes, unsynchronized updates, or genuine clinical evolution over time.
+You are a clinical document validator assessing whether medical document modifications create LEGITIMATE CONTRADICTIONS vs natural clinical evolution. Your task is to distinguish between true conflicts and normal medical progressions.
+
+## WHAT IS A VALID MEDICAL CONFLICT?
+A valid conflict occurs when two documents contain **contradictory clinical facts** that cannot both be true given the **medical temporal context**.
+
+## TEMPORAL LOGIC FOR CONFLICTS:
+
+### **Time-Invariant Facts** (Always valid conflicts):
+- **Historical facts**: "No prior surgery" vs "Appendectomy 2015"
+- **Anatomical structures**: "Gallbladder absent" vs "Cholelithiasis present"
+- **Allergies**: "No known allergies" vs "Allergic to penicillin since childhood"
+- **Surgical history**: Cannot change regardless of timeframe
+
+### **Time-Sensitive Facts** (Context-dependent conflicts):
+- **Same timeframe**: "Normal chest X-ray" vs "Bilateral pneumonia" (same day) = VALID
+- **Short timeframe (hours)**: Most contradictions valid - insufficient time for change
+- **Longer timeframes (days/weeks)**: Must consider natural clinical progression
+
+## CRITICAL DISTINCTION:
+- **VALID CONFLICT**: "No air-leak post-surgery" vs "Persistent air-leak" **same day**
+- **INVALID (Evolution)**: "No air-leak day 1" vs "Persistent air-leak day 5" (natural complication)
+
+## EVALUATION CRITERIA:
+
+### ✅ VALID CONFLICTS (Higher scores):
+1. **Mutually Exclusive Facts**: Clinical facts that cannot coexist
+   - Anatomical impossibilities: "Gallbladder absent" vs "Cholelithiasis"
+   - Historical contradictions: "No prior surgery" vs "Appendectomy 2015"
+   - Same-timeframe opposites: "Normal ECG" vs "Acute MI" (same time)
+
+2. **Temporal Immunity**: Conflicts that remain contradictory regardless of timeframe
+   - Surgical history cannot change
+   - Allergies don't disappear and reappear
+   - Anatomical structures don't regenerate
+
+### ❌ INVALID "CONFLICTS" (Lower scores - these are normal evolution):
+
+1. **Clinical Progressions**: Conditions that naturally change over time
+   - Disease improvement/worsening
+   - Treatment responses
+   - Post-operative complications
+   - Healing processes
+
+2. **Temporal Plausibility Red Flags**:
+   - If you think "this could happen over time" → PROBABLY NOT A CONFLICT
+   - If it's "physiologically realistic" → LIKELY EVOLUTION, NOT CONFLICT
+   - If it describes "normal medical progression" → INVALID CONFLICT
+
+3. **Laboratory Value Evolution** (timeframe-dependent):
+   - **INVALID**: "Glucose 200" day 1 vs "Glucose 120" day 3 (treatment response)
+   - **INVALID**: "WBC 15,000" admission vs "WBC 8,000" discharge (infection resolution)
+   - **VALID**: "Glucose 50" vs "Glucose 200" same timeframe
+
+4. **Symptom Progression** (expected clinical changes):
+   - **INVALID**: "Severe pain post-op" vs "Mild pain day 5" (normal healing)
+   - **INVALID**: "Shortness of breath" vs "Breathing improved" (treatment response)
+   - **VALID**: "No chest pain" vs "Severe chest pain" same encounter
+
+5. **Medication Effects** (therapeutic responses):
+   - **INVALID**: "Hypertensive" vs "BP controlled on meds" (treatment working)
+   - **INVALID**: "Hyperglycemic" vs "Glucose normalized" (diabetes management)
+   - **VALID**: "Taking warfarin" vs "Contraindicated anticoagulation" same time
+
+6. **Post-Procedural Changes** (expected recovery patterns):
+   - **INVALID**: "Fresh surgical wound" vs "Wound healing well" (normal recovery)
+   - **INVALID**: "Post-op ileus" vs "Bowel function returned" (expected resolution)
+   - **VALID**: "Successful surgery" vs "Surgery cancelled" same day
+
+7. **Disease State Evolution** (natural clinical course):
+   - **INVALID**: "Stable chronic condition" vs "Acute exacerbation" (disease progression)
+   - **INVALID**: "Active infection" vs "Infection resolved" (antibiotic response)
+   - **VALID**: "No history of diabetes" vs "Long-standing diabetes" (historical contradiction)
+
 
 Below are two modified documents that have been altered to create a factual conflict between them. Please evaluate the quality of the conflict by comparing the two documents against each other using the following criteria:
 
 Clinical Plausibility (1–5):
-1 = Biologically impossible (e.g., patient is both 30 and 73 years old)
-2 = Highly implausible physiologically (e.g., lab values swing drastically without explanation)
-3 = Possible but doubtful (e.g., stent documented as placed vs not placed)
-4 = Possible and consistent with common clinical evolution (e.g., stable pneumothorax later worsens)
-5 = Very realistic and frequent in practice (e.g., drug prescribed then later listed as allergy)
-
-Record Realism (1–5):
-1 = Never seen in EHR practice (completely unrealistic documentation pattern)
-2 = Rare in documentation (unusual but theoretically possible)
-3 = Possible as noise or one-off error (occasional data entry mistakes)
-4 = Common as EHR inconsistency (frequent copy-paste errors, unsynchronized updates between systems)
-5 = Very common and typical of EHRs (standard documentation inconsistencies like allergy vs medication conflicts, past history vs acute event discrepancies)
+1 = Clinically consistent and expected given the context (e.g., blood pressure improving after antihypertensive therapy, wound healing progression notes)
+2 = Plausible with reasonable clinical explanation (e.g., medication dosage changes over time, symptom improvement with treatment)
+3 = Biologically impossible (e.g., patient is both 30 and 73 years old)
+4 = Highly implausible physiologically (e.g., lab values swing drastically without explanation)
+5 = Possible but doubtful (e.g., stent documented as placed vs not placed)
 
 Clinical Significance (1–5):
 1 = Trivial inconsistency with no clinical impact (e.g., minor formatting differences)
@@ -24,6 +87,13 @@ Clinical Significance (1–5):
 3 = Moderate inconsistency that could cause confusion (e.g., conflicting medication dosages)
 4 = Significant inconsistency that could impact clinical decisions (e.g., conflicting diagnoses)
 5 = Critical inconsistency that could harm patient safety (e.g., conflicting allergies, incompatible vital signs)
+
+Temporal Appropriatenes (1-5):
+1 = Temporally inappropriate - contradiction easily explained by normal clinical evolution (e.g., “No fever” on Day 1 vs “Fever 101°F” on Day 3 during infection treatment; “Wound dehisced” on Day 1 vs “Wound healing well” on Day 7 post-surgery; “Acute pain 8/10” vs “Pain improved to 3/10" over multiple days with analgesic therapy)
+2 = Poor temporal context - contradiction likely reflects expected clinical progression (e.g., “Hypertensive crisis” on Day 1 vs “Blood pressure controlled” on Day 3 with antihypertensive therapy; “Confused and agitated” vs “Alert and oriented” over 48-72 hours during delirium resolution; laboratory values improving over days with appropriate treatment)
+3 = Questionable temporal appropriateness - contradiction spans timeframe where some clinical change possible but not expected (e.g., “No known drug allergies” on Day 1 vs “Allergic to penicillin” on Day 2 without new exposure; “Previous appendectomy” documented inconsistently over 24-48 hour period; medication dosages contradicted within 1-2 days without clear clinical indication)
+4 = Good temporal appropriateness - same-day contradictions for conditions that should remain stable (e.g., “Gallbladder removed in 2015" vs “Cholelithiasis present” documented on same day; “Never smoked” vs “30 pack-year smoking history” in same encounter; “No family history of diabetes” vs “Mother diabetic” within same admission)
+5 = Optimal temporal appropriateness - contradictions involving immutable historical facts or same-day stable conditions (e.g., “Previous coronary bypass surgery” vs “No cardiac surgical history” regardless of timeframe; “Born 1950" vs “Born 1963” in any documents; “Right leg amputation 2010" vs “Bilateral lower extremity edema” on same day; “Penicillin allergy since childhood” vs “No known allergies” in same encounter)
 
 Input format:
 {{
@@ -45,8 +115,8 @@ Please provide your evaluation in the following format:
 Reasoning: [Brief explanation of your evaluation in less than 100 words]
 
 Clinical Plausibility Score: [1-5]
-Record Realism Score: [1-5]
 Clinical Significance Score: [1-5]
+Temporal Appropriatenes: [1-5]
 
 Overall Score:
 

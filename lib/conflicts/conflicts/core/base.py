@@ -34,7 +34,7 @@ class Annotation:
     conflict_type: str
     value: AnnotationValue
     clinical_plausibility_score: float = 1.0
-    record_realism_score: float = 1.0
+    temporal_appropriateness_score: float = 1.0
     clinical_significance_score: float = 1.0
     is_valid: bool = False
     retry_attempt: int = 1
@@ -260,7 +260,7 @@ class DatasetManager:
             moderator_reasoning=validation_result.reasoning,
             conflict_type=conflict_type,
             clinical_plausibility_score=validation_result.clinical_plausibility_score,
-            record_realism_score=validation_result.record_realism_score,
+            temporal_appropriateness_score=validation_result.temporal_appropriateness_score,
             clinical_significance_score=validation_result.clinical_significance_score,
             is_valid=validation_result.is_valid,
             retry_attempt=retry_attempt,

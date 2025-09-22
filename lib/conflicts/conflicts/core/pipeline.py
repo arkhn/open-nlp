@@ -265,7 +265,7 @@ class Pipeline:
                     overall_score=1.0,
                     reasoning="Editor agent failed to modify - no changes to validate",
                     clinical_plausibility_score=1.0,
-                    record_realism_score=1.0,
+                    temporal_appropriateness_score=1.0,
                     clinical_significance_score=1.0,
                 )
                 result_data["moderator_result"] = validation_result
@@ -288,7 +288,7 @@ class Pipeline:
                 f"Attempt {attempt}: {conflict_result.conflict_type} conflict, "
                 f"valid={validation_result.is_valid}, overall={validation_result.overall_score}/5, "
                 f"clinical={validation_result.clinical_plausibility_score}/5, "
-                f"realism={validation_result.record_realism_score}/5, "
+                f"temporal={validation_result.temporal_appropriateness_score}/5, "
                 f"significance={validation_result.clinical_significance_score}/5"
             )
 

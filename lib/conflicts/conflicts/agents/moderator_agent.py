@@ -66,8 +66,10 @@ class ModeratorAgent(BaseAgent):
             # Extract scores and reasoning
             overall_score = parsed_response.get("overall_score", 1)
             clinical_plausibility_score = parsed_response.get("clinical_plausibility_score", 1)
-            record_realism_score = parsed_response.get("record_realism_score", 1)
             clinical_significance_score = parsed_response.get("clinical_significance_score", 1)
+            temporal_appropriateness_score = parsed_response.get(
+                "temporal_appropriateness_score", 1
+            )
             reasoning = parsed_response.get("reasoning", "No reasoning provided")
 
             # Determine validity based on score threshold
@@ -84,14 +86,15 @@ class ModeratorAgent(BaseAgent):
                 overall_score=overall_score,
                 reasoning=reasoning,
                 clinical_plausibility_score=clinical_plausibility_score,
-                record_realism_score=record_realism_score,
                 clinical_significance_score=clinical_significance_score,
+                temporal_appropriateness_score=temporal_appropriateness_score,
             )
 
             self.logger.info(
                 f"Moderator validation completed: {'VALID' if result.is_valid else 'INVALID'} "
                 f"(Overall: {result.overall_score}/5, Clinical: {clinical_plausibility_score}/5, "
-                f"Realism: {record_realism_score}/5, Significance: {clinical_significance_score}/5)"
+                f"Significance: {clinical_significance_score}/5,"
+                f"Temporal Appropriateness: {temporal_appropriateness_score}/5"
             )
 
             return result
@@ -107,8 +110,8 @@ class ModeratorAgent(BaseAgent):
             overall_score=1.0,
             reasoning=f"Validation failed due to error: {error_message}",
             clinical_plausibility_score=1.0,
-            record_realism_score=1.0,
             clinical_significance_score=1.0,
+            temporal_appropriateness_score=1.0,
         )
 
     def _parse_score_response(self, response: str) -> dict:
@@ -117,14 +120,21 @@ class ModeratorAgent(BaseAgent):
         """
         try:
             # Initialize with defaults
-            scores = {"clinical": 1.0, "realism": 1.0, "significance": 1.0}
+            scores = {
+                "clinical": 1.0,
+                "significance": 1.0,
+                "temporal_appropriateness": 1.0,
+                "overall_score": 1.0,
+            }
             reasoning = response.strip()
-
+            temporal_appropriateness_rg = (
+                r"(?:temporal.*?appropriateness|appropriateness).*?(\d+(?:\.\d+)?)"
+            )
             # Extract scores using flexible patterns (order matters - more specific first)
             patterns = {
                 "significance": r"(?:clinical.*?significance|significance).*?(\d+(?:\.\d+)?)",
                 "clinical": r"(?:clinical.*?plausibility|plausibility).*?(\d+(?:\.\d+)?)",
-                "realism": r"(?:record.*?realism|realism).*?(\d+(?:\.\d+)?)",
+                "temporal_appropriateness": temporal_appropriateness_rg,
                 "overall_score": r"(?:overall.*?score|score).*?(\d+(?:\.\d+)?)",
             }
 
@@ -137,10 +147,10 @@ class ModeratorAgent(BaseAgent):
 
             return {
                 "reasoning": reasoning,
-                "overall_score": scores["overall_score"],
+                "overall_score": round(scores["overall_score"], 1),
                 "clinical_plausibility_score": round(scores["clinical"], 1),
-                "record_realism_score": round(scores["realism"], 1),
                 "clinical_significance_score": round(scores["significance"], 1),
+                "temporal_appropriateness_score": round(scores["temporal_appropriateness"], 1),
             }
 
         except Exception as e:
@@ -149,6 +159,6 @@ class ModeratorAgent(BaseAgent):
                 "reasoning": response.strip() if response else "Failed to parse response",
                 "overall_score": 1.0,
                 "clinical_plausibility_score": 1.0,
-                "record_realism_score": 1.0,
                 "clinical_significance_score": 1.0,
+                "temporal_appropriateness_score": 1.0,
             }

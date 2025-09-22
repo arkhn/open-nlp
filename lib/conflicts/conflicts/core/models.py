@@ -52,7 +52,7 @@ class ValidationResult:
     overall_score: float  # Overall score (average of individual scores)
     reasoning: str
     clinical_plausibility_score: float = 1.0  # 1-5 scale
-    record_realism_score: float = 1.0  # 1-5 scale
+    temporal_appropriateness_score: float = 1.0  # 1-5 scale
     clinical_significance_score: float = 1.0  # 1-5 scale
 
 
