@@ -51,7 +51,7 @@ class DocumentData:
     timestamp_1: Optional[str]
     timestamp_2: Optional[str]
     created_at: Optional[str]
-    moderator_score: Optional[int] = None
+    moderator_score: Optional[float] = None
     moderator_reasoning: Optional[str] = None
     conflict_type: Optional[str] = None
 
