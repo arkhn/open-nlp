@@ -1,21 +1,107 @@
-You are a clinical document validator assessing the quality of medical conflict modifications. Your task is to validate whether the conflicts created between the two modified documents are acceptable and realistic. Always provide reasoning and a score.
+You are a clinical document validator assessing whether medical document modifications create LEGITIMATE CONTRADICTIONS vs natural clinical evolution. Your task is to distinguish between true conflicts and normal medical progressions.
 
-Below are two modified documents that have been altered to create a factual conflict between them. Please evaluate the quality of the conflict by comparing the two documents against each other. Grade the response on a 5-point scale using the following criteria:
+## WHAT IS A VALID MEDICAL CONFLICT?
+A valid conflict occurs when two documents contain **contradictory clinical facts** that cannot both be true given the **medical temporal context**.
 
-1: The response ignores the conflict resolution task, is vague, incomplete, or off-topic. It does not apply the evaluation criteria.
-2: The response addresses the conflicts superficially, but only touches on one or two evaluation dimensions without deeper reasoning.
-3: The response is somewhat useful: it engages with the conflicts and references multiple dimensions, but lacks precision, completeness, or consistent application of the evaluation framework.
-4: The response is written from an AI assistant perspective, applies the conflict evaluation criteria in a coherent way, and provides a well-structured resolution. Some minor improvements in depth or clarity are possible.
-5: The response is excellent: it consistently applies the evaluation framework (temporal compatibility, semantic normalization, physiological plausibility, clinical chain plausibility, and realistic reconciliation) with expert reasoning. It is precise, well-structured, and resolves conflicts clearly.
+## TEMPORAL LOGIC FOR CONFLICTS:
+
+### **Time-Invariant Facts** (Always valid conflicts):
+- **Historical facts**: "No prior surgery" vs "Appendectomy 2015"
+- **Anatomical structures**: "Gallbladder absent" vs "Cholelithiasis present"
+- **Allergies**: "No known allergies" vs "Allergic to penicillin since childhood"
+- **Surgical history**: Cannot change regardless of timeframe
+
+### **Time-Sensitive Facts** (Context-dependent conflicts):
+- **Same timeframe**: "Normal chest X-ray" vs "Bilateral pneumonia" (same day) = VALID
+- **Short timeframe (hours)**: Most contradictions valid - insufficient time for change
+- **Longer timeframes (days/weeks)**: Must consider natural clinical progression
+
+## CRITICAL DISTINCTION:
+- **VALID CONFLICT**: "No air-leak post-surgery" vs "Persistent air-leak" **same day**
+- **INVALID (Evolution)**: "No air-leak day 1" vs "Persistent air-leak day 5" (natural complication)
+
+## EVALUATION CRITERIA:
+
+### ✅ VALID CONFLICTS (Higher scores):
+1. **Mutually Exclusive Facts**: Clinical facts that cannot coexist
+   - Anatomical impossibilities: "Gallbladder absent" vs "Cholelithiasis"
+   - Historical contradictions: "No prior surgery" vs "Appendectomy 2015"
+   - Same-timeframe opposites: "Normal ECG" vs "Acute MI" (same time)
+
+2. **Temporal Immunity**: Conflicts that remain contradictory regardless of timeframe
+   - Surgical history cannot change
+   - Allergies don't disappear and reappear
+   - Anatomical structures don't regenerate
+
+### ❌ INVALID "CONFLICTS" (Lower scores - these are normal evolution):
+
+1. **Clinical Progressions**: Conditions that naturally change over time
+   - Disease improvement/worsening
+   - Treatment responses
+   - Post-operative complications
+   - Healing processes
+
+2. **Temporal Plausibility Red Flags**:
+   - If you think "this could happen over time" → PROBABLY NOT A CONFLICT
+   - If it's "physiologically realistic" → LIKELY EVOLUTION, NOT CONFLICT
+   - If it describes "normal medical progression" → INVALID CONFLICT
+
+3. **Laboratory Value Evolution** (timeframe-dependent):
+   - **INVALID**: "Glucose 200" day 1 vs "Glucose 120" day 3 (treatment response)
+   - **INVALID**: "WBC 15,000" admission vs "WBC 8,000" discharge (infection resolution)
+   - **VALID**: "Glucose 50" vs "Glucose 200" same timeframe
+
+4. **Symptom Progression** (expected clinical changes):
+   - **INVALID**: "Severe pain post-op" vs "Mild pain day 5" (normal healing)
+   - **INVALID**: "Shortness of breath" vs "Breathing improved" (treatment response)
+   - **VALID**: "No chest pain" vs "Severe chest pain" same encounter
+
+5. **Medication Effects** (therapeutic responses):
+   - **INVALID**: "Hypertensive" vs "BP controlled on meds" (treatment working)
+   - **INVALID**: "Hyperglycemic" vs "Glucose normalized" (diabetes management)
+   - **VALID**: "Taking warfarin" vs "Contraindicated anticoagulation" same time
+
+6. **Post-Procedural Changes** (expected recovery patterns):
+   - **INVALID**: "Fresh surgical wound" vs "Wound healing well" (normal recovery)
+   - **INVALID**: "Post-op ileus" vs "Bowel function returned" (expected resolution)
+   - **VALID**: "Successful surgery" vs "Surgery cancelled" same day
+
+7. **Disease State Evolution** (natural clinical course):
+   - **INVALID**: "Stable chronic condition" vs "Acute exacerbation" (disease progression)
+   - **INVALID**: "Active infection" vs "Infection resolved" (antibiotic response)
+   - **VALID**: "No history of diabetes" vs "Long-standing diabetes" (historical contradiction)
+
+## SCORING CRITERIA (Add 1 point for each criterion met):
+
+**Criterion 1: Mutually Exclusive Facts** (+1 point)
+Award 1 point if the documents contain clinical facts that cannot both be true simultaneously. Examples: "No allergies" vs "Allergic to penicillin", "Gallbladder absent" vs "Cholelithiasis present", "Never had surgery" vs "Appendectomy 2015".
+
+**Criterion 2: Temporal Appropriateness** (+1 point)
+Award 1 point if the contradiction is appropriate for the timeframe. Historical facts (surgical history, allergies, anatomical structures) are always appropriate. Same-day contradictions are usually appropriate. Multi-day contradictions must not be explainable by normal clinical progression.
+
+**Criterion 3: Clinical Impossibility** (+1 point)
+Award 1 point if the contradictory facts are medically impossible to coexist. The statements represent incompatible medical states, anatomical impossibilities, or logically exclusive conditions that cannot occur in the same patient.
+
+**Criterion 4: Non-Evolution** (+1 point)
+Award 1 point if the contradiction cannot be explained by normal clinical evolution, treatment responses, healing processes, or expected disease progression. The differences must represent true conflicts, not natural medical changes over time.
+
+**Criterion 5: Medical Significance** (+1 point)
+Award 1 point if the contradiction involves clinically significant information that would impact patient care, safety, or medical decision-making. Trivial or inconsequential contradictions do not meet this criterion.
+
+**FINAL SCORE = Total points (0-5)**
+
+Below are two modified documents. Evaluate each criterion and add 1 point for each met criterion.
+
+Provide your reasoning (under 100 words) and final score.
 
 Input format:
 {{
     context_document_1: "{context_document_1}",
-    conflict_1: "{conflict_1}",
-    context_document_2: "{context_document_2}",
-    conflict_2: "{conflict_2}"
+    context_document_2: "{context_document_2}"
 }}
 
-Note: context_document_1 and context_document_2 are the modified documents that should be compared against each other to evaluate the conflict quality.
+**CRITICAL**: Focus on whether the documents contain **mutually exclusive facts**, not whether the changes are "medically plausible" or "realistic progressions."
 
-Please first briefly describe your reasoning (in less than 100 words), and then write "Score: <rating>" in the last line. Answer in the style of an AI Assistant, with knowledge from web search if needed. To derive the final score based on the criteria, let's think step-by-step.
+Provide your reasoning (under 100 words) focusing on contradiction vs evolution distinction, then score 1-5.
+
+Score: <rating>
