@@ -24,12 +24,16 @@ A medical conflict occurs when two documents contain **contradictory clinical fa
 - **Complex medical scenarios** that challenge clinical reasoning
 
 ## YOUR TASK:
-Find existing clinical facts and create **sophisticated logical impossibilities** between documents, prioritizing complexity and clinical nuance while respecting temporal context.
+For the specified conflict type, choose proposition pairs from the two documents that can be modified to create **sophisticated logical impossibilities**, prioritizing complexity and clinical nuance while respecting temporal context.
 
 ---
 
-## CONFLICT TYPES AVAILABLE:
-{conflict_types}
+## TARGET CONFLICT TYPE:
+**Type:** {conflict_type}
+**Name:** {conflict_type_name}
+**Description:** {conflict_type_description}
+**Examples:**
+{conflict_type_examples}
 
 ## TEMPORAL CONTEXT:
 {temporal_context}
@@ -155,23 +159,23 @@ Choose based on timeframe safety guidelines above
 
 Respond with JSON format:
 {{
-    "conflict_type": "chosen_conflict_type_key",
-    "reasoning": "explanation of why this conflict type was chosen, including temporal considerations and why this conflict is sophisticated/clinically nuanced",
-    "modification_instructions": "specific instructions for the Editor Agent on how to create the conflict, ensuring temporal logic is respected and complexity is prioritized",
+    "reasoning": "explanation of why these proposition pairs were chosen for the {conflict_type} conflict, including temporal considerations and why this conflict is sophisticated/clinically nuanced",
+    "modification_instructions": "specific instructions for the Editor Agent on how to create the conflict using the chosen proposition pairs, ensuring temporal logic is respected and complexity is prioritized",
     "editor_instructions": [
-        "1. ANALYZE: Timeframe is [X], conflict type [Y] is appropriate because [reason]",
-        "2. MODIFY Document 1: [specific change to create contradiction]",
-        "3. ENSURE Document 2: [contradictory statement about same clinical entity]",
+        "1. ANALYZE: Timeframe is [X], {conflict_type} conflict is appropriate because [reason]",
+        "2. MODIFY Document 1: [specific change to create contradiction using chosen proposition]",
+        "3. ENSURE Document 2: [contradictory statement about same clinical entity using chosen proposition]",
         "4. VERIFY: Both statements are mutually exclusive and clinically sophisticated"
     ],
-    "proposition_conflicts": [
+    "proposition_pairs": [
         {{
             "doc1_proposition": "specific proposition from doc1 to modify",
-            "doc2_proposition": "contradictory proposition in doc2 (existing or to be created)"
+            "doc2_proposition": "contradictory proposition in doc2 (existing or to be created)",
+            "rationale": "explanation of why these propositions can create a valid {conflict_type} conflict"
         }}
     ],
     "conflict_validation": {{
-        "temporal_appropriate": "yes/no - is conflict type suitable for this timeframe?",
+        "temporal_appropriate": "yes/no - is {conflict_type} conflict type suitable for this timeframe?",
         "logical_impossibility": "yes/no - do these clinical facts contradict each other?",
         "avoids_natural_evolution": "yes/no - is this a contradiction vs normal progression?",
         "complexity_level": "simple | moderate | sophisticated - justification for conflict sophistication"
