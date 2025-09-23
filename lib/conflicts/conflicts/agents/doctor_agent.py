@@ -36,21 +36,33 @@ class DoctorAgent(BaseAgent):
         document_pair: DocumentPair,
         propositions1: PropositionResult = None,
         propositions2: PropositionResult = None,
+        conflict_type: str = None,
     ) -> ConflictResult:
         """
-        Analyze documents and determine the best conflict type to introduce
+        Analyze documents and choose proposition pairs for a specific conflict type
 
         Args:
             document_pair: Pair of clinical documents to analyze
             propositions1: Optional PropositionResult from document 1
             propositions2: Optional PropositionResult from document 2
+            conflict_type: Specific conflict type to create
 
         Returns:
-            ConflictResult containing the chosen conflict type and instructions
+            ConflictResult containing the chosen proposition pairs and instructions
         """
         self.logger.info(
             f"Analyzing document pair: {document_pair.doc1_id} & {document_pair.doc2_id}"
+            f" for conflict type: {conflict_type}"
         )
+
+        # Validate conflict_type parameter
+        if conflict_type is None:
+            raise ValueError("conflict_type parameter is required")
+        if conflict_type not in self.conflict_types:
+            raise ValueError(
+                f"Unknown conflict type: {conflict_type}."
+                f" Available types: {list(self.conflict_types.keys())}"
+            )
 
         try:
             # Perform temporal analysis
@@ -65,7 +77,7 @@ class DoctorAgent(BaseAgent):
             )
 
             # Prepare prompt with conflict types, temporal info, and documents
-            conflict_types_formatted = self.format_conflict_types_for_prompt()
+            conflict_type_info = self.get_conflict_type_info(conflict_type)
             temporal_context = temporal_analyzer.format_temporal_context_for_prompt(
                 temporal_analysis
             )
@@ -82,7 +94,12 @@ class DoctorAgent(BaseAgent):
             )
 
             prompt = self.system_prompt.format(
-                conflict_types=conflict_types_formatted,
+                conflict_type=conflict_type,
+                conflict_type_name=conflict_type_info["name"],
+                conflict_type_description=conflict_type_info["description"],
+                conflict_type_examples="\n".join(
+                    [f"- {example}" for example in conflict_type_info["examples"]]
+                ),
                 temporal_context=temporal_context,
                 temporal_recommendations=temporal_recommendations_str,
                 document1=self._truncate_document(document_pair.doc1_text),
@@ -100,25 +117,17 @@ class DoctorAgent(BaseAgent):
             parsed_response = self._parse_json_response(response)
 
             # Validate required fields
-            required_fields = ["conflict_type", "reasoning", "modification_instructions"]
+            required_fields = ["reasoning", "modification_instructions", "proposition_pairs"]
             for field in required_fields:
                 if field not in parsed_response:
                     raise ValueError(f"Missing required field '{field}' in Doctor Agent response")
 
-            # Validate conflict type exists
-            if parsed_response["conflict_type"] not in self.conflict_types:
-                self.logger.warning(
-                    f"Unknown conflict type '{parsed_response['conflict_type']}', \
-                     defaulting to 'opposition'"
-                )
-                parsed_response["conflict_type"] = "opposition"
-
             result = ConflictResult(
-                conflict_type=parsed_response["conflict_type"],
+                conflict_type=conflict_type,
                 reasoning=parsed_response["reasoning"],
                 modification_instructions=parsed_response["modification_instructions"],
                 editor_instructions=parsed_response.get("editor_instructions", []),
-                proposition_conflicts=parsed_response.get("proposition_conflicts", []),
+                proposition_conflicts=parsed_response.get("proposition_pairs", []),
             )
 
             self.logger.info("Doctor Agent completed analysis")

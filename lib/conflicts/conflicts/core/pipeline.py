@@ -38,6 +38,7 @@ class Pipeline:
 
         # Use Hydra config values
         self.max_retries = cfg.pipeline.max_retries
+        self.early_exit_on_success = cfg.pipeline.get("early_exit_on_success", False)
 
         # Setup logging - Hydra already configures root logger
         # Just get a logger for this module
@@ -134,7 +135,8 @@ class Pipeline:
         pair_id: str,
         document_pair: DocumentPair,
         all_attempts: List[Tuple],
-        conflict_type: str,
+        final_conflict_type: str,
+        all_conflict_attempts: List[Dict],
     ) -> bool:
         """
         Save all attempts to database as multiple annotations within a single document pair
@@ -143,25 +145,105 @@ class Pipeline:
             pair_id: Document pair ID for logging
             document_pair: Original document pair
             all_attempts: List of (editor_result, validation_result, attempt_num) tuples
-            conflict_type: Type of conflict identified
+            final_conflict_type: Type of conflict that was selected as best
+            all_conflict_attempts: List of all conflict type attempts
 
         Returns:
             True if saved successfully, False otherwise
         """
         try:
+            # Validate input data
+            if not all_attempts:
+                raise ValueError("all_attempts cannot be empty")
+            if not all_conflict_attempts:
+                raise ValueError("all_conflict_attempts cannot be empty")
+
             # Use the first attempt's editor result for the document content
             first_editor_result = all_attempts[0][0]
 
+            # Process all conflict types data
+            all_conflict_types_data = {}
+            successful_conflict_types = []
+
+            for conflict_attempt in all_conflict_attempts:
+                conflict_type = conflict_attempt["conflict_type"]
+                conflict_result = conflict_attempt["conflict_result"]
+                attempts = conflict_attempt["attempts"]
+
+                # Find best attempt for this conflict type
+                best_attempt = None
+                best_score = 0
+                has_success = False
+
+                for editor_result_attempt, validation_result_attempt, attempt_num in attempts:
+                    if validation_result_attempt.is_valid:
+                        has_success = True
+                        if validation_result_attempt.overall_score > best_score:
+                            best_score = validation_result_attempt.overall_score
+                            best_attempt = (
+                                editor_result_attempt,
+                                validation_result_attempt,
+                                attempt_num,
+                            )
+
+                # Store conflict type data
+                all_conflict_types_data[conflict_type] = {
+                    "conflict_result": {
+                        "conflict_type": conflict_result.conflict_type,
+                        "reasoning": conflict_result.reasoning,
+                        "modification_instructions": conflict_result.modification_instructions,
+                        "proposition_pairs": conflict_result.proposition_conflicts or [],
+                    },
+                    "attempts": [
+                        {
+                            "attempt_num": attempt_num,
+                            "editor_result": {
+                                "changes_made": editor_result_attempt.changes_made,
+                                "change_info_1": editor_result_attempt.change_info_1,
+                                "change_info_2": editor_result_attempt.change_info_2,
+                                "original_excerpt_1": editor_result_attempt.original_excerpt_1,
+                                "modified_excerpt_1": editor_result_attempt.modified_excerpt_1,
+                                "original_excerpt_2": editor_result_attempt.original_excerpt_2,
+                                "modified_excerpt_2": editor_result_attempt.modified_excerpt_2,
+                            },
+                            "validation_result": {
+                                "is_valid": validation_result_attempt.is_valid,
+                                "overall_score": validation_result_attempt.overall_score,
+                                "reasoning": validation_result_attempt.reasoning,
+                                "clinical_plausibility_score": (
+                                    validation_result_attempt.clinical_plausibility_score
+                                ),
+                                "temporal_appropriateness_score": (
+                                    validation_result_attempt.temporal_appropriateness_score
+                                ),
+                                "clinical_significance_score": (
+                                    validation_result_attempt.clinical_significance_score
+                                ),
+                            },
+                        }
+                        for (
+                            editor_result_attempt,
+                            validation_result_attempt,
+                            attempt_num,
+                        ) in attempts
+                    ],
+                    "success": has_success,
+                    "best_score": best_score,
+                    "best_attempt": best_attempt[1] if best_attempt else None,
+                }
+
+                if has_success:
+                    successful_conflict_types.append(conflict_type)
+
             # Create annotations for all attempts
             all_annotations = []
-
             for editor_result_attempt, validation_result_attempt, attempt_num in all_attempts:
                 # Create annotations for both excerpts using helper method
                 for excerpt_num in [1, 2]:
                     annotation = self.dataset_manager._create_annotation_for_excerpt(
                         editor_result_attempt,
                         validation_result_attempt,
-                        conflict_type,
+                        final_conflict_type,
                         excerpt_num,
                         attempt_num,
                     )
@@ -170,8 +252,12 @@ class Pipeline:
 
             # Create document data using the first attempt's content
             doc_data = self.dataset_manager._create_document_data(
-                first_editor_result, document_pair, all_attempts[0][1], conflict_type
+                first_editor_result, document_pair, all_attempts[0][1], final_conflict_type
             )
+
+            # Add all conflict types data to document data
+            doc_data.all_conflict_types = all_conflict_types_data
+            doc_data.final_selected_type = final_conflict_type
 
             # Create the complete item with all annotations
             conflict_item = ConflictDataItem(
@@ -186,7 +272,9 @@ class Pipeline:
 
             self.logger.info(
                 f"Document pair {pair_id} saved (DB ID: {doc_id}, Status: {status},"
-                f" {threshold_count}/{len(all_attempts)} attempts meet threshold)"
+                f" {threshold_count}/{len(all_attempts)} attempts meet threshold,"
+                f" {len(successful_conflict_types)}/{len(all_conflict_types_data)}"
+                " conflict types successful)"
             )
             return True
 
@@ -233,74 +321,183 @@ class Pipeline:
         result_data["proposition_result"] = proposition_result
         result_data["proposition_time"] = proposition_time
 
-        # Step 2: Doctor Agent identifies conflict type using propositions
+        # Step 2: Try each conflict type with Doctor Agent choosing proposition pairs
+        all_conflict_attempts = []
+        successful_conflict = None
 
-        conflict_result, doctor_time = self._execute_agent(
-            self.doctor_agent, document_pair, proposition_result[0], proposition_result[1]
-        )
-        result_data["doctor_result"] = conflict_result
-        result_data["doctor_time"] = doctor_time
-        result_data["conflict_type"] = conflict_result.conflict_type
+        # Get all available conflict types
+        conflict_types = list(self.doctor_agent.list_all_conflict_types().keys())
 
-        # Step 3: Editor and Moderator agents with retry logic
-        validation_result = None
-        editor_result = None
-        all_attempts = []  # Store all attempts for analysis
+        if not conflict_types:
+            self.logger.error("No conflict types available - cannot process document pair")
+            result_data["processing_time"] = time.time() - start_time
+            return False, result_data
 
-        for attempt in range(1, self.max_retries + 1):
-            # Execute editor agent
-            editor_result, editor_time = self._execute_agent(
-                self.editor_agent, document_pair, conflict_result
+        for conflict_type in conflict_types:
+            self.logger.info(f"Trying conflict type: {conflict_type}")
+
+            # Doctor Agent chooses proposition pairs for this conflict type
+            try:
+                conflict_result, doctor_time = self._execute_agent(
+                    self.doctor_agent,
+                    document_pair,
+                    proposition_result[0],
+                    proposition_result[1],
+                    conflict_type,
+                )
+            except Exception as e:
+                self.logger.error(f"Doctor Agent failed for conflict type {conflict_type}: {e}")
+                # Skip this conflict type and continue to next one
+                continue
+
+            # Step 3: Editor and Moderator agents with retry logic for this conflict type
+            validation_result = None
+            editor_result = None
+            conflict_attempts = []  # Store attempts for this conflict type
+
+            for attempt in range(1, self.max_retries + 1):
+                # Execute editor agent
+                editor_result, editor_time = self._execute_agent(
+                    self.editor_agent, document_pair, conflict_result
+                )
+
+                # Check if editor agent failed to create modifications
+                if "Failed to create conflict" in editor_result.changes_made:
+                    self.logger.warning(
+                        f"Editor agent failed to create modifications for {conflict_type},"
+                        "skipping moderator validation"
+                    )
+                    validation_result = ValidationResult(
+                        is_valid=False,
+                        overall_score=1.0,
+                        reasoning="Editor agent failed to modify - no changes to validate",
+                        clinical_plausibility_score=1.0,
+                        temporal_appropriateness_score=1.0,
+                        clinical_significance_score=1.0,
+                    )
+                    conflict_attempts.append((editor_result, validation_result, attempt))
+                    break
+
+                # Execute moderator agent for validation
+                validation_result, moderator_time = self._execute_agent(
+                    self.moderator_agent, document_pair, editor_result, conflict_type
+                )
+
+                # Store this attempt
+                conflict_attempts.append((editor_result, validation_result, attempt))
+
+                self.logger.info(
+                    f"Attempt {attempt} for {conflict_type}: "
+                    f"valid={validation_result.is_valid}, "
+                    f"overall={validation_result.overall_score}/5, "
+                    f"clinical={validation_result.clinical_plausibility_score}/5, "
+                    f"temporal={validation_result.temporal_appropriateness_score}/5, "
+                    f"significance={validation_result.clinical_significance_score}/5"
+                )
+
+                # Check if this attempt was successful
+                if validation_result.is_valid:
+                    successful_conflict = {
+                        "conflict_type": conflict_type,
+                        "conflict_result": conflict_result,
+                        "editor_result": editor_result,
+                        "validation_result": validation_result,
+                        "doctor_time": doctor_time,
+                        "editor_time": editor_time,
+                        "moderator_time": moderator_time,
+                        "attempts": conflict_attempts,
+                    }
+                    result_data["success"] = True
+                    if self.early_exit_on_success:
+                        self.logger.info(
+                            f"Validation passed for {conflict_type}, early exit enabled - "
+                            f"stopping conflict type iteration"
+                        )
+                        break
+                    else:
+                        self.logger.info(
+                            f"Validation passed for {conflict_type}, "
+                            f"continuing to next conflict type..."
+                        )
+                        break
+
+                if attempt < self.max_retries:
+                    self.logger.warning(f"Validation failed for {conflict_type}, retrying...")
+                    time.sleep(1)
+
+            # Store all attempts for this conflict type
+            all_conflict_attempts.append(
+                {
+                    "conflict_type": conflict_type,
+                    "conflict_result": conflict_result,
+                    "doctor_time": doctor_time,
+                    "attempts": conflict_attempts,
+                }
             )
-            result_data["editor_result"] = editor_result
-            result_data["editor_time"] = editor_time
 
-            # Check if editor agent failed to create modifications
-            if "Failed to create conflict" in editor_result.changes_made:
-                self.logger.warning(
-                    "Editor agent failed to create modifications, skipping moderator validation"
+            # Continue to next conflict type unless early exit is enabled and we found success
+            if self.early_exit_on_success and successful_conflict:
+                self.logger.info(
+                    "Early exit enabled & successful conflict found - "
+                    "stopping all conflict processing"
                 )
-                validation_result = ValidationResult(
-                    is_valid=False,
-                    overall_score=1.0,
-                    reasoning="Editor agent failed to modify - no changes to validate",
-                    clinical_plausibility_score=1.0,
-                    temporal_appropriateness_score=1.0,
-                    clinical_significance_score=1.0,
-                )
-                result_data["moderator_result"] = validation_result
-                result_data["moderator_time"] = 0
-                all_attempts.append((editor_result, validation_result, attempt))
                 break
 
-            # Execute moderator agent for validation
-            validation_result, moderator_time = self._execute_agent(
-                self.moderator_agent, document_pair, editor_result, conflict_result.conflict_type
+        # Choose the best successful conflict (highest validation score) or the last attempted one
+        if successful_conflict:
+            # If we have multiple successful conflicts, choose the one with highest score
+            best_conflict = successful_conflict
+            for conflict_attempt in all_conflict_attempts:
+                for (
+                    editor_result_attempt,
+                    validation_result_attempt,
+                    attempt_num,
+                ) in conflict_attempt["attempts"]:
+                    if (
+                        validation_result_attempt.is_valid
+                        and validation_result_attempt.overall_score
+                        > best_conflict["validation_result"].overall_score
+                    ):
+                        best_conflict = {
+                            "conflict_type": conflict_attempt["conflict_type"],
+                            "conflict_result": conflict_attempt["conflict_result"],
+                            "editor_result": editor_result_attempt,
+                            "validation_result": validation_result_attempt,
+                            "doctor_time": conflict_attempt["doctor_time"],
+                            "editor_time": 0,  # We don't track individual attempt times
+                            "moderator_time": 0,
+                            "attempts": conflict_attempt["attempts"],
+                        }
+            final_conflict = best_conflict
+        else:
+            # Use the last conflict type attempted
+            final_conflict = all_conflict_attempts[-1]
+            final_conflict["editor_result"] = (
+                final_conflict["attempts"][-1][0] if final_conflict["attempts"] else None
             )
-            # The meets_threshold field is already calculated in the moderator agent
-            result_data["moderator_result"] = validation_result
-            result_data["moderator_time"] = moderator_time
-
-            # Store this attempt
-            all_attempts.append((editor_result, validation_result, attempt))
-
-            self.logger.info(
-                f"Attempt {attempt}: {conflict_result.conflict_type} conflict, "
-                f"valid={validation_result.is_valid}, overall={validation_result.overall_score}/5, "
-                f"clinical={validation_result.clinical_plausibility_score}/5, "
-                f"temporal={validation_result.temporal_appropriateness_score}/5, "
-                f"significance={validation_result.clinical_significance_score}/5"
+            final_conflict["validation_result"] = (
+                final_conflict["attempts"][-1][1] if final_conflict["attempts"] else None
             )
+            final_conflict["editor_time"] = 0
+            final_conflict["moderator_time"] = 0
 
-            # Check if this attempt was successful
-            if validation_result.is_valid:
-                result_data["success"] = True
-                self.logger.info("Validation passed, stopping retries...")
-                break
+        # Update result data
+        result_data["doctor_result"] = final_conflict["conflict_result"]
+        result_data["doctor_time"] = final_conflict["doctor_time"]
+        result_data["conflict_type"] = final_conflict["conflict_type"]
+        result_data["editor_result"] = final_conflict["editor_result"]
+        result_data["editor_time"] = final_conflict["editor_time"]
+        result_data["moderator_result"] = final_conflict["validation_result"]
+        result_data["moderator_time"] = final_conflict["moderator_time"]
+        result_data["all_conflict_attempts"] = all_conflict_attempts
 
-            if attempt < self.max_retries:
-                self.logger.warning("Validation failed, retrying...")
-                time.sleep(1)
+        # Flatten all attempts for database saving
+        all_attempts = []
+        for conflict_attempt in all_conflict_attempts:
+            for editor_result_attempt, validation_result_attempt, attempt_num in conflict_attempt[
+                "attempts"
+            ]:
+                all_attempts.append((editor_result_attempt, validation_result_attempt, attempt_num))
 
         # Step 4: Save all attempts to database (no duplication, all attempts in one document pair)
         saved_attempts = []
@@ -308,7 +505,8 @@ class Pipeline:
             pair_id,
             document_pair,
             all_attempts,
-            conflict_result.conflict_type,
+            final_conflict["conflict_type"],
+            all_conflict_attempts,  # Pass all conflict types data
         )
 
         # Track all attempts for analysis
@@ -334,8 +532,19 @@ class Pipeline:
         successful_attempts = sum(1 for attempt in saved_attempts if attempt["valid"])
         threshold_attempts = sum(1 for attempt in saved_attempts if attempt["meets_threshold"])
 
+        # Count successful conflict types
+        successful_conflict_types = []
+        for conflict_attempt in all_conflict_attempts:
+            for editor_result_attempt, validation_result_attempt, attempt_num in conflict_attempt[
+                "attempts"
+            ]:
+                if validation_result_attempt.is_valid:
+                    successful_conflict_types.append(conflict_attempt["conflict_type"])
+                    break  # Only count each conflict type once
+
         self.logger.info(
-            f"Pair {pair_id}: {status} - {conflict_result.conflict_type} conflict, "
+            f"Pair {pair_id}: {status} - {final_conflict['conflict_type']} conflict "
+            f"(best of {len(successful_conflict_types)}/{len(conflict_types)} successful types), "
             f"{proposition_result[0].total_propositions + proposition_result[1].total_propositions}"
             f" propositions, {successful_attempts}/{total_attempts} valid,"
             f" {threshold_attempts}/{total_attempts} meet threshold"

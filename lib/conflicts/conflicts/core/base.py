@@ -54,6 +54,8 @@ class DocumentData:
     moderator_score: Optional[float] = None
     moderator_reasoning: Optional[str] = None
     conflict_type: Optional[str] = None
+    all_conflict_types: Optional[Dict[str, Any]] = None
+    final_selected_type: Optional[str] = None
 
 
 @dataclass
