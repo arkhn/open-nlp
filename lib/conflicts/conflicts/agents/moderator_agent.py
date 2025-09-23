@@ -127,15 +127,13 @@ class ModeratorAgent(BaseAgent):
                 "overall_score": 1.0,
             }
             reasoning = response.strip()
-            temporal_appropriateness_rg = (
-                r"(?:temporal.*?appropriateness|appropriateness).*?(\d+(?:\.\d+)?)"
-            )
+            temporal_appropriateness_rg = r"(?:[Tt]emporal.*?[Aa]ppropriateness).*?(\d{1})"
             # Extract scores using flexible patterns (order matters - more specific first)
             patterns = {
-                "significance": r"(?:clinical.*?significance|significance).*?(\d+(?:\.\d+)?)",
-                "clinical": r"(?:clinical.*?plausibility|plausibility).*?(\d+(?:\.\d+)?)",
+                "significance": r"(?:[Cc]linical.*?[Ss]ignificance).*?(\d{1})",
+                "clinical": r"(?:[Cc]linical.*?[Pp]lausibility).*?(\d{1})",
                 "temporal_appropriateness": temporal_appropriateness_rg,
-                "overall_score": r"(?:overall.*?score|score).*?(\d+(?:\.\d+)?)",
+                "overall_score": r"(?:[Oo]verall.*?[Ss]core).*?(\d{1})",
             }
 
             for score_type, pattern in patterns.items():
