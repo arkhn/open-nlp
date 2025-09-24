@@ -71,12 +71,13 @@ def apply_edit_operation(
         ValueError: If operation type is unknown or target_text not found
     """
     op_type = operation["op"]
-    target_text = operation["target_text"]
-    replacement_text = operation.get("replacement_text", "")
 
     # Handle "none" operation - no changes needed
     if op_type == "none":
         return document, "No changes made", "", ""
+
+    target_text = operation["target_text"]
+    replacement_text = operation.get("replacement_text", "")
 
     # Check if target_text exists in document
     similar_text = find_similar_text(document, target_text)
@@ -101,7 +102,7 @@ def apply_edit_operation(
         modified_excerpt = ""  # Deleted, so nothing remains
         return modified_doc, change_description, original_excerpt, modified_excerpt
     elif op_type == "insert_after":
-        if len(replacement_text.strip()) < 10:
+        if len(replacement_text.strip()) >= 10:
             modified_doc = document.replace(target_text, target_text + replacement_text, 1)
             change_description = (
                 f"Inserted '{replacement_text[:200]}...' after '{target_text[:200]}...'"
