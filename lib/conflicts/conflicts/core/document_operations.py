@@ -101,10 +101,17 @@ def apply_edit_operation(
         modified_excerpt = ""  # Deleted, so nothing remains
         return modified_doc, change_description, original_excerpt, modified_excerpt
     elif op_type == "insert_after":
-        modified_doc = document.replace(target_text, target_text + replacement_text, 1)
-        change_description = (
-            f"Inserted '{replacement_text[:200]}...' after '{target_text[:200]}...'"
-        )
+        if len(replacement_text.strip()) < 10:
+            modified_doc = document.replace(target_text, target_text + replacement_text, 1)
+            change_description = (
+                f"Inserted '{replacement_text[:200]}...' after '{target_text[:200]}...'"
+            )
+        else:
+            modified_doc = document
+            change_description = (
+                "The change was too short to be reliable, so no changes were made. here is the"
+                f"proposed change: {replacement_text}... after {target_text[:200]}..."
+            )
         modified_excerpt = target_text + replacement_text
         return modified_doc, change_description, original_excerpt, modified_excerpt
     elif op_type == "replace":
