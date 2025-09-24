@@ -55,15 +55,6 @@ class DoctorAgent(BaseAgent):
             f" for conflict type: {conflict_type}"
         )
 
-        # Validate conflict_type parameter
-        if conflict_type is None:
-            raise ValueError("conflict_type parameter is required")
-        if conflict_type not in self.conflict_types:
-            raise ValueError(
-                f"Unknown conflict type: {conflict_type}."
-                f" Available types: {list(self.conflict_types.keys())}"
-            )
-
         try:
             # Perform temporal analysis
             temporal_analyzer = TemporalAnalyzer()
