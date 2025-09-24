@@ -146,94 +146,23 @@ class Pipeline:
             document_pair: Original document pair
             all_attempts: List of (editor_result, validation_result, attempt_num) tuples
             final_conflict_type: Type of conflict that was selected as best
-            all_conflict_attempts: List of all conflict type attempts
+            all_conflict_attempts: List of all conflict type attempts (for counting)
 
         Returns:
             True if saved successfully, False otherwise
         """
         try:
-            # Validate input data
-            if not all_attempts:
-                raise ValueError("all_attempts cannot be empty")
-            if not all_conflict_attempts:
-                raise ValueError("all_conflict_attempts cannot be empty")
-
             # Use the first attempt's editor result for the document content
             first_editor_result = all_attempts[0][0]
 
-            # Process all conflict types data
-            all_conflict_types_data = {}
+            # Count successful conflict types for logging
             successful_conflict_types = []
-
             for conflict_attempt in all_conflict_attempts:
-                conflict_type = conflict_attempt["conflict_type"]
-                conflict_result = conflict_attempt["conflict_result"]
                 attempts = conflict_attempt["attempts"]
-
-                # Find best attempt for this conflict type
-                best_attempt = None
-                best_score = 0
-                has_success = False
-
                 for editor_result_attempt, validation_result_attempt, attempt_num in attempts:
                     if validation_result_attempt.is_valid:
-                        has_success = True
-                        if validation_result_attempt.overall_score > best_score:
-                            best_score = validation_result_attempt.overall_score
-                            best_attempt = (
-                                editor_result_attempt,
-                                validation_result_attempt,
-                                attempt_num,
-                            )
-
-                # Store conflict type data
-                all_conflict_types_data[conflict_type] = {
-                    "conflict_result": {
-                        "conflict_type": conflict_result.conflict_type,
-                        "reasoning": conflict_result.reasoning,
-                        "modification_instructions": conflict_result.modification_instructions,
-                        "proposition_pairs": conflict_result.proposition_conflicts or [],
-                    },
-                    "attempts": [
-                        {
-                            "attempt_num": attempt_num,
-                            "editor_result": {
-                                "changes_made": editor_result_attempt.changes_made,
-                                "change_info_1": editor_result_attempt.change_info_1,
-                                "change_info_2": editor_result_attempt.change_info_2,
-                                "original_excerpt_1": editor_result_attempt.original_excerpt_1,
-                                "modified_excerpt_1": editor_result_attempt.modified_excerpt_1,
-                                "original_excerpt_2": editor_result_attempt.original_excerpt_2,
-                                "modified_excerpt_2": editor_result_attempt.modified_excerpt_2,
-                            },
-                            "validation_result": {
-                                "is_valid": validation_result_attempt.is_valid,
-                                "overall_score": validation_result_attempt.overall_score,
-                                "reasoning": validation_result_attempt.reasoning,
-                                "clinical_plausibility_score": (
-                                    validation_result_attempt.clinical_plausibility_score
-                                ),
-                                "temporal_appropriateness_score": (
-                                    validation_result_attempt.temporal_appropriateness_score
-                                ),
-                                "clinical_significance_score": (
-                                    validation_result_attempt.clinical_significance_score
-                                ),
-                            },
-                        }
-                        for (
-                            editor_result_attempt,
-                            validation_result_attempt,
-                            attempt_num,
-                        ) in attempts
-                    ],
-                    "success": has_success,
-                    "best_score": best_score,
-                    "best_attempt": best_attempt[1] if best_attempt else None,
-                }
-
-                if has_success:
-                    successful_conflict_types.append(conflict_type)
+                        successful_conflict_types.append(conflict_attempt["conflict_type"])
+                        break  # Only count each conflict type once
 
             # Create annotations for all attempts
             all_annotations = []
@@ -255,10 +184,6 @@ class Pipeline:
                 first_editor_result, document_pair, all_attempts[0][1], final_conflict_type
             )
 
-            # Add all conflict types data to document data
-            doc_data.all_conflict_types = all_conflict_types_data
-            doc_data.final_selected_type = final_conflict_type
-
             # Create the complete item with all annotations
             conflict_item = ConflictDataItem(
                 data=doc_data, annotations=[{"result": all_annotations}]
@@ -273,7 +198,7 @@ class Pipeline:
             self.logger.info(
                 f"Document pair {pair_id} saved (DB ID: {doc_id}, Status: {status},"
                 f" {threshold_count}/{len(all_attempts)} attempts meet threshold,"
-                f" {len(successful_conflict_types)}/{len(all_conflict_types_data)}"
+                f" {len(successful_conflict_types)}/{len(all_conflict_attempts)}"
                 " conflict types successful)"
             )
             return True
