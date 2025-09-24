@@ -152,8 +152,18 @@ class Pipeline:
             True if saved successfully, False otherwise
         """
         try:
-            # Use the first attempt's editor result for the document content
-            first_editor_result = all_attempts[0][0]
+            # Find the best validation result (highest score among valid attempts)
+            best_editor_result = all_attempts[0][0]  # Default to first attempt
+            best_validation_result = all_attempts[0][1]  # Default to first attempt
+
+            for editor_result_attempt, validation_result_attempt, attempt_num in all_attempts:
+                if (
+                    validation_result_attempt.is_valid
+                    and validation_result_attempt.overall_score
+                    > best_validation_result.overall_score
+                ):
+                    best_editor_result = editor_result_attempt
+                    best_validation_result = validation_result_attempt
 
             # Count successful conflict types for logging
             successful_conflict_types = []
@@ -179,12 +189,16 @@ class Pipeline:
                     if annotation:
                         all_annotations.append(annotation)
 
-            # Create document data using the first attempt's content
+            # Sort annotations so best results appear first
+            # Sort by validation score (descending) and then by is_valid (True first)
+            all_annotations.sort(key=lambda ann: (-ann.moderator_score, -ann.is_valid))
+
+            # Create document data using the best attempt's content and validation result
             doc_data = self.dataset_manager._create_document_data(
-                first_editor_result, document_pair, all_attempts[0][1], final_conflict_type
+                best_editor_result, document_pair, best_validation_result, final_conflict_type
             )
 
-            # Create the complete item with all annotations
+            # Create the complete item with all annotations (best results first)
             conflict_item = ConflictDataItem(
                 data=doc_data, annotations=[{"result": all_annotations}]
             )
