@@ -3,7 +3,6 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import openai
@@ -29,13 +28,7 @@ class Annotation:
     from_name: str
     to_name: str
     type: str
-    moderator_score: float
-    moderator_reasoning: str
-    conflict_type: str
     value: AnnotationValue
-    clinical_plausibility_score: float = 1.0
-    temporal_appropriateness_score: float = 1.0
-    clinical_significance_score: float = 1.0
     is_valid: bool = False
     retry_attempt: int = 1
 
@@ -50,26 +43,27 @@ class DocumentData:
     orig_doc_2: str
     timestamp_1: Optional[str]
     timestamp_2: Optional[str]
-    created_at: Optional[str]
     moderator_score: Optional[float] = None
     moderator_reasoning: Optional[str] = None
+    clinical_plausibility_score: Optional[float] = None
+    temporal_appropriateness_score: Optional[float] = None
+    clinical_significance_score: Optional[float] = None
     conflict_type: Optional[str] = None
+    best_conflict: Optional[bool] = None
 
 
 @dataclass
 class ConflictDataItem:
-    """Complete conflict data item matching processed JSON format exactly"""
+    """Complete conflict data item matching new processed JSON format"""
 
     data: DocumentData
-    annotations: List[Dict[str, List[Annotation]]]
+    annotations: List[Annotation]
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
             "data": asdict(self.data),
-            "annotations": [
-                {"result": [asdict(ann) for ann in group["result"]]} for group in self.annotations
-            ],
+            "annotations": [{"result": [asdict(ann) for ann in self.annotations]}],
         }
 
 
@@ -184,7 +178,7 @@ class DatasetManager:
         """Add validated documents to dataset in Label Studio format"""
         # Create document data using helper method
         doc_data = self._create_document_data(
-            modified_docs, original_pair, validation_result, conflict_type
+            modified_docs, original_pair, validation_result, conflict_type, False
         )
 
         # Create annotations using helper methods
@@ -197,7 +191,7 @@ class DatasetManager:
                 annotations.append(annotation)
 
         # Create the complete item and save
-        conflict_item = ConflictDataItem(data=doc_data, annotations=[{"result": annotations}])
+        conflict_item = ConflictDataItem(data=doc_data, annotations=annotations)
         return self.save_item(conflict_item)
 
     def _create_document_data(
@@ -206,6 +200,7 @@ class DatasetManager:
         original_pair: DocumentPair,
         validation_result: ValidationResult,
         conflict_type: str,
+        best_conflict: bool = False,
     ) -> DocumentData:
         """Create DocumentData object with standard fields"""
         return DocumentData(
@@ -213,12 +208,15 @@ class DatasetManager:
             doc_2=modified_docs.modified_document2,
             orig_doc_1=original_pair.doc1_text,
             orig_doc_2=original_pair.doc2_text,
-            created_at=datetime.now().isoformat(),
             timestamp_1=str(original_pair.doc1_timestamp) if original_pair.doc1_timestamp else None,
             timestamp_2=str(original_pair.doc2_timestamp) if original_pair.doc2_timestamp else None,
             moderator_score=validation_result.overall_score,
             moderator_reasoning=validation_result.reasoning,
+            clinical_plausibility_score=validation_result.clinical_plausibility_score,
+            temporal_appropriateness_score=validation_result.temporal_appropriateness_score,
+            clinical_significance_score=validation_result.clinical_significance_score,
             conflict_type=conflict_type,
+            best_conflict=best_conflict,
         )
 
     def _create_annotation_for_excerpt(
@@ -234,16 +232,12 @@ class DatasetManager:
             excerpt = modified_docs.modified_excerpt_1
             document = modified_docs.modified_document1
             to_name = "doc_1"
-            from_name = (
-                f"labels_doc1_attempt_{retry_attempt}" if retry_attempt > 1 else "labels_doc1"
-            )
+            from_name = "labels_doc1"
         else:
             excerpt = modified_docs.modified_excerpt_2
             document = modified_docs.modified_document2
             to_name = "doc_2"
-            from_name = (
-                f"labels_doc2_attempt_{retry_attempt}" if retry_attempt > 1 else "labels_doc2"
-            )
+            from_name = "labels_doc2"
 
         if not excerpt or pd.isna(excerpt) or not excerpt.strip():
             return None
@@ -256,12 +250,6 @@ class DatasetManager:
             from_name=from_name,
             to_name=to_name,
             type="labels",
-            moderator_score=validation_result.overall_score,
-            moderator_reasoning=validation_result.reasoning,
-            conflict_type=conflict_type,
-            clinical_plausibility_score=validation_result.clinical_plausibility_score,
-            temporal_appropriateness_score=validation_result.temporal_appropriateness_score,
-            clinical_significance_score=validation_result.clinical_significance_score,
             is_valid=validation_result.is_valid,
             retry_attempt=retry_attempt,
             value=AnnotationValue(
