@@ -1,7 +1,7 @@
 <View>
   <View style="display: grid; grid-template-columns: 1fr 1fr; column-gap: 1em;">
     <View>
-      <Header value="Document 1"/>
+      <Header value="Document 1 (Modified)"/>
       <Text name="timestamp_1" value="$timestamp_1"/>
       <Text name="doc_1" value="$doc_1"/>
       <Labels name="labels_doc1" toName="doc_1">
@@ -9,7 +9,7 @@
       </Labels>
     </View>
     <View>
-      <Header value="Document 2"/>
+      <Header value="Document 2 (Modified)"/>
       <Text name="timestamp_2" value="$timestamp_2"/>
       <Text name="doc_2" value="$doc_2"/>
       <Labels name="labels_doc2" toName="doc_2">
@@ -18,6 +18,56 @@
     </View>
   </View>
 
+
+  <!-- Moderator Assessment Section -->
+  <View style="background: linear-gradient(135deg, #e6f3ff 0%, #f0f8ff 100%); padding: 20px; border-radius: 12px; margin: 15px 0; border: 2px solid #b3d9ff; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+    <Header value="Moderator Assessment" level="2" style="color: #1e40af; margin-bottom: 20px; text-align: center; font-weight: bold;"/>
+
+    <!-- Top Row: Overall Score and Conflict Info -->
+    <View style="display: grid; grid-template-columns: 1fr 1fr; column-gap: 20px; margin-bottom: 20px;">
+      <View style="background-color: #ffffff; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+        <Header value="Overall Assessment" level="3" style="color: #1e40af; margin-bottom: 10px;"/>
+        <View style="display: flex; flex-direction: column; gap: 8px;">
+          <View style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background-color: #f8fafc; border-radius: 4px;">
+            <Text name="moderator_score_label" value="Overall Score:" style="font-weight: 600; color: #374151;"/>
+            <Text name="moderator_score" value="$moderator_score" style="font-weight: bold; color: #1e40af; font-size: 1.1em;"/>
+          </View>
+          <View style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background-color: #f8fafc; border-radius: 4px;">
+            <Text name="conflict_type_label" value="Conflict Type:" style="font-weight: 600; color: #374151;"/>
+            <Text name="conflict_type" value="$conflict_type" style="font-weight: bold; color: #dc2626; text-transform: uppercase;"/>
+          </View>
+          <View style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background-color: #f8fafc; border-radius: 4px;">
+            <Text name="best_conflict_label" value="Best Conflict:" style="font-weight: 600; color: #374151;"/>
+            <Text name="best_conflict" value="$best_conflict" style="font-weight: bold; color: #059669;"/>
+          </View>
+        </View>
+      </View>
+
+      <View style="background-color: #ffffff; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
+        <Header value="Detailed Scores" level="3" style="color: #1e40af; margin-bottom: 10px;"/>
+        <View style="display: flex; flex-direction: column; gap: 8px;">
+          <View style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background-color: #f0fdf4; border-radius: 4px;">
+            <Text name="clinical_plausibility_score_label" value="Clinical Plausibility:" style="font-weight: 600; color: #374151;"/>
+            <Text name="clinical_plausibility_score" value="$clinical_plausibility_score" style="font-weight: bold; color: #059669;"/>
+          </View>
+          <View style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background-color: #f0fdf4; border-radius: 4px;">
+            <Text name="temporal_appropriateness_score_label" value="Temporal Appropriateness:" style="font-weight: 600; color: #374151;"/>
+            <Text name="temporal_appropriateness_score" value="$temporal_appropriateness_score" style="font-weight: bold; color: #059669;"/>
+          </View>
+          <View style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background-color: #f0fdf4; border-radius: 4px;">
+            <Text name="clinical_significance_score_label" value="Clinical Significance:" style="font-weight: 600; color: #374151;"/>
+            <Text name="clinical_significance_score" value="$clinical_significance_score" style="font-weight: bold; color: #059669;"/>
+          </View>
+        </View>
+      </View>
+    </View>
+
+    <!-- Reasoning Section -->
+    <View style="background-color: #ffffff; padding: 15px; border-radius: 8px; border-left: 4px solid #8b5cf6;">
+      <Header value="Moderator Reasoning" level="3" style="color: #1e40af; margin-bottom: 10px;"/>
+      <Text name="moderator_reasoning" value="$moderator_reasoning" style="background-color: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb; line-height: 1.5; white-space: pre-wrap;"/>
+    </View>
+  </View>
 
  <!-- Quality Assessment -->
   <View style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 10px 0;">
