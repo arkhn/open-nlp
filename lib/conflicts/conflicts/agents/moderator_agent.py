@@ -127,7 +127,7 @@ class ModeratorAgent(BaseAgent):
                 "overall_score": 1.0,
             }
             reasoning = response.strip()
-            temporal_appropriateness_rg = r"(?:[Tt]emporal.*?[Aa]ppropriateness).*?(\d{1})"
+            temporal_appropriateness_rg = r"(?:[Tt]emporal.*?[Aa]ppropriatenes?).*?(\d{1})"
             # Extract scores using flexible patterns (order matters - more specific first)
             patterns = {
                 "significance": r"(?:[Cc]linical.*?[Ss]ignificance).*?(\d{1})",

@@ -88,7 +88,7 @@ Clinical Significance (1–5):
 4 = Significant inconsistency that could impact clinical decisions (e.g., conflicting diagnoses)
 5 = Critical inconsistency that could harm patient safety (e.g., conflicting allergies, incompatible vital signs)
 
-Temporal Appropriatenes (1-5):
+Temporal Appropriateness (1-5):
 1 = Temporally inappropriate - contradiction easily explained by normal clinical evolution (e.g., “No fever” on Day 1 vs “Fever 101°F” on Day 3 during infection treatment; “Wound dehisced” on Day 1 vs “Wound healing well” on Day 7 post-surgery; “Acute pain 8/10” vs “Pain improved to 3/10" over multiple days with analgesic therapy)
 2 = Poor temporal context - contradiction likely reflects expected clinical progression (e.g., “Hypertensive crisis” on Day 1 vs “Blood pressure controlled” on Day 3 with antihypertensive therapy; “Confused and agitated” vs “Alert and oriented” over 48-72 hours during delirium resolution; laboratory values improving over days with appropriate treatment)
 3 = Questionable temporal appropriateness - contradiction spans timeframe where some clinical change possible but not expected (e.g., “No known drug allergies” on Day 1 vs “Allergic to penicillin” on Day 2 without new exposure; “Previous appendectomy” documented inconsistently over 24-48 hour period; medication dosages contradicted within 1-2 days without clear clinical indication)
@@ -116,7 +116,7 @@ Reasoning: [Brief explanation of your evaluation in less than 100 words]
 
 Clinical Plausibility Score: [1-5]
 Clinical Significance Score: [1-5]
-Temporal Appropriatenes: [1-5]
+Temporal Appropriateness: [1-5]
 
 Overall Score:
 
