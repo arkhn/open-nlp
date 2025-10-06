@@ -51,66 +51,60 @@ Propositions from Document 2: {propositions2}
 
 ### 🔴 ALWAYS SAFE TO CONTRADICT (Any timeframe):
 
-**ANATOMICAL conflicts:**
-- Organ presence/absence: "Gallbladder absent" ↔ "Cholelithiasis present"
-- Surgical history: "No prior surgery" ↔ "Mastectomy 2010"
-- Laterality: "Left breast cancer" ↔ "Right breast cancer"
-- Body structures: "Bilateral ovaries" ↔ "Hysterectomy completed"
+**CLINICAL_HISTORY conflicts:**
+- Surgical history: "No prior surgery" CONTRADICTS "Mastectomy 2010"
+- Transplant status: "Healthy adult" CONTRADICTS "Kidney transplant recipient"
+- Implant/device: "No contraindications" CONTRADICTS "Permanent pacemaker placed"
+- Anatomical alterations: "Bowel sounds present" CONTRADICTS "Total colectomy with ileostomy"
 
-**CONTRAINDICATION conflicts:**
-- Allergies: "No known allergies" ↔ "Penicillin allergy"
-- Drug tolerance: "Tolerates NSAIDs" ↔ "NSAID contraindication"
+**TEMPORALITY conflicts:**
+- Immutable characteristics: "Blood type A+" CONTRADICTS "Blood type O-"
+- Allergy evolution: "Anaphylaxis to penicillin" CONTRADICTS "No known drug allergies"
+- Genetic information: "BRCA1 positive" CONTRADICTS "No genetic risk factors"
+- Constitutional metrics: "Height 5'10"" CONTRADICTS "Height 6'2"" (adult)
 
 *Why safe: These facts cannot change over time*
 
 ### 🟡 TIMEFRAME-DEPENDENT CONFLICTS:
 
-**OPPOSITION conflicts:**
-- **WITHIN_HOUR/DAY**: Safe ("Normal chest X-ray" ↔ "Bilateral pneumonia")
-- **WITHIN_WEEK+**: Risky (could be treatment response)
-
-**VALUE conflicts:**
-- **WITHIN_HOUR**: Safe ("Glucose 50" ↔ "Glucose 200" same time)
+**BIOLOGICAL_MARKERS conflicts:**
+- **WITHIN_HOUR**: Safe ("Hemoglobin 7.2" CONTRADICTS "Hemoglobin 11.5" same time)
 - **WITHIN_DAY+**: Risky (treatment effects expected)
 
-**DESCRIPTIVE conflicts:**
-- **WITHIN_HOUR/DAY**: Safe ("Effusion unlikely" ↔ "Effusion present")
-- **WITHIN_WEEK+**: Risky (reassessment vs contradiction)
+**CARE_EVOLUTION conflicts:**
+- **WITHIN_HOUR/DAY**: Safe ("Acute MI" CONTRADICTS "GERD" same encounter)
+- **WITHIN_WEEK+**: Risky (could be treatment response or natural progression)
 
-**COMPARISON conflicts:**
-- **Generally AVOID**: Usually describe temporal changes
-- **Exception**: Same-time measurements ("3cm lesion" same day reported as "5cm lesion")
+**Biological markers:**
+- **WITHIN_HOUR**: Safe (impossible lab changes same time)
+- **WITHIN_DAY+**: Risky (treatment effects expected)
+
+**Care evolution:**
+- **WITHIN_HOUR/DAY**: Safe (diagnostic contradictions same encounter)
+- **WITHIN_WEEK+**: Risky (could reflect treatment response)
 
 ### 🚨 TIMEFRAME GUIDELINES BY CONFLICT TYPE:
 
 **WITHIN_HOUR (<1h):** Almost all conflict types valid - insufficient time for natural changes
-- **OPPOSITION**: Valid (normal vs abnormal findings same entity)
-- **ANATOMICAL**: Valid (structural contradictions always immutable)
-- **VALUE**: Valid (lab/measurement contradictions same timeframe)
-- **CONTRAINDICATION**: Valid (allergy/treatment conflicts immutable)
-- **DESCRIPTIVE**: Valid (assessment contradictions same timeframe)
-- **COMPARISON**: Valid only if same exact measurement timeframe
+- **CLINICAL_HISTORY**: Valid (surgical/transplant history immutable)
+- **TEMPORALITY**: Valid (blood type, allergies, genetic info immutable)
+- **BIOLOGICAL_MARKERS**: Valid (lab/measurement contradictions same timeframe)
+- **CARE_EVOLUTION**: Valid (diagnostic contradictions same encounter)
 
 **WITHIN_DAY (1-24h):** Most types valid with caution on treatment-responsive parameters
-- **ANATOMICAL + CONTRAINDICATION**: Always safe (immutable facts)
-- **OPPOSITION**: Valid if not treatment response (avoid "treated condition improving")
-- **VALUE**: Caution - lab values can change with acute interventions
-- **DESCRIPTIVE**: Valid for diagnostic assessments, avoid treatment progress notes
-- **COMPARISON**: High risk - often describes natural progression
+- **CLINICAL_HISTORY + TEMPORALITY**: Always safe (immutable facts)
+- **BIOLOGICAL_MARKERS**: Caution - lab values can change with acute interventions
+- **CARE_EVOLUTION**: Valid for diagnostic assessments, avoid treatment progress notes
 
 **WITHIN_WEEK (1-7d):** Conservative approach - prioritize immutable facts
-- **ANATOMICAL + CONTRAINDICATION**: Safest choices (structural/allergy facts unchanged)
-- **OPPOSITION**: High risk - treatments typically show effects by this timeframe
-- **VALUE**: High risk - lab improvements/changes expected with therapy
-- **DESCRIPTIVE**: Moderate risk - may reflect updated clinical assessments
-- **COMPARISON**: Very high risk - designed to capture temporal changes
+- **CLINICAL_HISTORY + TEMPORALITY**: Safest choices (structural/allergy facts unchanged)
+- **BIOLOGICAL_MARKERS**: High risk - lab improvements/changes expected with therapy
+- **CARE_EVOLUTION**: Moderate risk - may reflect updated clinical assessments
 
 **WITHIN_MONTH+ (>7d):** Ultra-conservative - avoid treatment-responsive conflicts
-- **ANATOMICAL + CONTRAINDICATION**: ONLY recommended types
-- **OPPOSITION**: Avoid - normal treatment evolution/recovery expected
-- **VALUE**: Avoid - therapeutic responses and adjustments normal
-- **DESCRIPTIVE**: Avoid - clinical reassessments and status updates expected
-- **COMPARISON**: Avoid - inherently temporal, describes expected changes
+- **CLINICAL_HISTORY + TEMPORALITY**: ONLY recommended types
+- **BIOLOGICAL_MARKERS**: Avoid - therapeutic responses and adjustments normal
+- **CARE_EVOLUTION**: Avoid - clinical reassessments and status updates expected
 
 ---
 
@@ -143,17 +137,17 @@ Choose based on timeframe safety guidelines above
 ## ✅ CREATE THESE REAL CONFLICTS (Prefer sophisticated over simple):
 
 **🥇 PREFERRED - Sophisticated/Tricky conflicts:**
-- **Implicit anatomical**: "Routine colonoscopy completed" ↔ "Total colectomy 2018"
-- **Complex contraindications**: "Started on warfarin" ↔ "Active GI bleeding noted"
-- **Nuanced medical logic**: "Creatinine 3.2" ↔ "Normal kidney function per nephrologist"
-- **Multi-system implications**: "Severe heart failure EF 15%" ↔ "Cleared for major surgery"
-- **Clinical reasoning conflicts**: "NPO for surgery" ↔ "Patient eating normal diet pre-op"
+- **Clinical History**: "Routine colonoscopy completed" CONTRADICTS "Total colectomy 2018"
+- **Biological Markers**: "Hemoglobin 7.2" CONTRADICTS "Hemoglobin 11.5" (no transfusion documented)
+- **Care Evolution**: "Acute MI" CONTRADICTS "GERD" (same encounter, no cardiac workup)
+- **Temporality**: "Blood type A+" CONTRADICTS "Blood type O-" (same patient)
+- **Complex clinical logic**: "Creatinine 3.2" CONTRADICTS "Normal kidney function per nephrologist"
 
 **🥈 ACCEPTABLE - Direct conflicts:**
-- Impossible anatomy: "Appendectomy 2015" ↔ "Appendicitis diagnosed"
-- Contradictory history: "Never hospitalized" ↔ "Prior MI admission 2020"
-- Opposing findings: "Normal ECG" ↔ "Acute MI changes" (same time)
-- Allergy conflicts: "No drug allergies" ↔ "Severe penicillin reaction"
+- Surgical history: "Appendectomy 2015" CONTRADICTS "Appendicitis diagnosed"
+- Transplant status: "Healthy adult" CONTRADICTS "Kidney transplant recipient"
+- Lab contradictions: "Normal ECG" CONTRADICTS "Acute MI changes" (same time)
+- Allergy conflicts: "No drug allergies" CONTRADICTS "Severe penicillin reaction"
 
 ---
 

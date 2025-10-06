@@ -89,7 +89,7 @@ class TemporalAnalyzer:
             List of recommended conflict types
         """
         if not temporal_analysis.get("has_temporal_info"):
-            return ["opposition", "descriptive"]  # Default recommendations
+            return ["clinical_history", "temporality"]  # Default recommendations
 
         recommendations = []
         time_category = temporal_analysis.get("time_category")
@@ -99,48 +99,47 @@ class TemporalAnalyzer:
             # Documents created close together - likely same clinical encounter
             recommendations.extend(
                 [
-                    "opposition",  # Contradictory findings in same encounter
-                    "anatomical",  # Different anatomical assessments
-                    "value",  # Conflicting measurements
-                    "descriptive",  # Different descriptions of same event
+                    "biological_markers",  # Conflicting measurements in same encounter
+                    "care_evolution",  # Different assessments of same event
+                    "clinical_history",  # Historical inconsistencies
                 ]
             )
         elif time_category == "within_day":
             # Same day - could be different shifts or providers
             recommendations.extend(
                 [
-                    "opposition",
-                    "anatomical",
-                    "value",
-                    "contraindication",  # Different medication/allergy assessments
+                    "biological_markers",  # Conflicting lab values
+                    "care_evolution",  # Different clinical assessments
+                    "clinical_history",  # Historical inconsistencies
+                    "temporality",  # Allergy/characteristic conflicts
                 ]
             )
         elif time_category == "within_week":
             # Same week - patient condition changes
             recommendations.extend(
                 [
-                    "comparison",  # Temporal contradictions
-                    "opposition",  # Condition changes
-                    "anatomical",  # Different assessments over time
-                    "value",  # Changing measurements
+                    "care_evolution",  # Care transition conflicts
+                    "biological_markers",  # Changing measurements
+                    "clinical_history",  # Historical inconsistencies
+                    "temporality",  # Characteristic changes
                 ]
             )
         elif time_category == "within_month":
             # Same month - longer-term changes
             recommendations.extend(
                 [
-                    "comparison",  # Temporal contradictions
-                    "opposition",  # Condition evolution
-                    "descriptive",  # Different perspectives over time
+                    "care_evolution",  # Care transition conflicts
+                    "clinical_history",  # Historical inconsistencies
+                    "temporality",  # Characteristic changes over time
                 ]
             )
         else:  # long_term
             # Significant time separation
             recommendations.extend(
                 [
-                    "comparison",  # Temporal contradictions
-                    "opposition",  # Long-term condition changes
-                    "descriptive",  # Different historical perspectives
+                    "temporality",  # Long-term characteristic changes
+                    "clinical_history",  # Historical inconsistencies
+                    "care_evolution",  # Care transition conflicts
                 ]
             )
 
