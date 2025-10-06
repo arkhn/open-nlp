@@ -1,6 +1,7 @@
 import argparse
 import hashlib
 import json
+import random
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -57,7 +58,9 @@ def load_and_process_files(file_paths: List[str]) -> List[Dict[str, Any]]:
     return all_data
 
 
-def create_splits(data: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+def create_splits(
+    data: List[Dict[str, Any]], best_limit: int, low_score_limit: int
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Create two splits based on criteria."""
     used_pair_ids = set()
     best_split = []
@@ -65,8 +68,10 @@ def create_splits(data: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], Lis
 
     # Split 1: Best propositions
     for item in data:
+        if len(best_split) >= best_limit:
+            break
         pair_id = get_pair_id(item)
-        is_best = item.get("best_conflict", False) or item.get("is_best", False)
+        is_best = item.get("data", {}).get("best_conflict", False)
 
         if is_best and pair_id not in used_pair_ids:
             best_split.append(item)
@@ -74,6 +79,8 @@ def create_splits(data: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], Lis
 
     # Split 2: Low-scored propositions
     for item in data:
+        if len(low_score_split) >= low_score_limit:
+            break
         pair_id = get_pair_id(item)
         avg_score = calculate_average_score(item)
 
@@ -132,6 +139,18 @@ def create_metadata(
 def main():
     parser = argparse.ArgumentParser(description="Post-process conflict detection dataset files")
     parser.add_argument("files", nargs="+", help="JSON files to process")
+    parser.add_argument(
+        "--best-limit",
+        type=int,
+        default=50,
+        help="Maximum number of best conflict items (default: 50)",
+    )
+    parser.add_argument(
+        "--low-score-limit",
+        type=int,
+        default=50,
+        help="Maximum number of low score items (default: 50)",
+    )
     args = parser.parse_args()
 
     # Load and process data
@@ -141,8 +160,11 @@ def main():
     print(f"Total items loaded: {len(all_data)}")
 
     # Create splits
-    best_split, low_score_split = create_splits(all_data)
+    best_split, low_score_split = create_splits(all_data, args.best_limit, args.low_score_limit)
     merged_data = best_split + low_score_split
+
+    # Shuffle the merged data
+    random.shuffle(merged_data)
 
     # Create output directory
     output_dir = Path("postprocessed")
@@ -169,7 +191,7 @@ def main():
     print(f"  - {json_path}")
     print(f"  - {md_path}")
     print(
-        f"\nFinal dataset: {len(merged_data)} items ({len(best_split)} best"
+        f"\nFinal dataset: {len(merged_data)} items ({len(best_split)} best "
         f"{len(low_score_split)} low score)"
     )
 
