@@ -15,6 +15,7 @@ from ..agents.editor_agent import EditorAgent
 from ..agents.moderator_agent import ModeratorAgent
 from ..agents.proposition_agent import PropositionAgent
 from .base import ConflictDataItem, DatasetManager
+from .constants import PRE_POST_CARE_CONFLICT_TYPE, TEMPORALITY_CONFLICT_TYPE
 from .data_loader import DataLoader
 from .models import DocumentPair, ValidationResult
 
@@ -59,8 +60,23 @@ class Pipeline:
 
         # Initialize agents with shared client and configuration
         self.proposition_agent = PropositionAgent(self.client, cfg.model.name, cfg)
-        self.doctor_agent = DoctorAgent(self.client, cfg.model.name, cfg)
-        self.editor_agent = EditorAgent(self.client, cfg.model.name, cfg)
+
+        # Initialize specialized doctor agents for the two conflict types
+        self.doctor_agent_pre_post_care = DoctorAgent(
+            self.client, cfg.model.name, cfg, conflict_type=PRE_POST_CARE_CONFLICT_TYPE
+        )
+        self.doctor_agent_temporality = DoctorAgent(
+            self.client, cfg.model.name, cfg, conflict_type=TEMPORALITY_CONFLICT_TYPE
+        )
+
+        # Initialize specialized editor agents for the two conflict types
+        self.editor_agent_pre_post_care = EditorAgent(
+            self.client, cfg.model.name, cfg, conflict_type=PRE_POST_CARE_CONFLICT_TYPE
+        )
+        self.editor_agent_temporality = EditorAgent(
+            self.client, cfg.model.name, cfg, conflict_type=TEMPORALITY_CONFLICT_TYPE
+        )
+
         self.moderator_agent = ModeratorAgent(
             self.client,
             cfg.model.name,
@@ -251,25 +267,31 @@ class Pipeline:
         result_data["proposition_result"] = proposition_result
         result_data["proposition_time"] = proposition_time
 
-        # Step 2: Try each conflict type with Doctor Agent choosing proposition pairs
-        all_attempts = []  # Simplified: single list of all attempts with metadata
-        best_result = None  # Track the best result found so far
+        # Step 2: Process both specialized conflict types for this proposition set
+        all_attempts = []
+        best_result = None
 
-        # Get all available conflict types
-        conflict_types = list(self.doctor_agent.list_all_conflict_types().keys())
+        # Process both specialized conflict types
+        conflict_type_configs = [
+            (
+                PRE_POST_CARE_CONFLICT_TYPE,
+                self.doctor_agent_pre_post_care,
+                self.editor_agent_pre_post_care,
+            ),
+            (
+                TEMPORALITY_CONFLICT_TYPE,
+                self.doctor_agent_temporality,
+                self.editor_agent_temporality,
+            ),
+        ]
 
-        if not conflict_types:
-            self.logger.error("No conflict types available - cannot process document pair")
-            result_data["processing_time"] = time.time() - start_time
-            return False, result_data
-
-        for conflict_type in conflict_types:
-            self.logger.info(f"Trying conflict type: {conflict_type}")
+        for conflict_type, doctor_agent, editor_agent in conflict_type_configs:
+            self.logger.info(f"Processing conflict type: {conflict_type}")
 
             # Doctor Agent chooses proposition pairs for this conflict type
             try:
                 conflict_result, doctor_time = self._execute_agent(
-                    self.doctor_agent,
+                    doctor_agent,
                     document_pair,
                     proposition_result[0],
                     proposition_result[1],
@@ -283,7 +305,7 @@ class Pipeline:
             for attempt in range(1, self.max_retries + 1):
                 # Execute editor agent
                 editor_result, editor_time = self._execute_agent(
-                    self.editor_agent, document_pair, conflict_result
+                    editor_agent, document_pair, conflict_result
                 )
 
                 # Check if editor agent failed to create modifications
@@ -410,10 +432,11 @@ class Pipeline:
                 if attempt["validation_result"].is_valid
             )
         )
+        total_conflict_types = len(set(attempt["conflict_type"] for attempt in all_attempts))
 
         self.logger.info(
             f"Pair {pair_id}: {status} - {final_result['conflict_type']} conflict "
-            f"(best of {successful_conflict_types}/{len(conflict_types)} successful types), "
+            f"(best of {successful_conflict_types}/{total_conflict_types} successful types), "
             f"{proposition_result[0].total_propositions + proposition_result[1].total_propositions}"
             f" propositions, {successful_attempts}/{total_attempts} valid"
         )
@@ -503,13 +526,16 @@ class Pipeline:
             "validated_documents": total_validated,
             "dataset_statistics": data_stats,
             "agents": {
-                "doctor": {
-                    "name": self.doctor_agent.name,
-                    "conflict_types_available": list(
-                        self.doctor_agent.list_all_conflict_types().keys()
-                    ),
+                "doctor_pre_post_care": {
+                    "name": self.doctor_agent_pre_post_care.name,
+                    "conflict_type": PRE_POST_CARE_CONFLICT_TYPE,
                 },
-                "editor": {"name": self.editor_agent.name},
+                "doctor_temporality": {
+                    "name": self.doctor_agent_temporality.name,
+                    "conflict_type": TEMPORALITY_CONFLICT_TYPE,
+                },
+                "editor_pre_post_care": {"name": self.editor_agent_pre_post_care.name},
+                "editor_temporality": {"name": self.editor_agent_temporality.name},
                 "moderator": {
                     "name": self.moderator_agent.name,
                     "min_score": self.moderator_agent.min_score,
