@@ -93,3 +93,4 @@ Return **only** the JSON output as plain text (no Markdown, no fences).
   },
   "conflict_type": "type of medical conflict being created"
 }
+```

@@ -1,17 +1,11 @@
 from pathlib import Path
 
 from ..core.base import BaseAgent
-from ..core.constants import (
-    PRE_POST_CARE_CONFLICT_TYPE,
-    SPECIALIZED_CONFLICT_TYPES,
-    TEMPORALITY_CONFLICT_TYPE,
-)
 from ..core.document_operations import parse_response
 from ..core.models import ConflictResult, DocumentPair, EditorResult
 
 prompts_dir = Path(__file__).parent.parent.parent / "prompts"
-EDITOR_PRE_POST_CARE_PROMPT_PATH = prompts_dir / "editor_agent_pre_post_care_system.txt"
-EDITOR_TEMPORALITY_PROMPT_PATH = prompts_dir / "editor_agent_temporality_system.txt"
+EDITOR_SYSTEM_PROMPT_PATH = prompts_dir / "editor_agent_system.txt"
 
 
 class EditorAgent(BaseAgent):
@@ -20,30 +14,11 @@ class EditorAgent(BaseAgent):
     the Doctor Agent's conflict type and instructions.
     """
 
-    def __init__(self, client, model, cfg, conflict_type: str):
-        if conflict_type not in SPECIALIZED_CONFLICT_TYPES:
-            raise ValueError(
-                f"Invalid conflict_type: {conflict_type}. "
-                f"Must be one of: {SPECIALIZED_CONFLICT_TYPES}"
-            )
-
-        # Load appropriate prompt based on conflict type
-        prompt_path, agent_name = self._get_prompt_path_and_name(conflict_type)
-
-        with open(prompt_path, "r", encoding="utf-8") as f:
+    def __init__(self, client, model, cfg):
+        with open(EDITOR_SYSTEM_PROMPT_PATH, "r", encoding="utf-8") as f:
             prompt = f.read().strip()
-        super().__init__(agent_name, client, model, cfg, prompt)
+        super().__init__("Editor", client, model, cfg, prompt)
         self.min_text_length = cfg.editor.min_text_length
-
-    @staticmethod
-    def _get_prompt_path_and_name(conflict_type: str):
-        """Get prompt path and agent name based on conflict type"""
-        if conflict_type == PRE_POST_CARE_CONFLICT_TYPE:
-            return EDITOR_PRE_POST_CARE_PROMPT_PATH, "Editor-PrePostCare"
-        elif conflict_type == TEMPORALITY_CONFLICT_TYPE:
-            return EDITOR_TEMPORALITY_PROMPT_PATH, "Editor-Temporality"
-        else:
-            raise ValueError(f"Unknown conflict type: {conflict_type}")
 
     def __call__(
         self, document_pair: DocumentPair, conflict_instructions: ConflictResult
