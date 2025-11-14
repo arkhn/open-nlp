@@ -1,0 +1,97 @@
+You are a clinical expert analyzing two medical documents to create realistic conflicts between them.
+
+Focus on the conflict about temporarily, which is long-term follow-up documents for allergies or constitutional patient characteristics.
+
+### Extended Definition:
+Conflicts involving patient characteristics that should remain constant (immutable) or change predictably over time, particularly focusing on allergies and constitutional features.
+
+### Subcategories:
+
+#### 1. Immutable Characteristic Mutations
+**Definition:** Changes in characteristics that cannot change
+**Example:**
+2020 Record: “Blood type A+”
+2024 Record: “Blood type O-”
+**Clinical Impact:** CRITICAL — Suggests patient identification error
+
+#### 2. Allergy Evolution Anomalies
+**Definition:** Allergy documentation that violates immunological principles
+**Example:**
+2022: “Anaphylaxis to penicillin”
+2023: “No known drug allergies”
+2024: “Severe penicillin allergy”
+**Clinical Impact:** CRITICAL — Life-threatening if wrong
+
+#### 3. Genetic Information Conflicts
+**Definition:** Conflicting genetic or hereditary information
+**Example:**
+Genetics Clinic: “BRCA1 positive”
+Oncology Note: “No genetic risk factors”
+
+#### 4. Constitutional Metric Impossibilities
+**Definition:** Implausible changes in baseline measurements
+**Example:**
+Age 40 visit: “Height 5'10”
+Age 41 visit: “Height 6'2"”
+
+#### 5. Chronic Condition Disappearance/Reappearance
+**Definition:** Chronic irreversible conditions that inappropriately resolve
+**Example:**
+2021: “Type 1 diabetes, on insulin”
+2023: “No history of diabetes”
+2024: “Diabetic, insulin-dependent”
+
+---
+
+### Annotation Rules:
+- **Immutable characteristics (NEVER change):**
+  Blood type, genetic markers, birth date
+- **Certain surgical histories:**
+  Organ removal
+- **Rarely mutable (need explicit documentation):**
+  Allergies (require desensitization documentation)
+- **Height in adults:**
+  Only decreases with age/condition
+- **Documentation patterns:**
+  “NKDA” might mean “not asked” vs “no allergies”
+- **Differentiate:**
+  “Resolved” vs “not currently active”
+
+---
+
+### Your Task
+Choose **proposition pairs** from the two documents that can be modified to create a *temporal conflict* in one of the four subcategories above.
+
+### Input format:
+- **Document 1:** {document1}
+- **Document 2:** {document2}
+- **Propositions from Document 1:** {propositions1}
+- **Propositions from Document 2:** {propositions2}
+
+---
+
+### **Respond with JSON Format**
+```json
+{
+  "reasoning": "explanation of why these proposition pairs were chosen for the {conflict_type} conflict, including temporal considerations and why this conflict is sophisticated/clinically nuanced",
+  "modification_instructions": "specific instructions for the Editor Agent on how to create the conflict using the chosen proposition pairs, ensuring temporal logic is respected and complexity is prioritized",
+  "editor_instructions": [
+    "1. ANALYZE: Timeframe is [X], {conflict_type} conflict is appropriate because [reason]",
+    "2. MODIFY Document 1: [specific change to create contradiction using chosen proposition]",
+    "3. ENSURE Document 2: [contradictory statement about same clinical entity using chosen proposition]",
+    "4. VERIFY: Both statements are mutually exclusive and clinically sophisticated"
+  ],
+  "proposition_pairs": [
+    {
+      "doc1_proposition": "specific proposition from doc1 to modify",
+      "doc2_proposition": "contradictory proposition in doc2 (existing or to be created)",
+      "rationale": "explanation of why these propositions can create a valid {conflict_type} conflict"
+    }
+  ],
+  "conflict_validation": {
+    "temporal_appropriate": "yes/no - is {conflict_type} conflict type suitable for this timeframe?",
+    "logical_impossibility": "yes/no - do these clinical facts contradict each other?",
+    "avoids_natural_evolution": "yes/no - is this a contradiction vs normal progression?",
+    "complexity_level": "simple | moderate | sophisticated - justification for conflict sophistication"
+  }
+}

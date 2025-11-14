@@ -1,0 +1,108 @@
+You are a clinical expert analyzing two medical documents to create realistic conflicts between them. Focus on the conflict about **Pre- and Post-Care Evolution Conflicts with Admission or Discharge Documents**
+
+---
+
+### **Extended Definition**
+Inconsistencies in clinical status, diagnoses, or treatment plans between care transition points that lack documented explanation or clinical justification.
+
+---
+
+### **Subcategories**
+
+---
+
+#### **1. Diagnosis Migration Without Justification**
+**Definition:** Primary diagnosis changes between admission and discharge without documented workup
+**Example:**
+Admission: “Acute myocardial infarction”
+Discharge: “Gastroesophageal reflux”
+*[No cardiac workup documented]*
+**Clinical Impact:** **HIGH** – Suggests missed diagnosis or inadequate documentation
+
+---
+
+#### **2. Unresolved Critical Findings**
+**Definition:** Abnormal findings identified at admission not addressed by discharge
+**Example:**
+Admission: “Lung mass identified on chest X-ray, needs follow-up”
+Discharge: “Pneumonia resolved”
+*[No mention of mass]*
+**Clinical Impact:** **CRITICAL** – Patient safety issue
+
+---
+
+#### **3. Medication Reconciliation Failures**
+**Definition:** Unexplained medication changes across transitions
+**Example:**
+Admission Meds: “Warfarin 5mg daily for AFib”
+Discharge Meds: *[No anticoagulation, no documented reason]*
+
+---
+
+#### **4. Functional Status Paradoxes**
+**Definition:** Impossible improvements or deteriorations in functional status
+**Example:**
+Admission: “Bedbound, severe dementia”
+Discharge (3 days later): “Ambulating independently, alert and oriented”
+
+---
+
+#### **5. Symptom Resolution Without Treatment**
+**Definition:** Presenting symptoms disappear without documented intervention
+**Example:**
+ED Arrival: “10/10 chest pain, diaphoresis”
+Admission (2 hours later): “Denies any symptoms”
+*[No treatment given]*
+
+---
+
+### **Annotation Rules**
+- **Expected documentation for diagnosis changes:**
+  - Must have diagnostic test results
+  - Must have clinical reasoning documented
+  - Must have attending physician agreement
+- **Time windows:**
+  - *Same encounter:* Strong conflict if unexplained
+  - *Between encounters:* Consider natural disease progression
+- **Exclude:** expected progressions (e.g., pneumonia → resolved pneumonia)
+
+---
+
+### **Your Task**
+Choose proposition pairs from the two documents that can be modified to create a temporary conflict in one of the five subcategories above.
+
+---
+
+### **Input Format**
+Document 1: {document1}
+Document 2: {document2}
+Propositions from Document 1: {propositions1}
+Propositions from Document 2: {propositions2}
+
+---
+
+### **Respond with JSON Format**
+```json
+{
+  "reasoning": "explanation of why these proposition pairs were chosen for the {conflict_type} conflict, including temporal considerations and why this conflict is sophisticated/clinically nuanced",
+  "modification_instructions": "specific instructions for the Editor Agent on how to create the conflict using the chosen proposition pairs, ensuring temporal logic is respected and complexity is prioritized",
+  "editor_instructions": [
+    "1. ANALYZE: Timeframe is [X], {conflict_type} conflict is appropriate because [reason]",
+    "2. MODIFY Document 1: [specific change to create contradiction using chosen proposition]",
+    "3. ENSURE Document 2: [contradictory statement about same clinical entity using chosen proposition]",
+    "4. VERIFY: Both statements are mutually exclusive and clinically sophisticated"
+  ],
+  "proposition_pairs": [
+    {
+      "doc1_proposition": "specific proposition from doc1 to modify",
+      "doc2_proposition": "contradictory proposition in doc2 (existing or to be created)",
+      "rationale": "explanation of why these propositions can create a valid {conflict_type} conflict"
+    }
+  ],
+  "conflict_validation": {
+    "temporal_appropriate": "yes/no - is {conflict_type} conflict type suitable for this timeframe?",
+    "logical_impossibility": "yes/no - do these clinical facts contradict each other?",
+    "avoids_natural_evolution": "yes/no - is this a contradiction vs normal progression?",
+    "complexity_level": "simple | moderate | sophisticated - justification for conflict sophistication"
+  }
+}
