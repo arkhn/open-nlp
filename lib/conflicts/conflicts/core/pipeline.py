@@ -69,13 +69,8 @@ class Pipeline:
             self.client, cfg.model.name, cfg, conflict_type=TEMPORALITY_CONFLICT_TYPE
         )
 
-        # Initialize specialized editor agents for the two conflict types
-        self.editor_agent_pre_post_care = EditorAgent(
-            self.client, cfg.model.name, cfg, conflict_type=PRE_POST_CARE_CONFLICT_TYPE
-        )
-        self.editor_agent_temporality = EditorAgent(
-            self.client, cfg.model.name, cfg, conflict_type=TEMPORALITY_CONFLICT_TYPE
-        )
+        # Initialize a single editor agent (works for all conflict types)
+        self.editor_agent = EditorAgent(self.client, cfg.model.name, cfg)
 
         self.moderator_agent = ModeratorAgent(
             self.client,
@@ -276,16 +271,14 @@ class Pipeline:
             (
                 PRE_POST_CARE_CONFLICT_TYPE,
                 self.doctor_agent_pre_post_care,
-                self.editor_agent_pre_post_care,
             ),
             (
                 TEMPORALITY_CONFLICT_TYPE,
                 self.doctor_agent_temporality,
-                self.editor_agent_temporality,
             ),
         ]
 
-        for conflict_type, doctor_agent, editor_agent in conflict_type_configs:
+        for conflict_type, doctor_agent in conflict_type_configs:
             self.logger.info(f"Processing conflict type: {conflict_type}")
 
             # Doctor Agent chooses proposition pairs for this conflict type
@@ -305,7 +298,7 @@ class Pipeline:
             for attempt in range(1, self.max_retries + 1):
                 # Execute editor agent
                 editor_result, editor_time = self._execute_agent(
-                    editor_agent, document_pair, conflict_result
+                    self.editor_agent, document_pair, conflict_result
                 )
 
                 # Check if editor agent failed to create modifications
@@ -534,8 +527,7 @@ class Pipeline:
                     "name": self.doctor_agent_temporality.name,
                     "conflict_type": TEMPORALITY_CONFLICT_TYPE,
                 },
-                "editor_pre_post_care": {"name": self.editor_agent_pre_post_care.name},
-                "editor_temporality": {"name": self.editor_agent_temporality.name},
+                "editor": {"name": self.editor_agent.name},
                 "moderator": {
                     "name": self.moderator_agent.name,
                     "min_score": self.moderator_agent.min_score,
