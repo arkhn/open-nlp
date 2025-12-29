@@ -105,6 +105,17 @@ class BaseAgent(ABC):
     def _parse_json_response(self, response: str) -> Dict[str, Any]:
         """Parse JSON response from API, handling potential formatting issues"""
         try:
+            # First, try to extract JSON from markdown code blocks
+            if "```json" in response:
+                parts = response.split("```json")
+                if len(parts) > 1:
+                    json_part = parts[1].split("```")[0].strip()
+                    try:
+                        return json.loads(json_part)
+                    except json.JSONDecodeError as e:
+                        self.logger.error(f"Failed to parse JSON from markdown block: {e}")
+                        # Fall through to try other methods
+
             # Try to find JSON content in the response
             start_idx = response.find("{")
             end_idx = response.rfind("}") + 1

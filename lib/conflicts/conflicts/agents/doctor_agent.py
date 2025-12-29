@@ -12,6 +12,12 @@ prompts_dir = Path(__file__).parent.parent.parent / "prompts"
 DOCTOR_PRE_POST_CARE_PROMPT_PATH = prompts_dir / "doctor_agent_pre_post_care_system.txt"
 DOCTOR_TEMPORALITY_PROMPT_PATH = prompts_dir / "doctor_agent_temporality_system.txt"
 
+# Configuration mapping for conflict types
+CONFLICT_TYPE_CONFIG = {
+    PRE_POST_CARE_CONFLICT_TYPE: (DOCTOR_PRE_POST_CARE_PROMPT_PATH, "Doctor-PrePostCare"),
+    TEMPORALITY_CONFLICT_TYPE: (DOCTOR_TEMPORALITY_PROMPT_PATH, "Doctor-Temporality"),
+}
+
 
 class DoctorAgent(BaseAgent):
     """
@@ -37,19 +43,15 @@ class DoctorAgent(BaseAgent):
     @staticmethod
     def _get_prompt_path_and_name(conflict_type: str):
         """Get prompt path and agent name based on conflict type"""
-        if conflict_type == PRE_POST_CARE_CONFLICT_TYPE:
-            return DOCTOR_PRE_POST_CARE_PROMPT_PATH, "Doctor-PrePostCare"
-        elif conflict_type == TEMPORALITY_CONFLICT_TYPE:
-            return DOCTOR_TEMPORALITY_PROMPT_PATH, "Doctor-Temporality"
-        else:
+        if conflict_type not in CONFLICT_TYPE_CONFIG:
             raise ValueError(f"Unknown conflict type: {conflict_type}")
+        return CONFLICT_TYPE_CONFIG[conflict_type]
 
     def __call__(
         self,
         document_pair: DocumentPair,
         propositions1: PropositionResult = None,
         propositions2: PropositionResult = None,
-        conflict_type: str = None,  # Kept for API compatibility but not used
     ) -> ConflictResult:
         """
         Analyze documents and choose proposition pairs for the specialized conflict type
@@ -58,7 +60,6 @@ class DoctorAgent(BaseAgent):
             document_pair: Pair of clinical documents to analyze
             propositions1: Optional PropositionResult from document 1
             propositions2: Optional PropositionResult from document 2
-            conflict_type: Not used (kept for API compatibility)
 
         Returns:
             ConflictResult containing the chosen proposition pairs and instructions
@@ -70,16 +71,8 @@ class DoctorAgent(BaseAgent):
 
         try:
             # Prepare propositions strings
-            propositions1_str = (
-                "\n".join([f"{i}. {prop}" for i, prop in enumerate(propositions1.propositions, 1)])
-                if propositions1 and propositions1.propositions
-                else "No propositions provided"
-            )
-            propositions2_str = (
-                "\n".join([f"{i}. {prop}" for i, prop in enumerate(propositions2.propositions, 1)])
-                if propositions2 and propositions2.propositions
-                else "No propositions provided"
-            )
+            propositions1_str = self._format_propositions(propositions1)
+            propositions2_str = self._format_propositions(propositions2)
 
             prompt = self.system_prompt.format(
                 document1=self._truncate_document(document_pair.doc1_text),
@@ -121,3 +114,19 @@ class DoctorAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error in Doctor Agent: {e}")
             raise
+
+    def _format_propositions(self, proposition_result: PropositionResult = None) -> str:
+        """
+        Format propositions for prompt inclusion
+
+        Args:
+            proposition_result: Optional PropositionResult to format
+
+        Returns:
+            Formatted string of propositions or "No propositions provided"
+        """
+        if proposition_result and proposition_result.propositions:
+            return "\n".join(
+                [f"{i}. {prop}" for i, prop in enumerate(proposition_result.propositions, 1)]
+            )
+        return "No propositions provided"
