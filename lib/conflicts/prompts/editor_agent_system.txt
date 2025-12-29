@@ -80,17 +80,17 @@ Any `target_text` that ends with "..." or incomplete words **will cause the syst
 Return **only** the JSON output as plain text (no Markdown, no fences).
 
 ```json
-{
-  "doc1": {
+{{
+  "doc1": {{
     "op": "delete" | "insert_after" | "replace",
     "target_text": "exact text from document 1 to modify",
     "replacement_text": "new text to insert or replace with"
-  },
-  "doc2": {
+  }},
+  "doc2": {{
     "op": "delete" | "insert_after" | "replace",
     "target_text": "exact text from document 2 to modify",
     "replacement_text": "new text to insert or replace with"
-  },
+  }},
   "conflict_type": "type of medical conflict being created"
-}
+}}
 ```

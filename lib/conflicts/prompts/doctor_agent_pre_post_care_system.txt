@@ -83,26 +83,26 @@ Propositions from Document 2: {propositions2}
 
 ### **Respond with JSON Format**
 ```json
-{
-  "reasoning": "explanation of why these proposition pairs were chosen for the {conflict_type} conflict, including temporal considerations and why this conflict is sophisticated/clinically nuanced",
+{{
+  "reasoning": "explanation of why these proposition pairs were chosen for the {{conflict_type}} conflict, including temporal considerations and why this conflict is sophisticated/clinically nuanced",
   "modification_instructions": "specific instructions for the Editor Agent on how to create the conflict using the chosen proposition pairs, ensuring temporal logic is respected and complexity is prioritized",
   "editor_instructions": [
-    "1. ANALYZE: Timeframe is [X], {conflict_type} conflict is appropriate because [reason]",
+    "1. ANALYZE: Timeframe is [X], {{conflict_type}} conflict is appropriate because [reason]",
     "2. MODIFY Document 1: [specific change to create contradiction using chosen proposition]",
     "3. ENSURE Document 2: [contradictory statement about same clinical entity using chosen proposition]",
     "4. VERIFY: Both statements are mutually exclusive and clinically sophisticated"
   ],
   "proposition_pairs": [
-    {
+    {{
       "doc1_proposition": "specific proposition from doc1 to modify",
       "doc2_proposition": "contradictory proposition in doc2 (existing or to be created)",
-      "rationale": "explanation of why these propositions can create a valid {conflict_type} conflict"
-    }
+      "rationale": "explanation of why these propositions can create a valid {{conflict_type}} conflict"
+    }}
   ],
-  "conflict_validation": {
-    "temporal_appropriate": "yes/no - is {conflict_type} conflict type suitable for this timeframe?",
+  "conflict_validation": {{
+    "temporal_appropriate": "yes/no - is {{conflict_type}} conflict type suitable for this timeframe?",
     "logical_impossibility": "yes/no - do these clinical facts contradict each other?",
     "avoids_natural_evolution": "yes/no - is this a contradiction vs normal progression?",
     "complexity_level": "simple | moderate | sophisticated - justification for conflict sophistication"
-  }
-}
+  }}
+}}
