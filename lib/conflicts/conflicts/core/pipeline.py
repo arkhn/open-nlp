@@ -14,16 +14,16 @@ from ..agents.doctor_agent import DoctorAgent
 from ..agents.editor_agent import EditorAgent
 from ..agents.moderator_agent import ModeratorAgent
 from ..agents.proposition_agent import PropositionAgent
+from ..core.models import EditorResult
 from .base import Annotation, ConflictDataItem, DatasetManager
-from .constants import (
-    BIOMARKER_MONITORING_CONFLICT_TYPE,
-    CLINICAL_HISTORY_CONFLICT_TYPE,
-    EDITOR_FAILURE_MESSAGE,
-    EXCERPT_NUMBERS,
-    PRE_POST_CARE_CONFLICT_TYPE,
-    TEMPORALITY_CONFLICT_TYPE,
-)
+from .constants import EXCERPT_NUMBERS, SPECIALIZED_CONFLICT_TYPES
 from .data_loader import DataLoader
+from .exceptions import (
+    DoctorAgentError,
+    EditorAgentError,
+    ModeratorAgentError,
+    PropositionAgentError,
+)
 from .models import DocumentPair, PropositionResult, ValidationResult
 
 load_dotenv()
@@ -68,19 +68,13 @@ class Pipeline:
         # Initialize agents with shared client and configuration
         self.proposition_agent = PropositionAgent(self.client, cfg.model.name, cfg)
 
-        # Initialize specialized doctor agents for all conflict types
-        self.doctor_agent_pre_post_care = DoctorAgent(
-            self.client, cfg.model.name, cfg, conflict_type=PRE_POST_CARE_CONFLICT_TYPE
-        )
-        self.doctor_agent_temporality = DoctorAgent(
-            self.client, cfg.model.name, cfg, conflict_type=TEMPORALITY_CONFLICT_TYPE
-        )
-        self.doctor_agent_clinical_history = DoctorAgent(
-            self.client, cfg.model.name, cfg, conflict_type=CLINICAL_HISTORY_CONFLICT_TYPE
-        )
-        self.doctor_agent_biomarker_monitoring = DoctorAgent(
-            self.client, cfg.model.name, cfg, conflict_type=BIOMARKER_MONITORING_CONFLICT_TYPE
-        )
+        # Initialize specialized doctor agents for all conflict types using dict-based approach
+        self.doctor_agents = {
+            conflict_type: DoctorAgent(
+                self.client, cfg.model.name, cfg, conflict_type=conflict_type
+            )
+            for conflict_type in SPECIALIZED_CONFLICT_TYPES
+        }
 
         # Initialize a single editor agent (works for all conflict types)
         self.editor_agent = EditorAgent(self.client, cfg.model.name, cfg)
@@ -145,7 +139,7 @@ class Pipeline:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to save document pair {pair_id}: {e}")
+            self.logger.error(f"Failed to save document pair {pair_id}: {e}", exc_info=True)
             return False
 
     def _save_single_attempt(
@@ -220,12 +214,7 @@ class Pipeline:
     @property
     def _conflict_type_configs(self) -> List[Tuple[str, DoctorAgent]]:
         """Get list of conflict type configurations"""
-        return [
-            (PRE_POST_CARE_CONFLICT_TYPE, self.doctor_agent_pre_post_care),
-            (TEMPORALITY_CONFLICT_TYPE, self.doctor_agent_temporality),
-            (CLINICAL_HISTORY_CONFLICT_TYPE, self.doctor_agent_clinical_history),
-            (BIOMARKER_MONITORING_CONFLICT_TYPE, self.doctor_agent_biomarker_monitoring),
-        ]
+        return [(conflict_type, agent) for conflict_type, agent in self.doctor_agents.items()]
 
     def _process_all_conflict_types(
         self,
@@ -286,8 +275,13 @@ class Pipeline:
             conflict_result, doctor_time = self._execute_agent(
                 doctor_agent, document_pair, proposition_result[0], proposition_result[1]
             )
-        except Exception as e:
+        except DoctorAgentError as e:
             self.logger.error(f"Doctor Agent failed for conflict type {conflict_type}: {e}")
+            return attempts
+        except Exception as e:
+            self.logger.error(
+                f"Unexpected error in Doctor Agent for conflict type {conflict_type}: {e}"
+            )
             return attempts
 
         # Editor and Moderator agents with retry logic for this conflict type
@@ -324,25 +318,41 @@ class Pipeline:
     ) -> Dict[str, Any]:
         """Make a single attempt: execute editor and moderator agents"""
         # Execute editor agent
-        editor_result, editor_time = self._execute_agent(
-            self.editor_agent, document_pair, conflict_result
-        )
-
-        # Check if editor agent failed to create modifications
-        if EDITOR_FAILURE_MESSAGE in editor_result.changes_made:
+        try:
+            editor_result, editor_time = self._execute_agent(
+                self.editor_agent, document_pair, conflict_result
+            )
+        except EditorAgentError as e:
             self.logger.warning(
-                f"Editor agent failed to create modifications for {conflict_type}, "
-                "skipping moderator validation"
+                f"Editor agent failed for {conflict_type} (attempt {attempt_num}): {e}"
             )
-            validation_result = self._create_failed_validation_result(
-                "Editor agent failed to modify - no changes to validate"
+            # Create failed validation result when editor fails
+            validation_result = self._create_failed_validation_result(f"Editor agent failed: {e}")
+            # Create a minimal editor result for tracking
+
+            editor_result = EditorResult(
+                modified_document1=document_pair.doc1_text,
+                modified_document2=document_pair.doc2_text,
+                changes_made=f"Editor agent failed: {e}",
+                change_info_1="No changes made - editor agent failed",
+                change_info_2="No changes made - editor agent failed",
             )
+            editor_time = 0
             moderator_time = 0
         else:
             # Execute moderator agent for validation
-            validation_result, moderator_time = self._execute_agent(
-                self.moderator_agent, document_pair, editor_result, conflict_type
-            )
+            try:
+                validation_result, moderator_time = self._execute_agent(
+                    self.moderator_agent, document_pair, editor_result, conflict_type
+                )
+            except ModeratorAgentError as e:
+                self.logger.warning(
+                    f"Moderator agent failed for {conflict_type} (attempt {attempt_num}): {e}"
+                )
+                validation_result = self._create_failed_validation_result(
+                    f"Moderator agent failed: {e}"
+                )
+                moderator_time = 0
 
         return {
             "conflict_type": conflict_type,
@@ -566,12 +576,27 @@ class Pipeline:
 
                 if success:
                     successful += 1
-            except Exception as e:
+            except (
+                PropositionAgentError,
+                DoctorAgentError,
+                EditorAgentError,
+                ModeratorAgentError,
+            ) as e:
                 self.logger.error(
-                    f"Failed to process document pair {doc_pair.doc1_id}_{doc_pair.doc2_id}: {e}"
+                    "Agent error processing document pair "
+                    f"{doc_pair.doc1_id}_{doc_pair.doc2_id}: {e}"
                 )
                 pair_id = f"{doc_pair.doc1_id}_{doc_pair.doc2_id}"
-                failed_result = self._create_failed_result(pair_id, str(e))
+                failed_result = self._create_failed_result(pair_id, f"{type(e).__name__}: {e}")
+                results.append(failed_result)
+            except Exception as e:
+                self.logger.error(
+                    "Unexpected error processing document pair "
+                    f"{doc_pair.doc1_id}_{doc_pair.doc2_id}: {e}",
+                    exc_info=True,
+                )
+                pair_id = f"{doc_pair.doc1_id}_{doc_pair.doc2_id}"
+                failed_result = self._create_failed_result(pair_id, f"Unexpected error: {e}")
                 results.append(failed_result)
 
         batch_time = time.time() - batch_start_time
@@ -600,26 +625,20 @@ class Pipeline:
         total_validated = self.dataset_manager.get_validated_documents_count()
         data_stats = self.data_loader.get_data_statistics()
 
+        # Build doctor agents statistics dynamically
+        doctor_agents_stats = {
+            f"doctor_{conflict_type}": {
+                "name": agent.name,
+                "conflict_type": conflict_type,
+            }
+            for conflict_type, agent in self.doctor_agents.items()
+        }
+
         return {
             "validated_documents": total_validated,
             "dataset_statistics": data_stats,
             "agents": {
-                "doctor_pre_post_care": {
-                    "name": self.doctor_agent_pre_post_care.name,
-                    "conflict_type": PRE_POST_CARE_CONFLICT_TYPE,
-                },
-                "doctor_temporality": {
-                    "name": self.doctor_agent_temporality.name,
-                    "conflict_type": TEMPORALITY_CONFLICT_TYPE,
-                },
-                "doctor_clinical_history": {
-                    "name": self.doctor_agent_clinical_history.name,
-                    "conflict_type": CLINICAL_HISTORY_CONFLICT_TYPE,
-                },
-                "doctor_biomarker_monitoring": {
-                    "name": self.doctor_agent_biomarker_monitoring.name,
-                    "conflict_type": BIOMARKER_MONITORING_CONFLICT_TYPE,
-                },
+                **doctor_agents_stats,
                 "editor": {"name": self.editor_agent.name},
                 "moderator": {
                     "name": self.moderator_agent.name,
@@ -628,6 +647,6 @@ class Pipeline:
             },
             "configuration": {
                 "max_retries": self.max_retries,
-                "dataset_path": self.dataset_manager.json_path,
+                "dataset_path": str(self.dataset_manager.json_path),
             },
         }

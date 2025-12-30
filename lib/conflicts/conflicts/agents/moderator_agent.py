@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 
 from ..core.base import BaseAgent
+from ..core.exceptions import ModeratorAgentError
 from ..core.models import DocumentPair, EditorResult, ValidationResult
 
 prompts_dir = Path(__file__).parent.parent.parent / "prompts"
@@ -101,18 +102,10 @@ class ModeratorAgent(BaseAgent):
 
         except Exception as e:
             self.logger.error(f"Moderator Agent processing failed: {e}")
-            return self._create_error_result(str(e))
-
-    def _create_error_result(self, error_message: str) -> ValidationResult:
-        """Create a standardized error result"""
-        return ValidationResult(
-            is_valid=False,
-            overall_score=1.0,
-            reasoning=f"Validation failed due to error: {error_message}",
-            clinical_plausibility_score=1.0,
-            clinical_significance_score=1.0,
-            temporal_appropriateness_score=1.0,
-        )
+            # Raise exception for better error tracking
+            if isinstance(e, ModeratorAgentError):
+                raise
+            raise ModeratorAgentError(f"Moderator Agent failed: {e}") from e
 
     def _parse_score_response(self, response: str) -> dict:
         """

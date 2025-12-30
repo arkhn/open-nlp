@@ -8,6 +8,7 @@ from ..core.constants import (
     SPECIALIZED_CONFLICT_TYPES,
     TEMPORALITY_CONFLICT_TYPE,
 )
+from ..core.exceptions import DoctorAgentError
 from ..core.models import ConflictResult, DocumentPair, PropositionResult
 
 prompts_dir = Path(__file__).parent.parent.parent / "prompts"
@@ -124,7 +125,9 @@ class DoctorAgent(BaseAgent):
 
         except Exception as e:
             self.logger.error(f"Error in Doctor Agent: {e}")
-            raise
+            if isinstance(e, DoctorAgentError):
+                raise
+            raise DoctorAgentError(f"Doctor Agent failed: {e}") from e
 
     def _format_propositions(self, proposition_result: PropositionResult = None) -> str:
         """
