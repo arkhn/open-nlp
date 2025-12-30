@@ -2,6 +2,8 @@ from pathlib import Path
 
 from ..core.base import BaseAgent
 from ..core.constants import (
+    BIOMARKER_MONITORING_CONFLICT_TYPE,
+    CLINICAL_HISTORY_CONFLICT_TYPE,
     PRE_POST_CARE_CONFLICT_TYPE,
     SPECIALIZED_CONFLICT_TYPES,
     TEMPORALITY_CONFLICT_TYPE,
@@ -11,11 +13,20 @@ from ..core.models import ConflictResult, DocumentPair, PropositionResult
 prompts_dir = Path(__file__).parent.parent.parent / "prompts"
 DOCTOR_PRE_POST_CARE_PROMPT_PATH = prompts_dir / "doctor_agent_pre_post_care_system.txt"
 DOCTOR_TEMPORALITY_PROMPT_PATH = prompts_dir / "doctor_agent_temporality_system.txt"
+DOCTOR_CLINICAL_HISTORY_PROMPT_PATH = prompts_dir / "doctor_agent_clinical_history_system.txt"
+DOCTOR_BIOMARKER_MONITORING_PROMPT_PATH = (
+    prompts_dir / "doctor_agent_biomarker_monitoring_system.txt"
+)
 
 # Configuration mapping for conflict types
 CONFLICT_TYPE_CONFIG = {
     PRE_POST_CARE_CONFLICT_TYPE: (DOCTOR_PRE_POST_CARE_PROMPT_PATH, "Doctor-PrePostCare"),
     TEMPORALITY_CONFLICT_TYPE: (DOCTOR_TEMPORALITY_PROMPT_PATH, "Doctor-Temporality"),
+    CLINICAL_HISTORY_CONFLICT_TYPE: (DOCTOR_CLINICAL_HISTORY_PROMPT_PATH, "Doctor-ClinicalHistory"),
+    BIOMARKER_MONITORING_CONFLICT_TYPE: (
+        DOCTOR_BIOMARKER_MONITORING_PROMPT_PATH,
+        "Doctor-BiomarkerMonitoring",
+    ),
 }
 
 

@@ -16,6 +16,8 @@ from ..agents.moderator_agent import ModeratorAgent
 from ..agents.proposition_agent import PropositionAgent
 from .base import Annotation, ConflictDataItem, DatasetManager
 from .constants import (
+    BIOMARKER_MONITORING_CONFLICT_TYPE,
+    CLINICAL_HISTORY_CONFLICT_TYPE,
     EDITOR_FAILURE_MESSAGE,
     EXCERPT_NUMBERS,
     PRE_POST_CARE_CONFLICT_TYPE,
@@ -66,12 +68,18 @@ class Pipeline:
         # Initialize agents with shared client and configuration
         self.proposition_agent = PropositionAgent(self.client, cfg.model.name, cfg)
 
-        # Initialize specialized doctor agents for the two conflict types
+        # Initialize specialized doctor agents for all conflict types
         self.doctor_agent_pre_post_care = DoctorAgent(
             self.client, cfg.model.name, cfg, conflict_type=PRE_POST_CARE_CONFLICT_TYPE
         )
         self.doctor_agent_temporality = DoctorAgent(
             self.client, cfg.model.name, cfg, conflict_type=TEMPORALITY_CONFLICT_TYPE
+        )
+        self.doctor_agent_clinical_history = DoctorAgent(
+            self.client, cfg.model.name, cfg, conflict_type=CLINICAL_HISTORY_CONFLICT_TYPE
+        )
+        self.doctor_agent_biomarker_monitoring = DoctorAgent(
+            self.client, cfg.model.name, cfg, conflict_type=BIOMARKER_MONITORING_CONFLICT_TYPE
         )
 
         # Initialize a single editor agent (works for all conflict types)
@@ -215,6 +223,8 @@ class Pipeline:
         return [
             (PRE_POST_CARE_CONFLICT_TYPE, self.doctor_agent_pre_post_care),
             (TEMPORALITY_CONFLICT_TYPE, self.doctor_agent_temporality),
+            (CLINICAL_HISTORY_CONFLICT_TYPE, self.doctor_agent_clinical_history),
+            (BIOMARKER_MONITORING_CONFLICT_TYPE, self.doctor_agent_biomarker_monitoring),
         ]
 
     def _process_all_conflict_types(
@@ -601,6 +611,14 @@ class Pipeline:
                 "doctor_temporality": {
                     "name": self.doctor_agent_temporality.name,
                     "conflict_type": TEMPORALITY_CONFLICT_TYPE,
+                },
+                "doctor_clinical_history": {
+                    "name": self.doctor_agent_clinical_history.name,
+                    "conflict_type": CLINICAL_HISTORY_CONFLICT_TYPE,
+                },
+                "doctor_biomarker_monitoring": {
+                    "name": self.doctor_agent_biomarker_monitoring.name,
+                    "conflict_type": BIOMARKER_MONITORING_CONFLICT_TYPE,
                 },
                 "editor": {"name": self.editor_agent.name},
                 "moderator": {
