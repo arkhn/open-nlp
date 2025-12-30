@@ -1,0 +1,127 @@
+You are a clinical expert analyzing two medical documents to create realistic conflicts between them. Focus on the conflict about **Biological Marker Monitoring** involving Surgical/Transplant Records and Pre/Post-Operative Documents.
+
+---
+
+### **Extended Definition**
+
+Conflicts in laboratory values, vital signs, or physiological measurements that are incompatible with documented procedures or expected post-procedural trajectories.
+
+---
+
+### **Subcategories**
+
+---
+
+#### **1. Post-Operative Trajectory Violations**
+
+**Definition:** Biomarker trends that deviate from expected post-surgical patterns without documented intervention
+
+**Example:**
+- Post-Op Day 1: "Hemoglobin 7.2"
+- Post-Op Day 2: "Hemoglobin 11.5" [No transfusion documented]
+
+**Clinical Impact:** **HIGH** - Suggests documentation error or missed intervention
+
+---
+
+#### **2. Organ Function Paradoxes**
+
+**Definition:** Lab values incompatible with documented organ removal or failure
+
+**Example:**
+- Current Labs: "Total bilirubin 0.8, direct bilirubin 0.2"
+- History: "Status post total hepatectomy pending transplant"
+
+**Clinical Impact:** **CRITICAL** - Physiologically impossible
+
+---
+
+#### **3. Immunological Marker Inconsistencies**
+
+**Definition:** Immune markers conflicting with transplant/transfusion history
+
+**Example:**
+- Current: "No HLA antibodies detected"
+- History: "Multiple pregnancy history, 20+ blood transfusions"
+
+**Clinical Impact:** **HIGH** - May affect transplant eligibility or transfusion safety
+
+---
+
+#### **4. Procedural Marker Absence**
+
+**Definition:** Missing expected biomarker changes after documented procedures
+
+**Example:**
+- Pre-cardiac cath: "Troponin 0.02"
+- Post-cardiac cath (with documented stent): "Troponin 0.02"
+
+**Clinical Impact:** **HIGH** - Suggests missing documentation or procedure not performed
+
+---
+
+### **Annotation Rules**
+
+- **Expected ranges for post-procedure timeframes:**
+  - Define expected biomarker changes based on procedure type
+  - Consider normal recovery trajectories
+- **Physiologically impossible values:**
+  - Flag values that cannot exist (e.g., cannot have normal LFTs without a liver)
+  - Consider organ function requirements
+- **Medication effects on biomarkers:**
+  - Account for medications that affect lab values
+  - Consider immunosuppression effects on immune markers
+- **Time-sensitivity:**
+  - Acute markers (troponin, CK-MB): 24-48 hour window
+  - Chronic markers (HbA1c): 3-month window
+  - Post-operative markers: Days to weeks depending on procedure
+- **Documentation requirements:**
+  - Interventions (transfusions, medications) must be documented if they explain biomarker changes
+  - Missing documentation of expected changes suggests conflict
+
+---
+
+### **Your Task**
+
+Choose proposition pairs from the two documents that can be modified to create a conflict in one of the four subcategories above.
+
+---
+
+### **Input Format**
+
+Document 1: {document1}
+Document 2: {document2}
+Propositions from Document 1: {propositions1}
+Propositions from Document 2: {propositions2}
+
+---
+
+### **Respond with JSON Format**
+
+```json
+{{
+  "reasoning": "explanation of why these proposition pairs were chosen for the {{conflict_type}} conflict, including biomarker analysis, temporal considerations, and why this conflict is sophisticated/clinically nuanced",
+  "modification_instructions": "specific instructions for the Editor Agent on how to create the conflict using the chosen proposition pairs, ensuring biomarker logic and temporal relationships are respected and complexity is prioritized",
+  "editor_instructions": [
+    "1. ANALYZE: Timeframe is [X], {{conflict_type}} conflict is appropriate because [reason related to biomarker trajectory/procedural expectation]",
+    "2. MODIFY Document 1: [specific change to create contradiction using chosen proposition, related to biomarker values/procedural markers]",
+    "3. ENSURE Document 2: [contradictory statement about same biomarker/procedural marker using chosen proposition, showing incompatible values or missing expected changes]",
+    "4. VERIFY: Both statements are mutually exclusive and clinically sophisticated, with proper temporal relationship and physiological plausibility"
+  ],
+  "proposition_pairs": [
+    {{
+      "doc1_proposition": "specific proposition from doc1 to modify",
+      "doc2_proposition": "contradictory proposition in doc2 (existing or to be created)",
+      "rationale": "explanation of why these propositions can create a valid {{conflict_type}} conflict related to biomarker monitoring"
+    }}
+  ],
+  "conflict_validation": {{
+    "temporal_appropriate": "yes/no - is {{conflict_type}} conflict type suitable for this timeframe?",
+    "logical_impossibility": "yes/no - do these biomarker values/procedural markers contradict each other?",
+    "avoids_natural_evolution": "yes/no - is this a contradiction vs normal biomarker progression?",
+    "complexity_level": "simple | moderate | sophisticated - justification for conflict sophistication",
+    "physiological_plausibility": "yes/no - are the conflicting values physiologically possible?",
+    "time_window_appropriate": "yes/no - is the time window appropriate for the biomarker type (acute vs chronic)?"
+  }}
+}}
+```
