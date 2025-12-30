@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from ..core.base import BaseAgent
+from ..core.exceptions import PropositionAgentError
 from ..core.models import PropositionResult
 
 prompts_dir = Path(__file__).parent.parent.parent / "prompts"
@@ -57,7 +58,9 @@ class PropositionAgent(BaseAgent):
 
         except Exception as e:
             self.logger.error(f"Failed to decompose text into propositions: {e}")
-            raise
+            if isinstance(e, PropositionAgentError):
+                raise
+            raise PropositionAgentError(f"Proposition Agent failed: {e}") from e
 
     def decompose_document_pair(
         self, doc1_text: str, doc2_text: str

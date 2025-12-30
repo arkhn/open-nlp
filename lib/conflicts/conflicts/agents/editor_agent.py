@@ -2,6 +2,7 @@ from pathlib import Path
 
 from ..core.base import BaseAgent
 from ..core.document_operations import parse_response
+from ..core.exceptions import EditorAgentError
 from ..core.models import ConflictResult, DocumentPair, EditorResult
 
 prompts_dir = Path(__file__).parent.parent.parent / "prompts"
@@ -41,16 +42,15 @@ class EditorAgent(BaseAgent):
             try:
                 self.logger.info(f"Attempt {attempt + 1}/{max_retries}")
                 return self._perform_modification(document_pair, conflict_instructions)
-            except ValueError as e:
+            except (ValueError, EditorAgentError) as e:
                 if attempt == max_retries - 1:
                     self.logger.error(f"All {max_retries} attempts failed: {e}")
-                    return EditorResult(
-                        modified_document1=document_pair.doc1_text,
-                        modified_document2=document_pair.doc2_text,
-                        changes_made=f"Failed to create conflict after {max_retries} attempts: {e}",
-                        change_info_1="No changes made - all attempts failed",
-                        change_info_2="No changes made - all attempts failed",
-                    )
+                    # Raise exception for better error tracking
+                    if isinstance(e, EditorAgentError):
+                        raise
+                    raise EditorAgentError(
+                        f"Failed to create conflict after {max_retries} attempts: {e}"
+                    ) from e
                 self.logger.warning(f"Attempt {attempt + 1} failed: {e}, retrying...")
 
     def _perform_modification(
@@ -124,13 +124,15 @@ class EditorAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Failed to parse response: {e}")
             self.logger.error(f"Response was: {response}")
-            raise
+            if isinstance(e, EditorAgentError):
+                raise
+            raise EditorAgentError(f"Failed to parse editor response: {e}") from e
 
         if (
             parsed_result["modified_doc_1"].strip() == document_pair.doc1_text.strip()
             and parsed_result["modified_doc_2"].strip() == document_pair.doc2_text.strip()
         ):
-            raise ValueError("No modifications were applied to the documents")
+            raise EditorAgentError("No modifications were applied to the documents")
 
         return parsed_result
 
