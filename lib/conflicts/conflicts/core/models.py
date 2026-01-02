@@ -62,4 +62,3 @@ class PropositionResult:
 
     propositions: list[str]
     reasoning: str
-    total_propositions: int

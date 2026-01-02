@@ -451,9 +451,10 @@ class Pipeline:
 
         # Step 1: Extract propositions from documents
         proposition_start_time = time.time()
-        proposition_result = self.proposition_agent.decompose_document_pair(
-            document_pair.doc1_text, document_pair.doc2_text
-        )
+        self.logger.info("Decomposing document pair into propositions")
+        propositions1 = self.proposition_agent(document_pair.doc1_text)
+        propositions2 = self.proposition_agent(document_pair.doc2_text)
+        proposition_result = (propositions1, propositions2)
         proposition_time = time.time() - proposition_start_time
         result_data["proposition_result"] = proposition_result
         result_data["proposition_time"] = proposition_time
@@ -543,8 +544,8 @@ class Pipeline:
             attempt_stats: Pre-calculated statistics (to avoid recalculation)
         """
         status = "SUCCESS" if result_data["success"] else "FAILED"
-        total_propositions = (
-            proposition_result[0].total_propositions + proposition_result[1].total_propositions
+        total_propositions = len(proposition_result[0].propositions) + len(
+            proposition_result[1].propositions
         )
 
         self.logger.info(
