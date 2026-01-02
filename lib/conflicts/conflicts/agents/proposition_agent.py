@@ -48,11 +48,10 @@ class PropositionAgent(BaseAgent):
             result = PropositionResult(
                 propositions=result_data["propositions"],
                 reasoning=result_data["reasoning"],
-                total_propositions=result_data["total_propositions"],
             )
 
             self.logger.info(
-                f"Successfully decomposed text into {result.total_propositions} propositions"
+                f"Successfully decomposed text into {len(result.propositions)} propositions"
             )
             return result
 
@@ -61,24 +60,3 @@ class PropositionAgent(BaseAgent):
             if isinstance(e, PropositionAgentError):
                 raise
             raise PropositionAgentError(f"Proposition Agent failed: {e}") from e
-
-    def decompose_document_pair(
-        self, doc1_text: str, doc2_text: str
-    ) -> tuple[PropositionResult, PropositionResult]:
-        """
-        Decompose both documents in a document pair into propositions
-
-        Args:
-            doc1_text: Text of the first document
-            doc2_text: Text of the second document
-
-        Returns:
-            Tuple of PropositionResult for each document
-        """
-        self.logger.info("Decomposing document pair into propositions")
-
-        # Decompose both documents
-        propositions1 = self(doc1_text)
-        propositions2 = self(doc2_text)
-
-        return propositions1, propositions2
