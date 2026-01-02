@@ -81,7 +81,7 @@ Choose **proposition pairs** from the two documents that can be modified to crea
     "3. ENSURE Document 2: [contradictory statement about same clinical entity using chosen proposition]",
     "4. VERIFY: Both statements are mutually exclusive and clinically sophisticated"
   ],
-  "proposition_pairs": [
+  "proposition_conflicts": [
     {{
       "doc1_proposition": "specific proposition from doc1 to modify",
       "doc2_proposition": "contradictory proposition in doc2 (existing or to be created)",

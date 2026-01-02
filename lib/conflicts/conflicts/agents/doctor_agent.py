@@ -45,33 +45,28 @@ class DoctorAgent(BaseAgent):
             )
 
         # Load appropriate prompt based on conflict type
-        prompt_path, agent_name = self._get_prompt_path_and_name(conflict_type)
+        if conflict_type not in CONFLICT_TYPE_CONFIG:
+            raise ValueError(f"Unknown conflict type: {conflict_type}")
+        prompt_path, agent_name = CONFLICT_TYPE_CONFIG[conflict_type]
 
         with open(prompt_path, "r", encoding="utf-8") as f:
             prompt = f.read().strip()
         super().__init__(agent_name, client, model, cfg, prompt)
         self.conflict_type_specialization = conflict_type
 
-    @staticmethod
-    def _get_prompt_path_and_name(conflict_type: str):
-        """Get prompt path and agent name based on conflict type"""
-        if conflict_type not in CONFLICT_TYPE_CONFIG:
-            raise ValueError(f"Unknown conflict type: {conflict_type}")
-        return CONFLICT_TYPE_CONFIG[conflict_type]
-
     def __call__(
         self,
         document_pair: DocumentPair,
-        propositions1: PropositionResult = None,
-        propositions2: PropositionResult = None,
+        propositions1: PropositionResult,
+        propositions2: PropositionResult,
     ) -> ConflictResult:
         """
         Analyze documents and choose proposition pairs for the specialized conflict type
 
         Args:
             document_pair: Pair of clinical documents to analyze
-            propositions1: Optional PropositionResult from document 1
-            propositions2: Optional PropositionResult from document 2
+            propositions1: PropositionResult from document 1
+            propositions2: PropositionResult from document 2
 
         Returns:
             ConflictResult containing the chosen proposition pairs and instructions
@@ -102,7 +97,7 @@ class DoctorAgent(BaseAgent):
             parsed_response = self._parse_json_response(response)
 
             # Validate required fields
-            required_fields = ["reasoning", "modification_instructions", "proposition_pairs"]
+            required_fields = ["reasoning", "modification_instructions", "proposition_conflicts"]
             for field in required_fields:
                 if field not in parsed_response:
                     raise ValueError(f"Missing required field '{field}' in Doctor Agent response")
@@ -115,7 +110,7 @@ class DoctorAgent(BaseAgent):
                 reasoning=parsed_response["reasoning"],
                 modification_instructions=parsed_response["modification_instructions"],
                 editor_instructions=parsed_response.get("editor_instructions", []),
-                proposition_conflicts=parsed_response.get("proposition_pairs", []),
+                proposition_conflicts=parsed_response.get("proposition_conflicts", []),
             )
 
             self.logger.info("Doctor Agent completed analysis")
@@ -129,18 +124,18 @@ class DoctorAgent(BaseAgent):
                 raise
             raise DoctorAgentError(f"Doctor Agent failed: {e}") from e
 
-    def _format_propositions(self, proposition_result: PropositionResult = None) -> str:
+    def _format_propositions(self, proposition_result: PropositionResult) -> str:
         """
         Format propositions for prompt inclusion
 
         Args:
-            proposition_result: Optional PropositionResult to format
+            proposition_result: PropositionResult to format
 
         Returns:
-            Formatted string of propositions or "No propositions provided"
+            Formatted string of propositions
         """
-        if proposition_result and proposition_result.propositions:
-            return "\n".join(
-                [f"{i}. {prop}" for i, prop in enumerate(proposition_result.propositions, 1)]
-            )
-        return "No propositions provided"
+        if not proposition_result.propositions:
+            return "No propositions provided"
+        return "\n".join(
+            [f"{i}. {prop}" for i, prop in enumerate(proposition_result.propositions, 1)]
+        )
