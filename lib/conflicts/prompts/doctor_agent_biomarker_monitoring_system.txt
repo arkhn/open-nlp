@@ -108,7 +108,7 @@ Propositions from Document 2: {propositions2}
     "3. ENSURE Document 2: [contradictory statement about same biomarker/procedural marker using chosen proposition, showing incompatible values or missing expected changes]",
     "4. VERIFY: Both statements are mutually exclusive and clinically sophisticated, with proper temporal relationship and physiological plausibility"
   ],
-  "proposition_pairs": [
+  "proposition_conflicts": [
     {{
       "doc1_proposition": "specific proposition from doc1 to modify",
       "doc2_proposition": "contradictory proposition in doc2 (existing or to be created)",

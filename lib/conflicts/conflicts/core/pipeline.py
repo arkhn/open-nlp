@@ -118,6 +118,7 @@ class Pipeline:
         document_pair: DocumentPair,
         best_result: Dict[str, Any],
         all_attempts: List[Dict[str, Any]],
+        attempt_stats: Dict[str, Any],
     ) -> bool:
         """
         Save all attempts to database as separate entries for each attempt
@@ -127,6 +128,7 @@ class Pipeline:
             document_pair: Original document pair
             best_result: Best result with editor_result, validation_result, conflict_type, etc.
             all_attempts: List of all attempts with metadata
+            attempt_stats: Pre-calculated statistics (to avoid recalculation)
 
         Returns:
             True if saved successfully, False otherwise
@@ -135,7 +137,7 @@ class Pipeline:
             for attempt in all_attempts:
                 self._save_single_attempt(attempt, document_pair, best_result)
 
-            self._log_save_statistics(pair_id, all_attempts, best_result)
+            self._log_save_statistics(pair_id, best_result, attempt_stats)
             return True
 
         except Exception as e:
@@ -184,15 +186,22 @@ class Pipeline:
         return annotations
 
     def _log_save_statistics(
-        self, pair_id: str, all_attempts: List[Dict[str, Any]], best_result: Dict[str, Any]
+        self, pair_id: str, best_result: Dict[str, Any], attempt_stats: Dict[str, Any]
     ):
-        """Log statistics about saved attempts"""
-        stats = self._calculate_attempt_statistics(all_attempts)
+        """
+        Log statistics about saved attempts
+
+        Args:
+            pair_id: Document pair ID
+            best_result: Best result with validation info
+            attempt_stats: Pre-calculated statistics (to avoid recalculation)
+        """
         status = "VALID" if best_result["validation_result"].is_valid else "INVALID"
         self.logger.info(
             f"Document pair {pair_id} saved (Status: {status}, "
-            f"{stats['valid_attempts']}/{stats['total_attempts']} attempts meet threshold, "
-            f"{stats['successful_conflict_types']}/{stats['total_conflict_types']}"
+            f"{attempt_stats['valid_attempts']}/{attempt_stats['total_attempts']}"
+            " attempts meet threshold, "
+            f"{attempt_stats['successful_conflict_types']}/{attempt_stats['total_conflict_types']}"
             " conflict types successful)"
         )
 
@@ -228,7 +237,8 @@ class Pipeline:
         for conflict_type, doctor_agent in self._conflict_type_configs:
             self.logger.info(f"Processing conflict type: {conflict_type}")
 
-            attempts = self._process_single_conflict_type(
+            # Process conflict type with early exit support
+            attempts, _ = self._process_single_conflict_type(
                 conflict_type, doctor_agent, document_pair, proposition_result
             )
             all_attempts.extend(attempts)
@@ -236,13 +246,15 @@ class Pipeline:
             # Update best result from this conflict type's attempts
             best_result = self._update_best_result(best_result, attempts)
 
-            # Early exit if we found success and early exit is enabled
-            if self._should_stop_all_conflict_types(best_result):
-                self.logger.info(
-                    "Early exit enabled & successful conflict found - "
-                    "stopping all conflict processing"
-                )
-                break
+            # Early exit: Check success ngay sau khi process conflict type
+            if self.early_exit_on_success and best_result is not None:
+                if best_result["validation_result"].is_valid:
+                    self.logger.info(
+                        f"Early exit enabled & successful conflict found "
+                        f"({best_result['conflict_type']}) - stopping "
+                        "all conflict types processing"
+                    )
+                    break
 
         return all_attempts, best_result
 
@@ -266,9 +278,16 @@ class Pipeline:
         doctor_agent: DoctorAgent,
         document_pair: DocumentPair,
         proposition_result: Tuple[PropositionResult, PropositionResult],
-    ) -> List[Dict[str, Any]]:
-        """Process one conflict type with retry logic"""
+    ) -> Tuple[List[Dict[str, Any]], bool]:
+        """
+        Process one conflict type with retry logic
+
+        Returns:
+            Tuple of (attempts list, found_valid flag)
+            found_valid: True if a valid result was found (for early exit tracking)
+        """
         attempts = []
+        found_valid = False
 
         # Doctor Agent chooses proposition pairs for this conflict type
         try:
@@ -277,12 +296,12 @@ class Pipeline:
             )
         except DoctorAgentError as e:
             self.logger.error(f"Doctor Agent failed for conflict type {conflict_type}: {e}")
-            return attempts
+            return attempts, found_valid
         except Exception as e:
             self.logger.error(
                 f"Unexpected error in Doctor Agent for conflict type {conflict_type}: {e}"
             )
-            return attempts
+            return attempts, found_valid
 
         # Editor and Moderator agents with retry logic for this conflict type
         for attempt_num in range(1, self.max_retries + 1):
@@ -293,12 +312,12 @@ class Pipeline:
 
             self._log_attempt_result(attempt_data, attempt_num, conflict_type)
 
-            # Check if this attempt was successful
             if attempt_data["validation_result"].is_valid:
-                if self._should_early_exit(attempt_data):
+                found_valid = True
+                if self.early_exit_on_success:
                     self.logger.info(
-                        f"Validation passed for {conflict_type}, early exit enabled - "
-                        f"stopping conflict type iteration"
+                        f"Validation passed for {conflict_type} (attempt {attempt_num}), "
+                        f"early exit enabled - stopping conflict type iteration"
                     )
                     break
 
@@ -306,7 +325,7 @@ class Pipeline:
                 self.logger.warning(f"Validation failed for {conflict_type}, retrying...")
                 time.sleep(1)
 
-        return attempts
+        return attempts, found_valid
 
     def _make_single_attempt(
         self,
@@ -390,16 +409,6 @@ class Pipeline:
             clinical_significance_score=1.0,
         )
 
-    def _should_early_exit(self, attempt_data: Dict[str, Any]) -> bool:
-        """Determine if we should stop processing based on attempt result"""
-        if not self.early_exit_on_success:
-            return False
-        return attempt_data["validation_result"].is_valid
-
-    def _should_stop_all_conflict_types(self, best_result: Optional[Dict[str, Any]]) -> bool:
-        """Determine if we should stop processing all conflict types"""
-        return self.early_exit_on_success and best_result is not None
-
     def _initialize_result_data(self, pair_id: str) -> Dict[str, Any]:
         """Initialize result data dictionary with default values"""
         return {
@@ -423,17 +432,6 @@ class Pipeline:
         result["error"] = error
         return result
 
-    def _extract_propositions(
-        self, document_pair: DocumentPair
-    ) -> Tuple[Tuple[PropositionResult, PropositionResult], float]:
-        """Extract propositions from document pair and return result with timing"""
-        start_time = time.time()
-        proposition_result = self.proposition_agent.decompose_document_pair(
-            document_pair.doc1_text, document_pair.doc2_text
-        )
-        proposition_time = time.time() - start_time
-        return proposition_result, proposition_time
-
     def process_document_pair(self, document_pair: DocumentPair) -> Tuple[bool, Dict[str, Any]]:
         """
         Process a single document pair through the complete pipeline
@@ -452,7 +450,11 @@ class Pipeline:
         result_data = self._initialize_result_data(pair_id)
 
         # Step 1: Extract propositions from documents
-        proposition_result, proposition_time = self._extract_propositions(document_pair)
+        proposition_start_time = time.time()
+        proposition_result = self.proposition_agent.decompose_document_pair(
+            document_pair.doc1_text, document_pair.doc2_text
+        )
+        proposition_time = time.time() - proposition_start_time
         result_data["proposition_result"] = proposition_result
         result_data["proposition_time"] = proposition_time
 
@@ -472,9 +474,12 @@ class Pipeline:
         # Update result data from final result
         self._update_result_data_from_final(result_data, final_result)
 
+        # Calculate statistics once and reuse
+        attempt_stats = self._calculate_attempt_statistics(all_attempts)
+
         # Step 4: Save all attempts to database
         is_success = self._save_attempts_to_database(
-            pair_id, document_pair, final_result, all_attempts
+            pair_id, document_pair, final_result, all_attempts, attempt_stats
         )
 
         # Track all attempts for analysis
@@ -484,7 +489,7 @@ class Pipeline:
 
         # Summary log
         self._log_processing_summary(
-            pair_id, result_data, final_result, all_attempts, proposition_result
+            pair_id, result_data, final_result, all_attempts, proposition_result, attempt_stats
         )
 
         return result_data["success"], result_data
@@ -513,16 +518,9 @@ class Pipeline:
                     "saved": is_success,
                     "valid": attempt["validation_result"].is_valid,
                     "overall_score": attempt["validation_result"].overall_score,
-                    "meets_threshold": attempt["validation_result"].is_valid,
                 }
             )
         return saved_attempts
-
-    def _calculate_total_propositions(
-        self, proposition_result: Tuple[PropositionResult, PropositionResult]
-    ) -> int:
-        """Calculate total number of propositions from both documents"""
-        return proposition_result[0].total_propositions + proposition_result[1].total_propositions
 
     def _log_processing_summary(
         self,
@@ -531,17 +529,29 @@ class Pipeline:
         final_result: Dict[str, Any],
         all_attempts: List[Dict[str, Any]],
         proposition_result: Tuple[PropositionResult, PropositionResult],
+        attempt_stats: Dict[str, Any],
     ):
-        """Log summary of processing results"""
+        """
+        Log summary of processing results
+
+        Args:
+            pair_id: Document pair ID
+            result_data: Result data dictionary
+            final_result: Final result with validation info
+            all_attempts: List of all attempts (for reference, not recalculated)
+            proposition_result: Proposition results from both documents
+            attempt_stats: Pre-calculated statistics (to avoid recalculation)
+        """
         status = "SUCCESS" if result_data["success"] else "FAILED"
-        stats = self._calculate_attempt_statistics(all_attempts)
-        total_propositions = self._calculate_total_propositions(proposition_result)
+        total_propositions = (
+            proposition_result[0].total_propositions + proposition_result[1].total_propositions
+        )
 
         self.logger.info(
-            f"Pair {pair_id}: {status} - {final_result['conflict_type']} conflict "
-            f"(best of {stats['successful_conflict_types']}/{stats['total_conflict_types']} "
+            f"Pair {pair_id}: {status} - {final_result['conflict_type']} conflict (best of "
+            f"{attempt_stats['successful_conflict_types']}/{attempt_stats['total_conflict_types']} "
             f"successful types), {total_propositions} propositions, "
-            f"{stats['valid_attempts']}/{stats['total_attempts']} valid"
+            f"{attempt_stats['valid_attempts']}/{attempt_stats['total_attempts']} valid"
         )
 
     def execute(

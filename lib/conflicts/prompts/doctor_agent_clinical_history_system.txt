@@ -99,7 +99,7 @@ Propositions from Document 2: {propositions2}
     "3. ENSURE Document 2: [contradictory statement about same clinical entity using chosen proposition, showing historical surgical/procedural information]",
     "4. VERIFY: Both statements are mutually exclusive and clinically sophisticated, with proper temporal relationship"
   ],
-  "proposition_pairs": [
+  "proposition_conflicts": [
     {{
       "doc1_proposition": "specific proposition from doc1 to modify",
       "doc2_proposition": "contradictory proposition in doc2 (existing or to be created)",
