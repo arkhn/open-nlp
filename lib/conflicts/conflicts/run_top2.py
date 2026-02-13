@@ -76,38 +76,10 @@ def main(cfg: DictConfig) -> None:
         pair_id = f"{document_pair.doc1_id}_{document_pair.doc2_id}"
         log.info(f"Processing pair {pair_id} for conflict type: {conflict_type}")
 
-        # Step 1: Extract propositions
-        propositions1 = pipeline.proposition_agent(document_pair.doc1_text)
-        propositions2 = pipeline.proposition_agent(document_pair.doc2_text)
-        proposition_result = (propositions1, propositions2)
+        success, _ = pipeline.process_document_pair(document_pair, conflict_types=[conflict_type])
 
-        log.info(
-            f"Extracted {len(propositions1.propositions)} +"
-            f" {len(propositions2.propositions)} propositions"
-        )
-
-        # Step 2: Run only the matching doctor agent
-        doctor_agent = pipeline.doctor_agents[conflict_type]
-        attempts, _ = pipeline._process_single_conflict_type(
-            conflict_type, doctor_agent, document_pair, proposition_result
-        )
-
-        if not attempts:
-            log.error(f"No attempts produced for {conflict_type}")
-            continue
-
-        best_result = pipeline._update_best_result(None, attempts)
-        final_result = best_result if best_result else attempts[-1]
-        attempt_stats = pipeline._calculate_attempt_statistics(attempts)
-
-        # Step 3: Save
-        pipeline._save_attempts_to_database(
-            pair_id, document_pair, final_result, attempts, attempt_stats
-        )
-
-        status = "VALID" if final_result["validation_result"].is_valid else "INVALID"
-        score = final_result["validation_result"].overall_score
-        log.info(f"Pair {pair_id} [{conflict_type}]: {status} (score={score:.2f})")
+        status = "VALID" if success else "INVALID"
+        log.info(f"Pair {pair_id} [{conflict_type}]: {status}")
 
     # Save all results to JSON
     pipeline.dataset_manager.save_to_json()
