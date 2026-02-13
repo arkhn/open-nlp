@@ -81,7 +81,9 @@ Choose proposition pairs from the two documents that can be modified to create a
 ### **Input Format**
 
 Document 1: {document1}
+Document 1 Timestamp: {doc1_timestamp}
 Document 2: {document2}
+Document 2 Timestamp: {doc2_timestamp}
 Propositions from Document 1: {propositions1}
 Propositions from Document 2: {propositions2}
 

@@ -229,12 +229,24 @@ class Pipeline:
         self,
         document_pair: DocumentPair,
         proposition_result: Tuple[PropositionResult, PropositionResult],
+        conflict_types: Optional[List[str]] = None,
     ) -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
-        """Process all conflict types and return all attempts + best result"""
+        """Process conflict types and return all attempts + best result
+
+        Args:
+            document_pair: Pair of clinical documents to process
+            proposition_result: Proposition results from both documents
+            conflict_types: Optional list of conflict types to process.
+                If None, all conflict types are processed.
+        """
         all_attempts = []
         best_result = None
 
-        for conflict_type, doctor_agent in self._conflict_type_configs:
+        configs = self._conflict_type_configs
+        if conflict_types is not None:
+            configs = [(ct, agent) for ct, agent in configs if ct in conflict_types]
+
+        for conflict_type, doctor_agent in configs:
             self.logger.info(f"Processing conflict type: {conflict_type}")
 
             # Process conflict type with early exit support
@@ -246,7 +258,7 @@ class Pipeline:
             # Update best result from this conflict type's attempts
             best_result = self._update_best_result(best_result, attempts)
 
-            # Early exit: Check success ngay sau khi process conflict type
+            # Early exit: Check success after processing conflict type
             if self.early_exit_on_success and best_result is not None:
                 if best_result["validation_result"].is_valid:
                     self.logger.info(
@@ -432,12 +444,18 @@ class Pipeline:
         result["error"] = error
         return result
 
-    def process_document_pair(self, document_pair: DocumentPair) -> Tuple[bool, Dict[str, Any]]:
+    def process_document_pair(
+        self,
+        document_pair: DocumentPair,
+        conflict_types: Optional[List[str]] = None,
+    ) -> Tuple[bool, Dict[str, Any]]:
         """
         Process a single document pair through the complete pipeline
 
         Args:
             document_pair: Pair of clinical documents to process
+            conflict_types: Optional list of conflict types to process.
+                If None, all conflict types are processed.
 
         Returns:
             Tuple of (success, result_data)
@@ -459,9 +477,9 @@ class Pipeline:
         result_data["proposition_result"] = proposition_result
         result_data["proposition_time"] = proposition_time
 
-        # Step 2: Process both specialized conflict types for this proposition set
+        # Step 2: Process conflict types for this proposition set
         all_attempts, best_result = self._process_all_conflict_types(
-            document_pair, proposition_result
+            document_pair, proposition_result, conflict_types=conflict_types
         )
 
         # Use best result if found, otherwise use the last attempt

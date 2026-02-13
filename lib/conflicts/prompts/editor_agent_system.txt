@@ -79,7 +79,6 @@ Any `target_text` that ends with "..." or incomplete words **will cause the syst
 ## OUTPUT FORMAT
 Return **only** the JSON output as plain text (no Markdown, no fences).
 
-```json
 {{
   "doc1": {{
     "op": "delete" | "insert_after" | "replace",
@@ -93,4 +92,3 @@ Return **only** the JSON output as plain text (no Markdown, no fences).
   }},
   "conflict_type": "type of medical conflict being created"
 }}
-```

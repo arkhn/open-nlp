@@ -5,7 +5,6 @@ from ..core.constants import (
     BIOMARKER_MONITORING_CONFLICT_TYPE,
     CLINICAL_HISTORY_CONFLICT_TYPE,
     PRE_POST_CARE_CONFLICT_TYPE,
-    SPECIALIZED_CONFLICT_TYPES,
     TEMPORALITY_CONFLICT_TYPE,
 )
 from ..core.exceptions import DoctorAgentError
@@ -38,15 +37,11 @@ class DoctorAgent(BaseAgent):
     """
 
     def __init__(self, client, model, cfg, conflict_type: str):
-        if conflict_type not in SPECIALIZED_CONFLICT_TYPES:
+        if conflict_type not in CONFLICT_TYPE_CONFIG:
             raise ValueError(
                 f"Invalid conflict_type: {conflict_type}. "
-                f"Must be one of: {SPECIALIZED_CONFLICT_TYPES}"
+                f"Must be one of: {list(CONFLICT_TYPE_CONFIG.keys())}"
             )
-
-        # Load appropriate prompt based on conflict type
-        if conflict_type not in CONFLICT_TYPE_CONFIG:
-            raise ValueError(f"Unknown conflict type: {conflict_type}")
         prompt_path, agent_name = CONFLICT_TYPE_CONFIG[conflict_type]
 
         with open(prompt_path, "r", encoding="utf-8") as f:
@@ -83,7 +78,9 @@ class DoctorAgent(BaseAgent):
 
             prompt = self.system_prompt.format(
                 document1=self._truncate_document(document_pair.doc1_text),
+                doc1_timestamp=document_pair.doc1_timestamp or "Unknown",
                 document2=self._truncate_document(document_pair.doc2_text),
+                doc2_timestamp=document_pair.doc2_timestamp or "Unknown",
                 propositions1=propositions1_str,
                 propositions2=propositions2_str,
             )
