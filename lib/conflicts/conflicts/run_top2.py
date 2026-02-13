@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 import hydra
 import pandas as pd
@@ -39,9 +40,6 @@ def main(cfg: DictConfig) -> None:
 
     # Initialize pipeline (loads all agents)
     pipeline = Pipeline(cfg)
-
-    # Read top2 parquet
-    from pathlib import Path
 
     parquet_path = Path(__file__).parent.parent / "data" / "top2_per_conflict_type.parquet"
     df = pd.read_parquet(parquet_path)
@@ -98,17 +96,7 @@ def main(cfg: DictConfig) -> None:
             log.error(f"No attempts produced for {conflict_type}")
             continue
 
-        # Find best result
-        best_result = None
-        for attempt in attempts:
-            if attempt["validation_result"].is_valid:
-                if (
-                    best_result is None
-                    or attempt["validation_result"].overall_score
-                    > best_result["validation_result"].overall_score
-                ):
-                    best_result = attempt
-
+        best_result = pipeline._update_best_result(None, attempts)
         final_result = best_result if best_result else attempts[-1]
         attempt_stats = pipeline._calculate_attempt_statistics(attempts)
 
