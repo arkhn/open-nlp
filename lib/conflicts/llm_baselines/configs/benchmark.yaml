@@ -1,0 +1,36 @@
+data:
+  processed_dir: processed/ # relative to repo root
+  max_examples: null # set to int for quick smoke tests (e.g. 10)
+
+models:
+  - name: openai/o3-mini
+    base_url: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+
+  - name: meta-llama/llama-4-maverick-17b-128e-instruct
+    base_url: https://api.groq.com/openai/v1
+    api_key_env: GROQ_API_KEY
+
+  - name: deepseek-r1-distill-llama-70b
+    base_url: https://api.groq.com/openai/v1
+    api_key_env: GROQ_API_KEY
+
+  - name: llama-3.3-70b-versatile
+    base_url: https://api.groq.com/openai/v1
+    api_key_env: GROQ_API_KEY
+
+  - name: meta-llama/llama-4-scout-17b-16e-instruct
+    base_url: https://api.groq.com/openai/v1
+    api_key_env: GROQ_API_KEY
+
+  - name: claude-3-7-sonnet-20250219
+    base_url: https://api.anthropic.com/v1
+    api_key_env: ANTHROPIC_API_KEY
+
+  - name: gemini-2.0-flash
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai
+    api_key_env: GOOGLE_API_KEY
+
+hydra:
+  run:
+    dir: outputs/${now:%Y%m%d-%H%M%S}
