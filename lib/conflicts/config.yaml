@@ -18,6 +18,7 @@ pipeline:
   max_retries: 5
   dataset_size: 30
   early_exit_on_success: false
+  top_k_per_subject: 5 # top-K docs per patient per conflict type → C(K,2) pairs each
 
 editor:
   max_retries: 5
