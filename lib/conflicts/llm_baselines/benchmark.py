@@ -85,7 +85,10 @@ def load_dataset(processed_dir: str) -> tuple[list[dict], list[dict]]:
             where gold_spans_doc* are lists of (start, end, text) tuples.
     """
     processed_path = REPO_ROOT / processed_dir
-    json_files = sorted(processed_path.glob("*.json"))
+    if processed_path.is_file():
+        json_files = [processed_path]
+    else:
+        json_files = sorted(processed_path.glob("*.json"))
 
     if not json_files:
         raise FileNotFoundError(f"No JSON files found in {processed_path}")

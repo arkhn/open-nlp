@@ -170,15 +170,15 @@ def classify_all_documents(
     results = []
     total = len(df)
 
-    for idx, row in df.iterrows():
+    for i, (_, row) in enumerate(df.iterrows(), 1):
         classification = classify_document(row["text"], model, desc_embeddings)
         classification["category"] = row["category"]
         classification["row_id"] = row["row_id"]
         classification["subject_id"] = row["subject_id"]
         results.append(classification)
 
-        if (idx + 1) % 1000 == 0:
-            print(f"  Processed {idx + 1}/{total} documents...")
+        if i % 1000 == 0:
+            print(f"  Processed {i}/{total} documents...")
 
     results_df = pd.DataFrame(results)
 
@@ -275,7 +275,7 @@ def save_top_n_documents(
             )
 
     top_df = pd.DataFrame(rows)
-    out_path = output_dir / "top2_per_conflict_type.parquet"
+    out_path = output_dir / f"top{top_n}_per_conflict_type.parquet"
     top_df.to_parquet(out_path, index=False)
     print(f"Saved top-{top_n} documents per type → {out_path}  ({len(top_df)} rows)")
 
