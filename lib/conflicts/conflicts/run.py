@@ -47,6 +47,7 @@ from .core.constants import (
     PRE_POST_CARE_CONFLICT_TYPE,
     TEMPORALITY_CONFLICT_TYPE,
 )
+from .core.exceptions import PropositionAgentError
 from .core.models import DocumentPair
 from .core.pipeline import Pipeline
 
@@ -192,20 +193,24 @@ def main(cfg: DictConfig) -> None:
             pair_id = f"{document_pair.doc1_id}_{document_pair.doc2_id}"
             log.info(f"  Processing {pair_id} (subject={document_pair.subject_id})")
 
-            success, _ = pipeline.process_document_pair(
-                document_pair, conflict_types=[conflict_type]
-            )
+            try:
+                success, _ = pipeline.process_document_pair(
+                    document_pair, conflict_types=[conflict_type]
+                )
+            except PropositionAgentError as e:
+                log.warning(f"  SKIPPED {pair_id} — PropositionAgent failed: {e}")
+                continue
 
             total_processed += 1
             if success:
                 total_success += 1
                 type_success += 1
+                pipeline.dataset_manager.save_to_json()
 
             log.info(f"  {'VALID' if success else 'INVALID'} — {type_success} valid so far")
 
         log.info(f"{conflict_type}: {type_success}/{len(pairs)} pairs successful")
 
-    pipeline.dataset_manager.save_to_json()
     log.info(f"\nDone. {total_success}/{total_processed} total pairs successful. Results saved.")
 
 
