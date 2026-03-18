@@ -53,6 +53,32 @@ from .core.pipeline import Pipeline
 
 log = logging.getLogger(__name__)
 
+CHECKPOINT_PATH = Path(__file__).parent.parent / "processed" / "checkpoint.json"
+
+
+def load_checkpoint(path: Path = CHECKPOINT_PATH) -> set[str]:
+    """Load processed pair keys from checkpoint file.
+
+    Each key has the form ``<conflict_type>::<doc1_id>_<doc2_id>`` so the same
+    document pair processed for different conflict types is tracked separately.
+
+    Returns an empty set if the checkpoint file does not exist yet.
+    """
+    if path.exists():
+        with open(path) as f:
+            data = json.load(f)
+        log.info(f"Checkpoint loaded: {len(data)} pairs already processed ({path})")
+        return set(data)
+    return set()
+
+
+def save_checkpoint(processed: set[str], path: Path = CHECKPOINT_PATH) -> None:
+    """Persist the current checkpoint set to disk."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(sorted(processed), f, indent=2)
+
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 # Map short names from classify_documents.py output to pipeline constants
@@ -176,7 +202,10 @@ def main(cfg: DictConfig) -> None:
         "pairs per patient per type"
     )
 
+    processed_keys = load_checkpoint()
+
     total_processed = 0
+    total_skipped = 0
     total_success = 0
 
     for short_name, row_ids in docs_per_type.items():
@@ -191,6 +220,13 @@ def main(cfg: DictConfig) -> None:
         type_success = 0
         for document_pair in pairs:
             pair_id = f"{document_pair.doc1_id}_{document_pair.doc2_id}"
+            ck = f"{conflict_type}::{pair_id}"
+
+            if ck in processed_keys:
+                log.debug(f"  SKIP {pair_id} (already in checkpoint)")
+                total_skipped += 1
+                continue
+
             log.info(f"  Processing {pair_id} (subject={document_pair.subject_id})")
 
             try:
@@ -199,19 +235,25 @@ def main(cfg: DictConfig) -> None:
                 )
             except PropositionAgentError as e:
                 log.warning(f"  SKIPPED {pair_id} — PropositionAgent failed: {e}")
-                continue
+                success = False
+
+            # Mark as processed regardless of outcome so restarts never retry it
+            processed_keys.add(ck)
+            save_checkpoint(processed_keys)
 
             total_processed += 1
             if success:
                 total_success += 1
                 type_success += 1
                 pipeline.dataset_manager.save_to_json()
-
             log.info(f"  {'VALID' if success else 'INVALID'} — {type_success} valid so far")
 
         log.info(f"{conflict_type}: {type_success}/{len(pairs)} pairs successful")
 
-    log.info(f"\nDone. {total_success}/{total_processed} total pairs successful. Results saved.")
+    log.info(
+        f"\nDone. {total_success}/{total_processed} successful, "
+        f"{total_skipped} skipped (checkpoint). Results saved."
+    )
 
 
 if __name__ == "__main__":
