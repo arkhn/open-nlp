@@ -21,8 +21,19 @@ SCALE (approximate, 100 patients)
 
 USAGE
 -----
-  python -m conflicts.run                               # default top_k=5
-  python -m conflicts.run pipeline.top_k_per_subject=3 # override via Hydra
+  python -m conflicts.run                                         # all types, default top_k=5
+  python -m conflicts.run pipeline.conflict_type=temporality      # single type
+  python -m conflicts.run pipeline.top_k_per_subject=3            # override top_k
+
+
+  # Single type
+  python -m conflicts.run pipeline.conflict_type=temporality
+  python -m conflicts.run pipeline.conflict_type=biomarker
+  python -m conflicts.run pipeline.conflict_type=clinical_history
+  python -m conflicts.run pipeline.conflict_type=pre_post_care
+
+  # Run all
+  python -m conflicts.run
 
 PREREQUISITES
 -------------
@@ -201,6 +212,18 @@ def main(cfg: DictConfig) -> None:
         f"top_k_per_subject={top_k} → up to C({top_k},2)={top_k*(top_k-1)//2} "
         "pairs per patient per type"
     )
+
+    conflict_type_filter = cfg.pipeline.get("conflict_type", None)
+    if conflict_type_filter is not None:
+        if conflict_type_filter not in docs_per_type:
+            raise ValueError(
+                f"Unknown conflict_type '{conflict_type_filter}'. "
+                f"Available: {list(docs_per_type.keys())}"
+            )
+        docs_per_type = {conflict_type_filter: docs_per_type[conflict_type_filter]}
+        log.info(f"Running single conflict type: {conflict_type_filter}")
+    else:
+        log.info(f"Running all conflict types: {list(docs_per_type.keys())}")
 
     processed_keys = load_checkpoint()
 
